@@ -1,0 +1,48 @@
+(in-package :cl-user)
+(defpackage qlot.parser
+  (:use :cl
+        :iterate)
+  (:import-from :qlot.source
+                :make-source
+                :find-source-class)
+  (:import-from :qlot.error
+                :qlot-qlfile-error)
+  (:export :parse-qlfile))
+(in-package :qlot.parser)
+
+(defun parse-qlfile-line (line)
+  (labels ((trim-comment (line)
+             (ppcre:regex-replace "(?<!\\\\)#.*" line ""))
+           (canonical-line (line)
+             (string-trim '(#\Space #\Tab)
+                          (trim-comment line))))
+    (setf line (canonical-line line))
+    (when (string= line "")
+      (return-from parse-qlfile-line))
+    (destructuring-bind (source-type &rest args)
+        (ppcre:split "\\s+" line)
+      (let ((package-name (format nil "~A.~:@(~A~)" #.(string :qlot.source) source-type)))
+        (unless (find-package package-name)
+          (error 'qlot-qlfile-error
+                 :format-control "Invalid source type: ~S~2%  ~A"
+                 :format-arguments (list source-type line)))
+        (apply #'make-source
+               (find-source-class source-type)
+               (mapcar (lambda (arg)
+                         (if (char= (aref arg 0) #\:)
+                             (intern (string-upcase (subseq arg 1)) :keyword)
+                             arg))
+                       args))))))
+
+(defun parse-qlfile (file)
+  (with-open-file (in file)
+    (iter (for line = (read-line in nil nil))
+      (while line)
+      (for source = (handler-bind ((error
+                                     (lambda (e)
+                                       (error 'qlot-qlfile-error
+                                              :format-control "Error while parsing qlfile: ~A~%  at ~S~2%  ~A"
+                                              :format-arguments (list file line e)))))
+                      (parse-qlfile-line line)))
+      (when source
+        (collect source)))))
