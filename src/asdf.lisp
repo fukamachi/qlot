@@ -1,6 +1,5 @@
 (in-package :cl-user)
 (defpackage qlot.asdf
-  (:nicknames :qlot-asdf)
   (:use :cl)
   (:export :qlot-system
            :system-quicklisp-home))
