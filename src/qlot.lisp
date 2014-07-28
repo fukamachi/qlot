@@ -18,6 +18,9 @@
                 :safety-http-request)
   (:import-from :qlot.shell
                 :safety-shell-command)
+  (:import-from :qlot-asdf
+                :qlot-system
+                :system-quicklisp-home)
   (:import-from :qlot.util
                 :with-quicklisp-home
                 :with-package-functions)
@@ -158,6 +161,13 @@
     (apply #'install-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
     (apply #'install-project (asdf:find-system object) args))
+  (:method ((object qlot-system) &rest args &key quicklisp-home &allow-other-keys)
+    (unless quicklisp-home
+      (setf args
+            (list* :quicklisp-home
+                   (system-quicklisp-home object)
+                   args)))
+    (apply #'install-project (asdf:component-pathname object) args))
   (:method ((object asdf:system) &rest args)
     (apply #'install-project (asdf:component-pathname object) args))
   (:method ((object pathname) &rest args)

@@ -4,12 +4,14 @@
   (:use :cl)
   (:import-from :qlot.util
                 :with-package-functions)
-  (:export :qlot-system))
+  (:export :qlot-system
+           :system-quicklisp-home))
 (in-package :qlot.asdf)
 
 (defclass qlot-system (asdf:system)
   ((quicklisp-home :initarg :quicklisp-home
-                   :initform #P"quicklisp/")
+                   :initform #P"quicklisp/"
+                   :accessor system-quicklisp-home)
    (qlhome-initialized :initform nil)))
 
 (defmethod asdf:component-depends-on :before (op (system qlot-system))

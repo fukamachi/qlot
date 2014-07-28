@@ -32,7 +32,7 @@
                :function-cache)
   :components ((:module "src"
                 :components
-                ((:file "qlot" :depends-on ("parser" "server" "http" "shell" "source" "tmp" "util"))
+                ((:file "qlot" :depends-on ("parser" "server" "http" "shell" "source" "tmp" "asdf" "util"))
                  (:file "parser" :depends-on ("source" "error"))
                  (:file "server" :depends-on ("source"))
                  (:file "http")
@@ -47,5 +47,6 @@
                   ((:file "ql")
                    (:file "git")))
                  (:file "error")
+                 (:file "asdf" :depends-on ("util"))
                  (:file "util"))))
   :in-order-to ((test-op (test-op qlot-test))))
