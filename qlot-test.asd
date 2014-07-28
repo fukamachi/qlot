@@ -12,6 +12,7 @@
   :author "Eitaro Fukamachi"
   :license "MIT"
   :depends-on (:qlot
+               :qlot-install
                :cl-test-more)
   :components ((:module "t"
                 :components
