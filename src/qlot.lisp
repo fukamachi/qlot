@@ -20,7 +20,8 @@
                 :safety-shell-command)
   (:import-from :qlot-asdf
                 :qlot-system
-                :system-quicklisp-home)
+                :system-quicklisp-home
+                :quickload)
   (:import-from :qlot.util
                 :with-quicklisp-home
                 :with-package-functions)
@@ -33,7 +34,8 @@
   (:import-from :alexandria
                 :copy-stream)
   (:export :install
-           :install-quicklisp))
+           :install-quicklisp
+           :quickload))
 (in-package :qlot)
 
 (defvar *current-lisp-path*

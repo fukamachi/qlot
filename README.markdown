@@ -39,15 +39,8 @@ Qlot is going to solve this problem.
 ## Tutorial
 
 1. Put "qlfile" at the root of your project directory.
-2. `(qlot:install :myapp)` or `shly -Lqlot install`
-3. Change `:class` of `defsystem` like this.
-
-```common-lisp
-(defsystem myapp
-  :defsystem-depends-on (:qlot-asdf)
-  :class :qlot-system
-  :components ((:file "src/myapp")))
-```
+2. `(qlot:install :myapp)` or `shly -Lqlot install`.
+3. Load the system by `qlot:quickload`.
 
 ## `qlfile` syntax
 

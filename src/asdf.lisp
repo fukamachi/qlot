@@ -5,43 +5,87 @@
   (:import-from :qlot.util
                 :with-package-functions)
   (:export :qlot-system
-           :system-quicklisp-home))
+           :system-quicklisp-home
+           :quickload))
 (in-package :qlot.asdf)
 
 (defclass qlot-system (asdf:system)
   ((quicklisp-home :initarg :quicklisp-home
-                   :initform #P"quicklisp/"
-                   :accessor system-quicklisp-home)
+                   :initform #P"quicklisp/")
    (qlhome-initialized :initform nil)))
 
-(defmethod asdf:component-depends-on :before (op (system qlot-system))
-  (unless (slot-value system 'qlhome-initialized)
-    (let ((qlhome (asdf:system-relative-pathname system (slot-value system 'quicklisp-home))))
-      (unless (probe-file qlhome)
-        (error "Directory \"quicklisp/\" does not exist in ~A.
-Try (qlot:install :~A) to install Quicklisp in the project root."
-               (asdf:system-source-directory system)
-               (asdf:component-name system)))
+(defgeneric system-quicklisp-home (system)
+  (:method ((system asdf:system))
+    (asdf:system-relative-pathname system #P"quicklisp/"))
+  (:method ((system qlot-system))
+    (asdf:system-relative-pathname system (slot-value system 'quicklisp-home))))
 
-      #+quicklisp
-      (setf ql:*quicklisp-home* qlhome)
+(defun pathname-in-directory (path directory)
+  (loop for dir1 in (pathname-directory directory)
+        for dir2 in (pathname-directory path)
+        unless (string= dir1 dir2)
+          do (return nil)
+        finally
+           (return t)))
 
-      (load (merge-pathnames #P"setup.lisp" qlhome))
+(defun load-system-with-local-quicklisp (system qlhome)
+  (unless (probe-file qlhome)
+    (error "Directory ~S does not exist." qlhome))
 
-      (setf asdf::*default-source-registries*
-            '(asdf::environment-source-registry
-              asdf::system-source-registry
-              asdf::system-source-registry-directory))
-      (asdf:initialize-source-registry)
+  (let (#+quicklisp
+        (ql:*quicklisp-home* qlhome)
+        (global-source-registry asdf::*source-registry*)
+        (asdf::*source-registry* (make-hash-table :test 'equal))
+        (asdf::*default-source-registries*
+          '(asdf::environment-source-registry
+            asdf::system-source-registry
+            asdf::system-source-registry-directory))
+        (asdf:*central-registry* (list (asdf:system-source-directory system))))
+    #-quicklisp
+    (load (merge-pathnames #P"setup.lisp" qlhome))
+    #+quicklisp
+    (push (merge-pathnames #P"quicklisp/" qlhome) asdf:*central-registry*)
 
-      (map nil
-           (lambda (dep)
-             (asdf:clear-system dep)
-             (with-package-functions :ql-dist (ensure-installed find-release)
-               (let ((release (find-release (string-downcase dep))))
-                 (when release
-                   (ensure-installed release)))))
-           (asdf:component-sideway-dependencies system)))
-    (setf (slot-value system 'qlhome-initialized) t)))
+    (asdf:initialize-source-registry)
+
+    (labels ((component-already-loaded-p (component)
+               (let ((asdf::*source-registry* global-source-registry))
+                 (and (find (string-downcase component)
+                            (asdf:registered-systems) :test #'string=)
+                      (asdf:component-loaded-p component))))
+             (load-system (system-name)
+               (with-package-functions :ql-dist (ensure-installed find-system name dependency-tree)
+                 (let ((system (find-system system-name)))
+                   (unless system
+                     (error "~S is not found in ~S." system-name qlhome))
+                   (when (component-already-loaded-p system-name)
+                     (if (pathname-in-directory
+                          (let ((asdf::*source-registry* global-source-registry))
+                            (asdf:system-source-directory system-name))
+                          qlhome)
+                         (return-from load-system)
+                         (warn "Other version of ~S is already loaded." system-name)))
+
+                   (asdf:clear-system system-name)
+                   (ensure-installed system)
+                   (asdf:find-system system-name)
+
+                   (loop for dep in (asdf:component-sideway-dependencies (asdf:find-system system-name))
+                         do (load-system (string-downcase dep)))))))
+      (loop for dep in (asdf:component-sideway-dependencies system)
+            do (load-system (string-downcase dep))))
+
+    (with-package-functions :ql (quickload)
+      (quickload (asdf:component-name system)))))
+
+(defun quickload (systems)
+  (unless (consp systems)
+    (setf systems (list systems)))
+  (loop for system-name in systems
+        for system = (asdf:find-system (string-downcase system-name))
+        do (load-system-with-local-quicklisp
+            system
+            (system-quicklisp-home system)))
+  systems)
 
 (import '(qlot-system) :asdf)
