@@ -2,7 +2,8 @@
 (defpackage qlot.util
   (:use :cl)
   (:export :with-quicklisp-home
-           :with-package-functions))
+           :with-package-functions
+           :pathname-in-directory-p))
 (in-package :qlot.util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
@@ -15,7 +16,15 @@
                     collect `(,fn (&rest ,args)
                                   (apply
                                    ,(if (and (listp fn) (eq (car fn) 'setf))
-                                        `(function (setf ,(intern (string (cadr fn)) package-designator)))
-                                        `(function ,(intern (string fn) package-designator)))
+                                        `(eval `(function (setf ,(intern ,(string (cadr fn)) ,package-designator))))
+                                        `(symbol-function (intern ,(string fn) ,package-designator)))
                                    ,args))))
        ,@body)))
+
+(defun pathname-in-directory-p (path directory)
+  (loop for dir1 in (pathname-directory directory)
+        for dir2 in (pathname-directory path)
+        unless (string= dir1 dir2)
+          do (return nil)
+        finally
+           (return t)))

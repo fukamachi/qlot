@@ -16,37 +16,9 @@
   :version "0.1.0"
   :author "Eitaro Fukamachi"
   :license "MIT"
-  :depends-on (:clack
-               :ningle
-               :drakma
-               :archive
-               :salza2
-               :ironclad
-               :flexi-streams
-               :alexandria
-               :cl-ppcre
-               :external-program
-               :usocket
-               :split-sequence
-               :iterate
-               :function-cache)
   :components ((:module "src"
                 :components
-                ((:file "qlot" :depends-on ("parser" "server" "http" "shell" "source" "tmp" "asdf" "util"))
-                 (:file "parser" :depends-on ("source" "error"))
-                 (:file "server" :depends-on ("source"))
-                 (:file "http")
-                 (:file "shell")
-                 (:file "tmp")
-                 (:file "archive")
-                 (:file "source" :depends-on ("tmp"))
-                 (:module "dist-sources"
-                  :pathname "source"
-                  :depends-on ("source" "http" "shell" "server" "archive" "tmp" "util")
-                  :components
-                  ((:file "ql")
-                   (:file "git")))
-                 (:file "error")
+                ((:file "qlot" :depends-on ("asdf" "util"))
                  (:file "asdf" :depends-on ("util"))
                  (:file "util"))))
   :in-order-to ((test-op (test-op qlot-test))))
