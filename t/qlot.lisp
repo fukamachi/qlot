@@ -8,7 +8,7 @@
   (:use :cl
         :qlot
         :cl-test-more)
-  (:import-from :qlot
+  (:import-from :qlot.install
                 :install-quicklisp
                 :uninstall-all-dists))
 (in-package :qlot-test)
