@@ -98,7 +98,7 @@ Set `:quicklisp-home` of your system.
 
 ```common-lisp
 (defsystem myapp
-  :defsystem-depends-on (:qlot-asdf)
+  :defsystem-depends-on (:qlot)
   :class :qlot-system
   :quicklisp-home #P".ql/"
   :components ((:file "src/myapp")))
