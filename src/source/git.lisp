@@ -9,22 +9,6 @@
   (:import-from :qlot.shell
                 :safety-shell-command
                 :shell-command-error)
-  (:import-from :qlot.util
-                :with-package-functions)
-  (:import-from :ironclad
-                :byte-array-to-hex-string
-                :digest-file
-                :digest-sequence)
-  (:import-from :fad
-                :list-directory
-                :directory-pathname-p)
-  (:import-from :flexi-streams
-                :with-output-to-sequence)
-  (:import-from :split-sequence
-                :split-sequence)
-  (:import-from :alexandria
-                :with-gensyms
-                :copy-stream)
   (:export :source-git))
 (in-package :qlot.source.git)
 
@@ -51,9 +35,6 @@
 (defmethod initialize ((source source-git))
   (when (source-initialized source)
     (error "~S is already initialized." source))
-
-  (ensure-directories-exist (tmp-path #P"source-git/archive/"))
-  (ensure-directories-exist (tmp-path #P"source-git/repos/"))
 
   (setf (source-directory source)
         (pathname
@@ -129,8 +110,3 @@
                                   dir
                                   "checkout"
                                   checkout-to)))))
-
-(defmethod install-source ((source source-git))
-  (with-package-functions :ql-dist (provided-releases dist ensure-installed)
-    (dolist (release (provided-releases (dist (source-dist-name source))))
-      (ensure-installed release))))

@@ -12,6 +12,7 @@
                :drakma
                :archive
                :salza2
+               :gzip-stream
                :ironclad
                :flexi-streams
                :alexandria
@@ -30,13 +31,14 @@
                  (:file "shell")
                  (:file "tmp")
                  (:file "archive")
-                 (:file "source" :depends-on ("tmp"))
+                 (:file "source" :depends-on ("tmp" "util"))
                  (:module "dist-sources"
                   :pathname "source"
-                  :depends-on ("source" "http" "shell" "server" "archive" "tmp" "util")
+                  :depends-on ("source" "http" "shell" "archive" "tmp")
                   :components
                   ((:file "ql")
-                   (:file "git")))
+                   (:file "git")
+                   (:file "http")))
                  (:file "error")
                  (:file "asdf" :depends-on ("util"))
                  (:file "util"))))

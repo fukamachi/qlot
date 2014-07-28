@@ -5,52 +5,46 @@
   (:import-from :qlot.tmp
                 :tmp-path)
   (:import-from :qlot.archive
-                :walk-tarball-file)
+                :extract-tarball)
+  (:import-from :qlot.http
+                :safety-http-request)
   (:import-from :alexandria
                 :copy-stream))
 (in-package :qlot.source.http)
 
-(defclass source-http (source)
+(defclass source-http (source-has-directory)
   ((url :initarg :url
         :accessor source-http-url)))
 
+(defmethod make-source ((source (eql 'source-http)) &rest args)
+  (destructuring-bind (project-name url) args
+    (make-instance 'source-http
+                   :project-name project-name
+                   :url url)))
+
 (defmethod print-object ((source source-http) stream)
-  (format stream "#<~S ~A>"
+  (format stream "#<~S ~A ~A>"
           (type-of source)
+          (source-project-name source)
           (source-http-url source)))
 
 (defmethod initialize ((source source-http))
-  (ensure-directories-exist (tmp-path #P"http/archive/"))
+  (setf (source-archive source)
+        (pathname
+         (format nil "~A.tar.gz" (source-project-name source))))
   (download-archive source)
+  (setf (source-directory source)
+        (extract-tarball (source-archive source)
+                         (tmp-path #P"source-http/repos/")))
   (setf (source-version source)
         (ironclad:byte-array-to-hex-string
-         (ironclad:digest-file :md5 (archive-path source ".tar.gz")))))
-
-(defun archive-path (source &optional (type ".tar.gz"))
-  (merge-pathnames (format nil "~A-~A~A"
-                           (source-project-name source)
-                           (source-version source)
-                           type)
-                   (tmp-path #P"http/archive/")))
+         (ironclad:digest-file :md5 (source-archive source)))))
 
 (defun download-archive (source)
   (check-type source source-http)
-  (let ((stream (http-request (source-http-url source) :want-stream t)))
-    (ensure-directories-exist (tmp-path #P"http/archive/"))
-    (with-open-file (out (archive-path source ".tar.gz")
-                         :direction :output :if-exists :supersede)
-      (alexandria:copy-stream stream out))))
-
-(defmethod systems.txt ((source source-http))
-  ; TODO
-  )
-
-(defmethod releases.txt ((source source-http))
-  ; TODO
-  )
-
-(defmethod archive ((source source-http))
-  (archive-path source ".tar.gz"))
-
-(defmethod url-path-for ((source source-http) (for (eql 'archive)))
-  )
+  (let ((stream (safety-http-request (source-http-url source) :want-stream t)))
+    (with-open-file (out (source-archive source)
+                         :direction :output :if-exists :supersede
+                         :element-type '(unsigned-byte 8))
+      (alexandria:copy-stream stream out
+                              :element-type '(unsigned-byte 8)))))

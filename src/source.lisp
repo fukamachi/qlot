@@ -3,9 +3,19 @@
   (:use :cl)
   (:import-from :qlot.tmp
                 :tmp-path)
+  (:import-from :qlot.util
+                :with-package-functions)
   (:import-from :fad
                 :list-directory
                 :pathname-absolute-p)
+  (:import-from :ironclad
+                :byte-array-to-hex-string
+                :digest-file
+                :digest-sequence)
+  (:import-from :flexi-streams
+                :with-output-to-sequence)
+  (:import-from :alexandria
+                :copy-stream)
   (:export :*qlot-port*
            :source
            :make-source
@@ -136,6 +146,10 @@ distinfo-subscription-url: http://localhost:~A/~A.txt
    (archive :initarg :archive
             :reader source-archive)))
 
+(defmethod initialize :before ((source source-has-directory))
+  (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))))
+  (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source))))))
+
 (defmethod (setf source-directory) (value (source source-has-directory))
   (setf (slot-value source 'directory)
         (if (fad:pathname-absolute-p value)
@@ -204,3 +218,8 @@ distinfo-subscription-url: http://localhost:~A/~A.txt
           (source-project-name source)
           (source-version source)
           (file-namestring (archive source))))
+
+(defmethod install-source ((source source-has-directory))
+  (with-package-functions :ql-dist (provided-releases dist ensure-installed)
+    (dolist (release (provided-releases (dist (source-dist-name source))))
+      (ensure-installed release))))

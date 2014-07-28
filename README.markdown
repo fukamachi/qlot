@@ -50,7 +50,7 @@ Qlot is going to solve this problem.
 <source> <dist name> [arg1, arg2..]
 ```
 
-Currently, `<source>` must be one of `ql` or `git`.
+Currently, `<source>` must be one of `ql`, `http` or `git`.
 
 ### ql
 
@@ -66,6 +66,14 @@ ql clack 2014-01-13
 
 ```
 ql :all :latest
+```
+
+### http
+
+`http` source will download a tarball.
+
+```
+http yason http://netzhansa.com/yason.tar.gz
 ```
 
 ### git
