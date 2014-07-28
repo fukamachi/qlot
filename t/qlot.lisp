@@ -9,7 +9,6 @@
         :qlot
         :cl-test-more)
   (:import-from :qlot.install
-                :install-quicklisp
                 :uninstall-all-dists))
 (in-package :qlot-test)
 
