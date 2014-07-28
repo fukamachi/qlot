@@ -12,8 +12,9 @@
 (in-package :qlot)
 
 (defun install (&rest args)
-  #+quicklisp (ql:quickload :qlot-install)
-  #-quicklisp (asdf:load-system :qlot-install)
+  (unless (find-package :qlot.install)
+    #+quicklisp (ql:quickload :qlot-install)
+    #-quicklisp (asdf:load-system :qlot-install))
   (with-package-functions :qlot.install (install-project)
     (if (evenp (length args))
         (apply #'install-project *default-pathname-defaults* args)
@@ -21,8 +22,9 @@
 
 (defun install-quicklisp (&optional (path nil path-specified-p))
   (declare (ignore path))
-  #+quicklisp (ql:quickload :qlot-install)
-  #-quicklisp (asdf:load-system :qlot-install)
+  (unless (find-package :qlot.install)
+    #+quicklisp (ql:quickload :qlot-install)
+    #-quicklisp (asdf:load-system :qlot-install))
   (with-package-functions :qlot.install (install-quicklisp)
     (apply #'install-quicklisp (if path-specified-p
                                    (list path)
