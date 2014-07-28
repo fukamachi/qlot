@@ -32,8 +32,15 @@
 (install (asdf:system-relative-pathname :qlot #P"t/data/qlfile")
          :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
 
-(is (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*))
-    '()
+(is (mapcar (lambda (path)
+              (car (last (pathname-directory path))))
+            (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+    '("cl-dbi"
+      "clack"
+      "log4cl"
+      "quicklisp"
+      "shelly")
+    :test #'equal
     "can install dists from qlfile")
 
 (finalize)
