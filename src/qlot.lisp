@@ -30,7 +30,7 @@
                                    (list path)
                                    nil))))
 
-(defun load-system-with-local-quicklisp (system qlhome)
+(defun load-system-with-local-quicklisp (system qlhome quickload-args)
   (unless (probe-file qlhome)
     (error "Directory ~S does not exist." qlhome))
 
@@ -78,14 +78,16 @@
             do (load-system (string-downcase dep))))
 
     (with-package-functions :ql (quickload)
-      (quickload (asdf:component-name system)))))
+      (apply #'quickload (asdf:component-name system) quickload-args))))
 
-(defun quickload (systems)
+(defun quickload (systems &rest args &key verbose prompt explain &allow-other-keys)
+  (declare (ignore verbose prompt explain))
   (unless (consp systems)
     (setf systems (list systems)))
   (loop for system-name in systems
         for system = (asdf:find-system (string-downcase system-name))
         do (load-system-with-local-quicklisp
             system
-            (system-quicklisp-home system)))
+            (system-quicklisp-home system)
+            args))
   systems)
