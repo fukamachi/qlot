@@ -33,9 +33,6 @@
            args)))
 
 (defmethod initialize ((source source-git))
-  (when (source-initialized source)
-    (error "~S is already initialized." source))
-
   (setf (source-directory source)
         (pathname
          (format nil "~A~:[~;~:*-~A~]/"

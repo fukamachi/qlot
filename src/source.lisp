@@ -72,6 +72,10 @@
 
 (defgeneric initialize (source)
   (:method ((source source))))
+(defmethod initialize :around (source)
+  (if (source-initialized source)
+      t
+      (call-next-method)))
 (defmethod initialize :after (source)
   (setf (source-initialized source) t))
 
