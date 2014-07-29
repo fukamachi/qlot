@@ -9,7 +9,8 @@
   (:import-from :qlot.shell
                 :safety-shell-command
                 :shell-command-error)
-  (:export :source-git))
+  (:export :source-git
+           :retry-git-clone))
 (in-package :qlot.source.git)
 
 (defclass source-git (source-has-directory)
@@ -95,10 +96,17 @@
         (checkout-to (or (source-git-ref source)
                          (source-git-branch source)
                          (source-git-tag source))))
-    (safety-shell-command "git"
-                          (list "clone"
-                                (source-git-repos-url source)
-                                dir))
+    (tagbody git-cloning
+       (restart-case
+           (safety-shell-command "git"
+                                 (list "clone"
+                                       (source-git-repos-url source)
+                                       dir))
+         (retry-git-clone ()
+           :report "Retry to git clone the repository."
+           (when (probe-file dir)
+             (fad:delete-directory-and-files dir))
+           (go git-cloning))))
     (when checkout-to
       (safety-shell-command "git"
                             (list "--git-dir"
