@@ -160,25 +160,36 @@ distinfo-subscription-url: ~A~A
             (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source)))
                       value))))
 
-(defun source-systems (source)
+(defun source-system-files (source)
   (check-type source source)
   (remove-if-not
    (lambda (path)
      (equal (pathname-type path) "asd"))
    (fad:list-directory (source-directory source))))
 
+(defun system-file-systems (name)
+  (let* ((system (asdf:find-system name))
+         (target (asdf:system-source-file system))
+         (result '()))
+    (asdf:map-systems
+     (lambda (system)
+       (when (equalp target (asdf:system-source-file system))
+         (push (asdf:component-name system) result))))
+    result))
+
 (defmethod systems.txt ((source source-has-directory))
   (with-output-to-string (s)
     (format s "# project system-file system-name [dependency1..dependencyN]~%")
     (let ((asdf:*central-registry* (cons (source-directory source)
                                          asdf:*central-registry*)))
-      (dolist (system-file (source-systems source))
-        (format s "~{~A~^ ~}~%"
-                (list* (source-project-name source)
-                       (file-namestring system-file)
-                       (pathname-name system-file)
-                       (mapcar #'string-downcase
-                               (asdf::component-sideway-dependencies (asdf:find-system (pathname-name system-file))))))))))
+      (dolist (system-file (source-system-files source))
+        (dolist (system (system-file-systems (pathname-name system-file)))
+          (format s "~A ~A ~A ~{~A~^ ~}~%"
+                  (source-project-name source)
+                  (pathname-name system-file)
+                  system
+                  (mapcar #'string-downcase
+                          (asdf::component-sideway-dependencies (asdf:find-system system)))))))))
 
 (defmethod releases.txt ((source source-has-directory))
   (let ((version (source-version source))
@@ -204,7 +215,7 @@ distinfo-subscription-url: ~A~A
                 content-sha1
                 prefix
                 (mapcar #'file-namestring
-                        (source-systems source)))))))
+                        (source-system-files source)))))))
 
 (defmethod archive ((source source-has-directory))
   (source-archive source))
