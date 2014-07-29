@@ -10,8 +10,7 @@
 (in-package :qlot.source.ql)
 
 (defclass source-ql (source)
-  ((%version :initarg :%version)
-   (dist-name :initform "quicklisp")))
+  ((%version :initarg :%version)))
 
 (defmethod make-source ((source (eql 'source-ql)) &rest args)
   (destructuring-bind (project-name version) args
@@ -33,6 +32,11 @@
 (defmethod initialize ((source source-ql))
   (setf (source-version source)
         (format nil "ql-~A" (source-ql-version source))))
+
+(defmethod source-dist-name ((source source-ql))
+  (if (eq (source-project-name source) :all)
+      "quicklisp"
+      (call-next-method)))
 
 (defcached ql-latest-version ()
   (let ((stream (safety-http-request "http://beta.quicklisp.org/dist/quicklisp.txt"
@@ -92,33 +96,31 @@
     (if (eq project-name :all)
         (format nil "name: quicklisp
 version: ~A
-distinfo-subscription-url: http://localhost:~A/quicklisp.txt
+distinfo-subscription-url: ~A~A
 release-index-url: http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt
 system-index-url: http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt
 "
                 (source-version source)
-                *qlot-port*
+                *dist-base-url* (url-path-for source 'project.txt)
                 (source-ql-version source)
                 (source-ql-version source))
         (call-next-method))))
 
 (defmethod distinfo.txt ((source source-ql))
-  (with-slots (project-name) source
-    (let ((version (source-version source)))
-      (format nil "name: ~A
+  (format nil "name: ~A
 version: ~A
-system-index-url: http://localhost:~A/~A/~A/systems.txt
-release-index-url: http://localhost:~A/~A/~A/releases.txt
+system-index-url: ~A~A
+release-index-url: ~A~A
 archive-base-url: http://beta.quicklisp.org/
-canonical-distinfo-url: http://localhost:~A/~A/~A/distinfo.txt
-distinfo-subscription-url: http://localhost:~A/~A.txt
+canonical-distinfo-url: ~A~A
+distinfo-subscription-url: ~A~A
 "
-              project-name
-              version
-              *qlot-port* project-name version
-              *qlot-port* project-name version
-              *qlot-port* project-name version
-              *qlot-port* project-name))))
+          (source-project-name source)
+          (source-version source)
+          *dist-base-url* (url-path-for source 'systems.txt)
+          *dist-base-url* (url-path-for source 'releases.txt)
+          *dist-base-url* (url-path-for source 'distinfo.txt)
+          *dist-base-url* (url-path-for source 'project.txt)))
 
 (defmethod systems.txt ((source source-ql))
   (format nil "# project system-file system-name [dependency1..dependencyN]

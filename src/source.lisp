@@ -16,14 +16,13 @@
                 :with-output-to-sequence)
   (:import-from :alexandria
                 :copy-stream)
-  (:export :*qlot-port*
+  (:export :*dist-base-url*
            :source
            :make-source
            :find-source-class
            :initialize
            :project-name
            :version
-           :dist-name
            :source-project-name
            :source-version
            :source-dist-name
@@ -41,15 +40,13 @@
            :source-archive))
 (in-package :qlot.source)
 
-(defvar *qlot-port* nil)
+(defvar *dist-base-url* nil)
 
 (defclass source ()
   ((project-name :initarg :project-name
                  :reader source-project-name)
    (version :initarg :version
             :accessor source-version)
-   (dist-name :initarg :dist-name
-              :accessor source-dist-name)
    (initialized :initform nil
                 :accessor source-initialized)))
 
@@ -59,10 +56,9 @@
   (intern (format nil "~A-~:@(~A~)" #.(string :source) class-name)
           (format nil "~A.~:@(~A~)" #.(string :qlot.source) class-name)))
 
-(defmethod initialize-instance :after ((source source) &key)
-  (unless (slot-boundp source 'dist-name)
-    (setf (slot-value source 'dist-name)
-          (slot-value source 'project-name))))
+(defgeneric source-dist-name (source)
+  (:method ((source source))
+    (source-project-name source)))
 
 (defmethod print-object ((source source) stream)
   (format stream "#<~S ~A ~A>"
@@ -88,39 +84,35 @@
 
 (defgeneric project.txt (source)
   (:method ((source source))
-    (let ((project-name (source-project-name source))
-          (version (source-version source)))
-      (format nil "name: ~A
+    (format nil "name: ~A
 version: ~A
-distinfo-subscription-url: http://localhost:~A/~A.txt
-release-index-url: http://localhost:~A/~A/~A/releases.txt
-system-index-url: http://localhost:~A/~A/~A/systems.txt
+distinfo-subscription-url: ~A~A
+release-index-url: ~A~A
+system-index-url: ~A~A
 "
-              project-name
-              version
-              *qlot-port* project-name
-              *qlot-port* project-name version
-              *qlot-port* project-name version))))
+            (source-dist-name source)
+            (source-version source)
+            *dist-base-url* (url-path-for source 'project.txt)
+            *dist-base-url* (url-path-for source 'releases.txt)
+            *dist-base-url* (url-path-for source 'systems.txt))))
 
 (defgeneric distinfo.txt (source)
   (:method ((source source))
-    (with-slots (project-name) source
-      (let ((version (source-version source)))
-        (format nil "name: ~A
+    (format nil "name: ~A
 version: ~A
-system-index-url: http://localhost:~A/~A/~A/systems.txt
-release-index-url: http://localhost:~A/~A/~A/releases.txt
-archive-base-url: http://localhost:~A/
-canonical-distinfo-url: http://localhost:~A/~A/~A/distinfo.txt
-distinfo-subscription-url: http://localhost:~A/~A.txt
+system-index-url: ~A~A
+release-index-url: ~A~A
+archive-base-url: ~A/
+canonical-distinfo-url: ~A~A
+distinfo-subscription-url: ~A~A
 "
-                project-name
-                version
-                *qlot-port* project-name version
-                *qlot-port* project-name version
-                *qlot-port*
-                *qlot-port* project-name version
-                *qlot-port* project-name)))))
+            (source-dist-name source)
+            (source-version source)
+            *dist-base-url* (url-path-for source 'systems.txt)
+            *dist-base-url* (url-path-for source 'releases.txt)
+            *dist-base-url*
+            *dist-base-url* (url-path-for source 'distinfo.txt)
+            *dist-base-url* (url-path-for source 'project.txt))))
 
 (defgeneric releases.txt (source))
 (defgeneric systems.txt (source))
@@ -203,10 +195,10 @@ distinfo-subscription-url: http://localhost:~A/~A.txt
                                                (alexandria:copy-stream in out :finish-output t))))))
       (with-slots (project-name) source
         (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
-~A http://localhost:~A/archive/~A/~A/~A ~A ~A ~A ~A~{ ~A~}
+~A ~A~A ~A ~A ~A ~A~{ ~A~}
 "
                 project-name
-                *qlot-port* project-name version (file-namestring (archive source))
+                *dist-base-url* (url-path-for source 'archive)
                 size
                 file-md5
                 content-sha1

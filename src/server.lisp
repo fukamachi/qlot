@@ -2,7 +2,7 @@
 (defpackage qlot.server
   (:use :cl)
   (:import-from :qlot.source
-                :*qlot-port*
+                :*dist-base-url*
                 :initialize
                 :url-path-for
                 :project.txt
@@ -22,15 +22,18 @@
                 :*response*)
   (:import-from :alexandria
                 :when-let)
-  (:export :*qlot-port*
-           :localhost
+  (:export :localhost
            :start-server
            :stop-server))
 (in-package :qlot.server)
 
 (defvar *handler* nil)
 
-(defun localhost (path)
+(defvar *qlot-port* nil)
+
+(defun localhost (&optional (path ""))
+  (unless *qlot-port*
+    (error "~S is not set." '*qlot-port*))
   (format nil "http://127.0.0.1:~D~A"
           *qlot-port*
           path))
@@ -59,7 +62,8 @@
                     (when (string-equal (subseq action-name (- (length action-name) 4))
                                         ".txt")
                       (setf (headers *response* :content-type) "text/plain")))
-                  (funcall (symbol-function action) source))))))
+                  (let ((*dist-base-url* (localhost)))
+                    (funcall (symbol-function action) source)))))))
     app))
 
 (defun start-server (sources)
