@@ -15,7 +15,6 @@ ql log4cl 2014-03-17
 ```
 
 ```common-lisp
-(ql:quickload :qlot)
 (qlot:install :myapp)
 ```
 
@@ -92,17 +91,13 @@ git datafly https://github.com/fukamachi/datafly.git :tag v0.7.4
 git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae51de8b95a6b0cf4b
 ```
 
-### Priorities
+### Priorities of distributions
 
 If multiple distributions provide the same library, lower one would take priority over higher ones.
 
 ## Installing other place than ./quicklisp/
 
-```common-lisp
-(qlot:install :myapp :quicklisp-home #P".ql/")
-```
-
-Set `:quicklisp-home` of your system.
+Set `:quicklisp-home` of your system and `(qlot:install :myapp)`.
 
 ```common-lisp
 (defsystem myapp
