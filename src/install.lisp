@@ -15,7 +15,7 @@
                 :project.txt
                 :install-source)
   (:import-from :qlot.http
-                :safety-http-request)
+                :download-file)
   (:import-from :qlot.shell
                 :safety-shell-command)
   (:import-from :qlot.asdf
@@ -30,8 +30,6 @@
                 :pathname-directory-pathname
                 :generate-random-string
                 :delete-directory-and-files)
-  (:import-from :alexandria
-                :copy-stream)
   (:export :install-quicklisp
            :install-qlfile
            :find-qlfile
@@ -49,15 +47,13 @@
 
 (defun install-quicklisp (&optional (path (merge-pathnames #P"quicklisp/" *default-pathname-defaults*)))
   (format t "~&Installing Quicklisp to ~A ...~%" path)
-  (let ((stream (safety-http-request "http://beta.quicklisp.org/quicklisp.lisp"
-                                     :want-stream t))
-        (*standard-output* (make-broadcast-stream))
+  (let ((*standard-output* (make-broadcast-stream))
         (quicklisp-file (merge-pathnames (format nil "quicklisp-~A.lisp"
                                                  (fad::generate-random-string))
                                          *tmp-directory*)))
     (ensure-directories-exist *tmp-directory*)
-    (with-open-file (out quicklisp-file :direction :output :if-does-not-exist :create)
-      (alexandria:copy-stream stream out))
+    (download-file "http://beta.quicklisp.org/quicklisp.lisp"
+                   quicklisp-file)
 
     #+(or ccl sbcl allegro clisp cmu ecl)
     (let ((eval-option (or

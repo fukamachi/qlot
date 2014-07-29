@@ -3,10 +3,13 @@
   (:use :cl)
   (:import-from :alexandria
                 :with-gensyms
-                :once-only)
+                :once-only
+                :copy-stream)
   (:export :http-request
            :safety-http-request
-           :http-request-failed))
+           :http-request-failed
+           :download-file
+           :retry-download))
 (in-package :qlot.http)
 
 (define-condition http-request-failed (simple-error)
@@ -36,3 +39,19 @@
                   :status ,status))
 
          ,stream))))
+
+(defun download-file (url output &key (element-type '(unsigned-byte 8)))
+  (format t "~&Downloading '~A' to '~A'...~%" url output)
+  (let (stream)
+    (tagbody downloading
+       (restart-case (setf stream (safety-http-request url :want-stream t))
+         (retry-download ()
+           :report "Retry to download."
+           (when (probe-file output)
+             (delete-file output))
+           (go downloading))))
+    (with-open-file (out output
+                         :direction :output :if-exists :supersede
+                         :element-type element-type)
+      (alexandria:copy-stream stream out
+                              :element-type element-type))))

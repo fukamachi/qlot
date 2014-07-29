@@ -7,7 +7,7 @@
   (:import-from :qlot.archive
                 :extract-tarball)
   (:import-from :qlot.http
-                :safety-http-request)
+                :download-file)
   (:import-from :ironclad
                 :byte-array-to-hex-string
                 :digest-file)
@@ -35,19 +35,11 @@
   (setf (source-archive source)
         (pathname
          (format nil "~A.tar.gz" (source-project-name source))))
-  (download-archive source)
+  (download-file (source-http-url source)
+                 (source-archive source))
   (setf (source-directory source)
         (extract-tarball (source-archive source)
                          (tmp-path #P"source-http/repos/")))
   (setf (source-version source)
         (ironclad:byte-array-to-hex-string
          (ironclad:digest-file :md5 (source-archive source)))))
-
-(defun download-archive (source)
-  (check-type source source-http)
-  (let ((stream (safety-http-request (source-http-url source) :want-stream t)))
-    (with-open-file (out (source-archive source)
-                         :direction :output :if-exists :supersede
-                         :element-type '(unsigned-byte 8))
-      (alexandria:copy-stream stream out
-                              :element-type '(unsigned-byte 8)))))
