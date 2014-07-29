@@ -36,6 +36,7 @@
             (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
     '("cl-dbi"
       "clack"
+      "datafly"
       "log4cl"
       "quicklisp"
       "shelly")

@@ -15,6 +15,7 @@
                :gzip-stream
                :ironclad
                :flexi-streams
+               :yason
                :alexandria
                :cl-ppcre
                :external-program
@@ -35,10 +36,12 @@
                  (:module "dist-sources"
                   :pathname "source"
                   :depends-on ("source" "http" "shell" "archive" "tmp")
+                  :serial t
                   :components
                   ((:file "ql")
                    (:file "git")
-                   (:file "http")))
+                   (:file "http")
+                   (:file "github")))
                  (:file "error")
                  (:file "asdf" :depends-on ("util"))
                  (:file "util"))))

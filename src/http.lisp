@@ -29,16 +29,16 @@
                                            (asdf::component-version (asdf:find-system :qlot)))))))
 
 (defmacro safety-http-request (url &rest args)
-  (with-gensyms (stream status)
+  (with-gensyms (body status)
     (once-only (url)
-      `(multiple-value-bind (,stream ,status)
+      `(multiple-value-bind (,body ,status)
            (http-request ,url ,@args)
          (unless (= ,status 200)
            (error 'http-request-failed
                   :url ,url
                   :status ,status))
 
-         ,stream))))
+         ,body))))
 
 (defun download-file (url output &key (element-type '(unsigned-byte 8)))
   (format t "~&Downloading '~A' to '~A'...~%" url output)

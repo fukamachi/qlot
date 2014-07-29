@@ -49,7 +49,7 @@ Qlot is going to solve this problem.
 <source> <dist name> [arg1, arg2..]
 ```
 
-Currently, `<source>` must be one of `ql`, `http` or `git`.
+Currently, `<source>` must be one of `ql`, `http`, `git` or `github`.
 
 ### ql
 
@@ -89,6 +89,15 @@ You can also specify `:ref`, `:branch` or `:tag`.
 git clack https://github.com/fukamachi/clack.git :branch develop
 git datafly https://github.com/fukamachi/datafly.git :tag v0.7.4
 git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae51de8b95a6b0cf4b
+```
+
+### github
+
+`github` source is similar to `git`, but it is specifically for GitHub. As it uses GitHub API and tarballs GitHub serves, it doesn't require "git" command.
+
+```
+github datafly fukamachi/datafly
+github datafly fukamachi/datafly :branch develop
 ```
 
 ### Priorities of distributions

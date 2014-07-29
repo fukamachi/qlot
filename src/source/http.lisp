@@ -12,7 +12,9 @@
                 :byte-array-to-hex-string
                 :digest-file)
   (:import-from :alexandria
-                :copy-stream))
+                :copy-stream)
+  (:export :source-http
+           :source-http-url))
 (in-package :qlot.source.http)
 
 (defclass source-http (source-has-directory)

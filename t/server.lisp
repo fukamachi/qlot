@@ -11,7 +11,7 @@
                 :http-request))
 (in-package :qlot-test.server)
 
-(plan 5)
+(plan 6)
 
 (let ((sources (parse-qlfile (merge-pathnames #P"qlfile" (asdf:system-relative-pathname :qlot #P"t/data/"))))
       (*tmp-directory* (fad:pathname-as-directory
@@ -25,6 +25,7 @@
   (is (nth-value 1 (http-request (localhost "/clack.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/shelly.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/cl-dbi.txt"))) 200)
+  (is (nth-value 1 (http-request (localhost "/datafly.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/log4cl.txt"))) 200)
 
   (fad:delete-directory-and-files *tmp-directory*))

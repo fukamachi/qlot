@@ -43,7 +43,7 @@
          "can escape a sharp")
 
 (let ((parsed (parse-qlfile (test-qlfile #P"qlfile"))))
-  (is (length parsed) 5))
+  (is (length parsed) 6))
 
 (is-error (parse-qlfile (test-qlfile #P"qlfile.error"))
           'qlot-qlfile-error)

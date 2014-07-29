@@ -41,7 +41,7 @@
                  (source-git-identifier source))))
   (git-clone source (source-directory source))
   (setf (source-version source)
-        (retrieve-source-git-ref source))
+        (format nil "git-~A" (retrieve-source-git-ref source)))
   (setf (source-archive source)
         (pathname
          (format nil "~A-~A.tar.gz"
@@ -87,7 +87,7 @@
                ((source-git-tag source)
                 (show-ref (format nil "refs/tags/~A" (source-git-tag source))))
                (T (show-ref "HEAD")))))
-    (format nil "git-~A" (get-ref source))))
+    (get-ref source)))
 
 (defun git-clone (source destination)
   (check-type source source-git)
