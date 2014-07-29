@@ -29,7 +29,7 @@
                 %version
                 (prin1-to-string %version)))))
 
-(defmethod initialize ((source source-ql))
+(defmethod prepare ((source source-ql))
   (setf (source-version source)
         (format nil "ql-~A" (source-ql-version source))))
 
@@ -152,3 +152,7 @@ distinfo-subscription-url: ~A~A
   (if (eq (source-project-name source) :all)
       nil
       (call-next-method)))
+
+(defmethod install-source ((source source-ql))
+  ;; do nothing.
+  nil)

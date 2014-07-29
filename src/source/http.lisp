@@ -31,7 +31,7 @@
           (source-project-name source)
           (source-http-url source)))
 
-(defmethod initialize ((source source-http))
+(defmethod prepare ((source source-http))
   (setf (source-archive source)
         (pathname
          (format nil "~A.tar.gz" (source-project-name source))))

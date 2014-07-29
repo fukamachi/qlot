@@ -33,14 +33,13 @@
            :repos-url repos-url
            args)))
 
-(defmethod initialize ((source source-git))
+(defmethod prepare ((source source-git))
   (setf (source-directory source)
         (pathname
          (format nil "~A~:[~;~:*-~A~]/"
                  (source-project-name source)
                  (source-git-identifier source))))
-  (unless (probe-file (source-directory source))
-    (git-clone source))
+  (git-clone source (source-directory source))
   (setf (source-version source)
         (retrieve-source-git-ref source))
   (setf (source-archive source)
@@ -90,10 +89,9 @@
                (T (show-ref "HEAD")))))
     (format nil "git-~A" (get-ref source))))
 
-(defun git-clone (source)
+(defun git-clone (source destination)
   (check-type source source-git)
-  (let ((dir (source-directory source))
-        (checkout-to (or (source-git-ref source)
+  (let ((checkout-to (or (source-git-ref source)
                          (source-git-branch source)
                          (source-git-tag source))))
     (tagbody git-cloning
@@ -101,17 +99,17 @@
            (safety-shell-command "git"
                                  (list "clone"
                                        (source-git-repos-url source)
-                                       dir))
+                                       destination))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
-           (when (probe-file dir)
-             (fad:delete-directory-and-files dir))
+           (when (probe-file destination)
+             (fad:delete-directory-and-files destination))
            (go git-cloning))))
     (when checkout-to
       (safety-shell-command "git"
                             (list "--git-dir"
-                                  (format nil "~A.git" dir)
+                                  (format nil "~A.git" destination)
                                   "--work-tree"
-                                  dir
+                                  destination
                                   "checkout"
                                   checkout-to)))))

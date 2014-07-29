@@ -3,7 +3,7 @@
   (:use :cl)
   (:import-from :qlot.source
                 :*dist-base-url*
-                :initialize
+                :prepare
                 :url-path-for
                 :project.txt
                 :distinfo.txt
@@ -50,7 +50,7 @@
           return port))
 
 (defun make-app (sources)
-  (map nil #'initialize sources)
+  (map nil #'prepare sources)
   (let ((app (make-instance '<app>)))
     (dolist (source sources)
       (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))

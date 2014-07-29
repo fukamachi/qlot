@@ -20,13 +20,13 @@
            :source
            :make-source
            :find-source-class
-           :initialize
+           :prepare
            :project-name
            :version
            :source-project-name
            :source-version
            :source-dist-name
-           :source-initialized
+           :source-prepared
            :project.txt
            :distinfo.txt
            :releases.txt
@@ -42,23 +42,19 @@
 
 (defvar *dist-base-url* nil)
 
+(defun find-source-class (class-name)
+  (intern (format nil "~A-~:@(~A~)" #.(string :source) class-name)
+          (format nil "~A.~:@(~A~)" #.(string :qlot.source) class-name)))
+
 (defclass source ()
   ((project-name :initarg :project-name
                  :reader source-project-name)
    (version :initarg :version
             :accessor source-version)
-   (initialized :initform nil
-                :accessor source-initialized)))
+   (prepared :initform nil
+             :accessor source-prepared)))
 
 (defgeneric make-source (source &rest args))
-
-(defun find-source-class (class-name)
-  (intern (format nil "~A-~:@(~A~)" #.(string :source) class-name)
-          (format nil "~A.~:@(~A~)" #.(string :qlot.source) class-name)))
-
-(defgeneric source-dist-name (source)
-  (:method ((source source))
-    (source-project-name source)))
 
 (defmethod print-object ((source source) stream)
   (format stream "#<~S ~A ~A>"
@@ -66,17 +62,25 @@
           (source-project-name source)
           (source-version source)))
 
-(defgeneric initialize (source)
+(defgeneric source-dist-name (source)
+  (:method ((source source))
+    (source-project-name source)))
+
+(defgeneric prepare (source)
   (:method ((source source))))
-(defmethod initialize :around (source)
-  (if (source-initialized source)
+
+(defmethod prepare :around (source)
+  (if (source-prepared source)
       t
       (call-next-method)))
-(defmethod initialize :after (source)
-  (setf (source-initialized source) t))
 
-(defgeneric install-source (source)
-  (:method (source)))
+(defmethod prepare :after (source)
+  (setf (source-prepared source) t))
+
+(defmethod install-source ((source source))
+  (with-package-functions :ql-dist (provided-releases dist ensure-installed)
+    (dolist (release (provided-releases (dist (source-dist-name source))))
+      (ensure-installed release))))
 
 
 ;;
@@ -115,7 +119,9 @@ distinfo-subscription-url: ~A~A
             *dist-base-url* (url-path-for source 'project.txt))))
 
 (defgeneric releases.txt (source))
+
 (defgeneric systems.txt (source))
+
 (defgeneric archive (source))
 
 (defgeneric url-path-for (source for)
@@ -136,13 +142,17 @@ distinfo-subscription-url: ~A~A
   (:method (source (for (eql 'archive)))
     nil))
 
+
+;;
+;; source-has-directory
+
 (defclass source-has-directory (source)
   ((directory :initarg :directory
               :reader source-directory)
    (archive :initarg :archive
             :reader source-archive)))
 
-(defmethod initialize :before ((source source-has-directory))
+(defmethod prepare :before ((source source-has-directory))
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))))
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source))))))
 
@@ -161,7 +171,7 @@ distinfo-subscription-url: ~A~A
                       value))))
 
 (defun source-system-files (source)
-  (check-type source source)
+  (check-type source source-has-directory)
   (remove-if-not
    (lambda (path)
      (equal (pathname-type path) "asd"))
@@ -225,8 +235,3 @@ distinfo-subscription-url: ~A~A
           (source-project-name source)
           (source-version source)
           (file-namestring (archive source))))
-
-(defmethod install-source ((source source-has-directory))
-  (with-package-functions :ql-dist (provided-releases dist ensure-installed)
-    (dolist (release (provided-releases (dist (source-dist-name source))))
-      (ensure-installed release))))
