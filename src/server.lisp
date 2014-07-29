@@ -73,8 +73,9 @@
   (let ((port (random-port)))
     (prog1
         (setf *handler*
-              (let ((*standard-output* (make-broadcast-stream)))
-                (clackup (make-app sources) :port port)))
+              (let ((*standard-output* (make-broadcast-stream))
+                    (app (make-app sources)))
+                (clackup app :port port)))
       (setf *qlot-port* port))))
 
 (defun stop-server ()
