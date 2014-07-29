@@ -202,8 +202,7 @@ distinfo-subscription-url: ~A~A
                           (asdf::component-sideway-dependencies (asdf:find-system system)))))))))
 
 (defmethod releases.txt ((source source-has-directory))
-  (let ((version (source-version source))
-        (tarball-file (source-archive source))
+  (let ((tarball-file (source-archive source))
         (prefix (car (last (pathname-directory (source-directory source))))))
     (multiple-value-bind (size file-md5 content-sha1)
         (with-open-file (in tarball-file :element-type '(unsigned-byte 8))

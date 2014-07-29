@@ -4,7 +4,8 @@
         :qlot.source)
   (:import-from :qlot.source.http
                 :source-http
-                :source-http-url)
+                :source-http-url
+                :url)
   (:import-from :qlot.http
                 :safety-http-request)
   (:import-from :yason
@@ -37,8 +38,8 @@
               (source-github-tag source)
               "master")))
 
-(defmethod initialize-instance :after ((source source-github))
-  (when (slot-unboundp source)
+(defmethod initialize-instance :after ((source source-github) &key)
+  (unless (slot-boundp source 'url)
     (setf (source-http-url source)
           (source-github-url source))))
 

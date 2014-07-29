@@ -21,7 +21,6 @@
         (apply #'install-project args))))
 
 (defun install-quicklisp (&optional (path nil path-specified-p))
-  (declare (ignore path))
   (unless (find-package :qlot.install)
     #+quicklisp (ql:quickload :qlot-install)
     #-quicklisp (asdf:load-system :qlot-install))
