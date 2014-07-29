@@ -8,6 +8,9 @@
                 :extract-tarball)
   (:import-from :qlot.http
                 :safety-http-request)
+  (:import-from :ironclad
+                :byte-array-to-hex-string
+                :digest-file)
   (:import-from :alexandria
                 :copy-stream))
 (in-package :qlot.source.http)
