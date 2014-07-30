@@ -37,9 +37,55 @@ Qlot is going to solve this problem.
 
 ## Tutorial
 
-1. Put "qlfile" at the root of your project directory.
-2. `(qlot:install :myapp)` or `shly -Lqlot install`.
-3. Load the system by `qlot:quickload`.
+### Adding "qlfile"
+
+Put a file "qlfile" at the root of your project directory.
+
+### Installation of libraries
+
+You can install libraries into the project directory via:
+
+```common-lisp
+(qlot:install :myapp)
+```
+
+It creates `quicklisp/` directory in the project directory and a file `qlfile.snapshot`.
+
+`qlfile.snapshot` is similar to `qlfile` except the library versions are qualified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
+
+Make sure you add `qlfile` and `qlfile.snapshot` to your version controlled repository and make the `quicklisp/` directory ignored.
+
+```
+$ echo quicklisp/ >> .gitignore
+$ git add qlfile qlfile.snapshot
+$ git commit -m 'Start using qlot.'
+```
+
+### Loading your application
+
+To load your qlot-ready application, use `qlot:quickload` instead of `ql:quickload`.
+
+```common-lisp
+(qlot:quickload :myapp)
+```
+
+### Updating the project-local quicklisp
+
+You can update the content of `quicklisp/` directory via:
+
+```common-lisp
+(qlot:update :myapp)
+```
+
+It will also overwrite `qlfile.snapshot`.
+
+### Deploying your application
+
+`qlot:install` takes a keyword argument `:deployment`. If `:deployment` is `T`, it will use `qlfile.snapshot` instead of `qlfile`.
+
+```common-lisp
+(qlot:install :myapp :deployment t)
+```
 
 ## `qlfile` syntax
 
