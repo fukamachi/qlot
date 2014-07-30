@@ -73,7 +73,8 @@
     ((source-git-tag source)
      (concatenate 'string "tag-" (source-git-tag source)))))
 
-(defmethod retrieve-source-git-ref ((source source-git))
+(defun retrieve-source-git-ref (source)
+  (check-type source source-git)
   (labels ((show-ref (pattern)
              (handler-case
                  (ppcre:scan-to-strings "^\\S+"

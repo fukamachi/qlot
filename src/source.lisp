@@ -80,10 +80,11 @@
 (defmethod prepare :after (source)
   (setf (source-prepared source) t))
 
-(defmethod install-source ((source source))
-  (with-package-functions :ql-dist (provided-releases dist ensure-installed)
-    (dolist (release (provided-releases (dist (source-dist-name source))))
-      (ensure-installed release))))
+(defgeneric install-source (source)
+  (:method ((source source))
+    (with-package-functions :ql-dist (provided-releases dist ensure-installed)
+      (dolist (release (provided-releases (dist (source-dist-name source))))
+        (ensure-installed release)))))
 
 
 ;;
@@ -159,19 +160,21 @@ distinfo-subscription-url: ~A~A
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))))
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source))))))
 
-(defmethod (setf source-directory) (value (source source-has-directory))
-  (setf (slot-value source 'directory)
-        (if (fad:pathname-absolute-p value)
-            value
-            (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))
-                      value))))
+(defgeneric (setf source-directory) (value source)
+  (:method (value (source source-has-directory))
+    (setf (slot-value source 'directory)
+          (if (fad:pathname-absolute-p value)
+              value
+              (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))
+                        value)))))
 
-(defmethod (setf source-archive) (value (source source-has-directory))
-  (setf (slot-value source 'archive)
-        (if (fad:pathname-absolute-p value)
-            value
-            (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source)))
-                      value))))
+(defgeneric (setf source-archive) (value source)
+  (:method (value (source source-has-directory))
+    (setf (slot-value source 'archive)
+          (if (fad:pathname-absolute-p value)
+              value
+              (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source)))
+                        value)))))
 
 (defun source-system-files (source)
   (check-type source source-has-directory)
