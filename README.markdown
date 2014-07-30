@@ -83,10 +83,10 @@ It will also overwrite `qlfile.snapshot`.
 
 ### Deploying your application
 
-`qlot:install` takes a keyword argument `:deployment`. If `:deployment` is `T`, it will use `qlfile.snapshot` instead of `qlfile`.
+`qlot:install` takes a keyword argument `:use-snapshot`. If `:use-snapshot` is `T`, it will use `qlfile.snapshot` instead of `qlfile`.
 
 ```common-lisp
-(qlot:install :myapp :deployment t)
+(qlot:install :myapp :use-snapshot t)
 ```
 
 ## `qlfile` syntax

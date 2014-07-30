@@ -113,7 +113,7 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/") deployment)
+(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/") use-snapshot)
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
 
@@ -126,10 +126,10 @@
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
     (uninstall-all-dists qlhome)
-    (apply-qlfile-to-qlhome file qlhome :deployment deployment)
+    (apply-qlfile-to-qlhome file qlhome :use-snapshot use-snapshot)
     (format t "~&Successfully installed.~%")))
 
-(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") deployment)
+(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") use-snapshot)
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
 
@@ -141,10 +141,10 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome :deployment deployment)
+    (apply-qlfile-to-qlhome file qlhome :use-snapshot use-snapshot)
     (format t "~&Successfully updated.~%")))
 
-(defun apply-qlfile-to-qlhome (file qlhome &key deployment)
+(defun apply-qlfile-to-qlhome (file qlhome &key use-snapshot)
   (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
         (sources (parse-qlfile file))
@@ -173,7 +173,7 @@
             (uninstall dist)))))
     (stop-server)
 
-    (unless (or deployment
+    (unless (or use-snapshot
                 (string= (pathname-type file) "snapshot"))
       (with-quicklisp-home qlhome
         (with-open-file (out (merge-pathnames (format nil "~A.snapshot" (pathname-name file))
@@ -185,9 +185,9 @@
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
 
-(defun find-qlfile (directory &key (errorp t) deployment)
+(defun find-qlfile (directory &key (errorp t) use-snapshot)
   (check-type directory pathname)
-  (let ((qlfile (merge-pathnames (if deployment
+  (let ((qlfile (merge-pathnames (if use-snapshot
                                      "qlfile.snapshot"
                                      "qlfile")
                                  directory)))
@@ -210,10 +210,10 @@
     (apply #'install-project (asdf:component-pathname object) args))
   (:method ((object asdf:system) &rest args)
     (apply #'install-project (asdf:component-pathname object) args))
-  (:method ((object pathname) &rest args &key deployment &allow-other-keys)
+  (:method ((object pathname) &rest args &key use-snapshot &allow-other-keys)
     (let ((object (truename object)))
       (if (fad:directory-pathname-p object)
-          (apply #'install-project (find-qlfile object :deployment deployment) args)
+          (apply #'install-project (find-qlfile object :use-snapshot use-snapshot) args)
           (apply #'install-qlfile object args)))))
 
 (defgeneric update-project (object &rest args)
