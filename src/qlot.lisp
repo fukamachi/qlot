@@ -7,6 +7,7 @@
                 :with-package-functions
                 :pathname-in-directory-p)
   (:export :install
+           :update
            :install-quicklisp
            :quickload))
 (in-package :qlot)
@@ -19,6 +20,15 @@
     (if (evenp (length args))
         (apply #'install-project *default-pathname-defaults* args)
         (apply #'install-project args))))
+
+(defun update (&rest args)
+  (unless (find-package :qlot.install)
+    #+quicklisp (ql:quickload :qlot-install)
+    #-quicklisp (asdf:load-system :qlot-install))
+  (with-package-functions :qlot.install (update-project)
+    (if (evenp (length args))
+        (apply #'update-project *default-pathname-defaults* args)
+        (apply #'update-project args))))
 
 (defun install-quicklisp (&optional (path nil path-specified-p))
   (unless (find-package :qlot.install)

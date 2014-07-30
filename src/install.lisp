@@ -1,6 +1,7 @@
 (in-package :cl-user)
 (defpackage qlot.install
-  (:use :cl)
+  (:use :cl
+        :iterate)
   (:import-from :qlot.parser
                 :parse-qlfile)
   (:import-from :qlot.server
@@ -124,24 +125,54 @@
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
     (uninstall-all-dists qlhome)
+    (apply-qlfile-to-qlhome file qlhome)
+    (format t "~&Successfully installed.~%")))
 
-    (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
-                                                                       (merge-pathnames #P"tmp/qlot/" qlhome))))
-          (sources (parse-qlfile file))
-          (time (get-universal-time)))
-      (start-server sources)
-      (with-package-functions :ql-dist (install-dist (setf preference) dist)
+(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+  (unless (probe-file file)
+    (error "File does not exist: ~A" file))
+
+  (let ((qlhome (canonical-qlhome quicklisp-home (fad:pathname-directory-pathname file))))
+
+    (unless (probe-file qlhome)
+      (error "~S does not exist." qlhome))
+
+    (unless (find-package :ql)
+      (load (merge-pathnames #P"setup.lisp" qlhome)))
+
+    (apply-qlfile-to-qlhome file qlhome)
+    (format t "~&Successfully updated.~%")))
+
+(defun apply-qlfile-to-qlhome (file qlhome)
+  (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
+                                                                     (merge-pathnames #P"tmp/qlot/" qlhome))))
+        (sources (parse-qlfile file))
+        (dists-map (make-hash-table :test 'equal))
+        (time (get-universal-time)))
+    (start-server sources)
+    (with-package-functions :ql-dist (all-dists install-dist uninstall (setf preference) dist name distinfo-subscription-url (setf distinfo-subscription-url))
+      (with-package-functions :ql (update-dist)
         (with-quicklisp-home qlhome
-          (dolist (source sources)
-            (format t "~&Installing a dist ~A~%" source)
-            (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace t)
+          (iter (for dist in (all-dists))
+            (setf (gethash (name dist) dists-map) dist))
+          (iter (for source in sources)
+            (let ((dist (gethash (source-dist-name source) dists-map)))
+              (cond
+                (dist (remhash (source-dist-name source) dists-map)
+                      (setf (distinfo-subscription-url dist)
+                            (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
+                                                 (distinfo-subscription-url dist)
+                                                 (localhost)))
+                      (update-dist dist :prompt nil))
+                (T (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace t)
+                   (install-source source))))
             (setf (preference (dist (source-dist-name source)))
-                  (incf time))
-            (install-source source))))
-      (stop-server)
-      (when (probe-file *tmp-directory*)
-        (fad:delete-directory-and-files *tmp-directory*))
-      (format t "~&Successfully installed.~%"))))
+                  (incf time)))
+          (iter (for (dist-name dist) in-hashtable dists-map)
+            (uninstall dist)))))
+    (stop-server)
+    (when (probe-file *tmp-directory*)
+      (fad:delete-directory-and-files *tmp-directory*))))
 
 (defun find-qlfile (object &optional (errorp t))
   (check-type object pathname)
@@ -173,3 +204,23 @@
       (if (fad:directory-pathname-p object)
           (apply #'install-project (find-qlfile object) args)
           (apply #'install-qlfile object args)))))
+
+(defgeneric update-project (object &rest args)
+  (:method ((object symbol) &rest args)
+    (apply #'update-project (asdf:find-system object) args))
+  (:method ((object string) &rest args)
+    (apply #'update-project (asdf:find-system object) args))
+  (:method ((object qlot-system) &rest args &key quicklisp-home &allow-other-keys)
+    (unless quicklisp-home
+      (setf args
+            (list* :quicklisp-home
+                   (system-quicklisp-home object)
+                   args)))
+    (apply #'update-project (asdf:component-pathname object) args))
+  (:method ((object asdf:system) &rest args)
+    (apply #'update-project (asdf:component-pathname object) args))
+  (:method ((object pathname) &rest args)
+    (let ((object (truename object)))
+      (if (fad:directory-pathname-p object)
+          (apply #'update-project (find-qlfile object) args)
+          (apply #'update-qlfile object args)))))

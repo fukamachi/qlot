@@ -17,7 +17,7 @@
   (fad:delete-directory-and-files *tmp-directory*))
 (ensure-directories-exist *tmp-directory*)
 
-(plan 3)
+(plan 4)
 
 (ok (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))
     "can install Quicklisp")
@@ -42,5 +42,18 @@
       "shelly")
     :test #'equal
     "can install dists from qlfile")
+
+(update (asdf:system-relative-pathname :qlot #P"t/data/qlfile2")
+        :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
+
+(is (mapcar (lambda (path)
+              (car (last (pathname-directory path))))
+            (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+    '("datafly"
+      "log4cl"
+      "quicklisp"
+      "shelly")
+    :test #'equal
+    "can update dists from qlfile")
 
 (finalize)

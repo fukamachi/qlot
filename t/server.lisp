@@ -21,7 +21,7 @@
   (diag "starting a server..")
   (start-server sources)
 
-  (is (nth-value 1 (http-request (localhost "/quicklisp.txt"))) 200)
+  (is (nth-value 1 (http-request (localhost "/quicklisp.txt"))) 404)
   (is (nth-value 1 (http-request (localhost "/clack.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/shelly.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/cl-dbi.txt"))) 200)

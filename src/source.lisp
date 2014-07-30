@@ -184,7 +184,7 @@ distinfo-subscription-url: ~A~A
     (asdf:map-systems
      (lambda (system)
        (when (equalp target (asdf:system-source-file system))
-         (push (asdf:component-name system) result))))
+         (push system result))))
     result))
 
 (defmethod systems.txt ((source source-has-directory))
@@ -197,9 +197,10 @@ distinfo-subscription-url: ~A~A
           (format s "~A ~A ~A ~{~A~^ ~}~%"
                   (source-project-name source)
                   (pathname-name system-file)
-                  system
+                  (asdf:component-name system)
                   (mapcar #'string-downcase
-                          (asdf::component-sideway-dependencies (asdf:find-system system)))))))))
+                          (asdf::component-sideway-dependencies system)))
+          (asdf:clear-system (asdf:component-name system)))))))
 
 (defmethod releases.txt ((source source-has-directory))
   (let ((tarball-file (source-archive source))
