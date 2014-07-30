@@ -19,6 +19,7 @@
   (:export :*dist-base-url*
            :source
            :make-source
+           :freeze-source
            :find-source-class
            :prepare
            :project-name
@@ -55,6 +56,8 @@
              :accessor source-prepared)))
 
 (defgeneric make-source (source &rest args))
+
+(defgeneric freeze-source (source))
 
 (defmethod print-object ((source source) stream)
   (format stream "#<~S ~A ~A>"

@@ -27,6 +27,11 @@
                    :project-name project-name
                    :url url)))
 
+(defmethod freeze-source ((source source-http))
+  (format nil "http ~A ~A"
+          (source-project-name source)
+          (source-http-url source)))
+
 (defmethod print-object ((source source-http) stream)
   (format stream "#<~S ~A ~A>"
           (type-of source)
@@ -43,5 +48,6 @@
         (extract-tarball (source-archive source)
                          (tmp-path #P"source-http/repos/")))
   (setf (source-version source)
-        (ironclad:byte-array-to-hex-string
-         (ironclad:digest-file :md5 (source-archive source)))))
+        (format nil "http-~A"
+                (ironclad:byte-array-to-hex-string
+                 (ironclad:digest-file :md5 (source-archive source))))))

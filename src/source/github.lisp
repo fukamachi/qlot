@@ -52,6 +52,12 @@
                    :branch branch
                    :tag tag)))
 
+(defmethod freeze-source ((source source-github))
+  (format nil "github ~A ~A :ref ~A"
+          (source-project-name source)
+          (source-github-repos source)
+          (retrieve-source-git-ref-from-github source)))
+
 (defun retrieve-source-git-ref-from-github (source)
   (labels ((retrieve-from-github (action)
              (yason:parse

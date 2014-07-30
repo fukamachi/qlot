@@ -8,3 +8,5 @@
 .#*
 
 t/tmp
+qlfile.snapshot
+t/data/qlfile2.snapshot

@@ -24,6 +24,15 @@
                        :project-name project-name
                        :%version version))))
 
+(defmethod freeze-source ((source source-ql))
+  (format nil "ql ~A ~A"
+          (source-project-name source)
+          (source-ql-version source)))
+
+(defmethod freeze-source ((source source-ql-all))
+  (format nil "ql :all ~A"
+          (source-ql-version source)))
+
 (defmethod print-object ((source source-ql) stream)
   (with-slots (project-name %version) source
     (format stream "#<~S ~A ~A>"
@@ -85,12 +94,17 @@
             when (string= (subseq line 0 len) str)
               collect (ppcre:split "\\s+" line)))))
 
-(defun source-ql-version (source)
-  (check-type source source-ql)
-  (with-slots (%version) source
-    (if (eq %version :latest)
-        (ql-latest-version)
-        %version)))
+(defgeneric source-ql-version (source)
+  (:method ((source source-ql))
+    (with-slots (%version) source
+      (if (eq %version :latest)
+          (ql-latest-version)
+          %version)))
+  (:method ((source source-ql-all))
+    (with-slots (version) source
+      (if (eq version :latest)
+          (ql-latest-version)
+          version))))
 
 (defmethod distinfo.txt ((source source-ql))
   (format nil "name: ~A

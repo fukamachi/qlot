@@ -12,6 +12,7 @@
                 :*tmp-directory*)
   (:import-from :qlot.source
                 :source-dist-name
+                :freeze-source
                 :url-path-for
                 :project.txt
                 :install-source)
@@ -112,7 +113,7 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/") deployment)
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
 
@@ -125,10 +126,10 @@
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
     (uninstall-all-dists qlhome)
-    (apply-qlfile-to-qlhome file qlhome)
+    (apply-qlfile-to-qlhome file qlhome :deployment deployment)
     (format t "~&Successfully installed.~%")))
 
-(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") deployment)
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
 
@@ -140,10 +141,10 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome)
+    (apply-qlfile-to-qlhome file qlhome :deployment deployment)
     (format t "~&Successfully updated.~%")))
 
-(defun apply-qlfile-to-qlhome (file qlhome)
+(defun apply-qlfile-to-qlhome (file qlhome &key deployment)
   (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
         (sources (parse-qlfile file))
@@ -171,17 +172,27 @@
           (iter (for (dist-name dist) in-hashtable dists-map)
             (uninstall dist)))))
     (stop-server)
+
+    (unless (or deployment
+                (string= (pathname-type file) "snapshot"))
+      (with-quicklisp-home qlhome
+        (with-open-file (out (merge-pathnames (format nil "~A.snapshot" (pathname-name file))
+                                              file)
+                             :direction :output
+                             :if-exists :supersede)
+          (format out "~{~A~%~}" (mapcar #'freeze-source sources)))))
+
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
 
-(defun find-qlfile (object &optional (errorp t))
-  (check-type object pathname)
-  (let ((qlfile (find-if #'fad:file-exists-p
-                         (mapcar
-                          (lambda (file) (merge-pathnames file object))
-                          '("qlfile.txt" "qlfile")))))
-    (when (and (not qlfile) errorp)
-      (error "qlfile is not found at ~A" object))
+(defun find-qlfile (directory &key (errorp t) deployment)
+  (check-type directory pathname)
+  (let ((qlfile (merge-pathnames (if deployment
+                                     "qlfile.snapshot"
+                                     "qlfile")
+                                 directory)))
+    (when (and (not (fad:file-exists-p qlfile)) errorp)
+      (error "'~A' is not found at '~A'." qlfile directory))
 
     qlfile))
 
@@ -199,10 +210,10 @@
     (apply #'install-project (asdf:component-pathname object) args))
   (:method ((object asdf:system) &rest args)
     (apply #'install-project (asdf:component-pathname object) args))
-  (:method ((object pathname) &rest args)
+  (:method ((object pathname) &rest args &key deployment &allow-other-keys)
     (let ((object (truename object)))
       (if (fad:directory-pathname-p object)
-          (apply #'install-project (find-qlfile object) args)
+          (apply #'install-project (find-qlfile object :deployment deployment) args)
           (apply #'install-qlfile object args)))))
 
 (defgeneric update-project (object &rest args)
