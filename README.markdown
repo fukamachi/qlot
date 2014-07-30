@@ -41,6 +41,8 @@ Qlot is going to solve this problem.
 
 Put a file "qlfile" at the root of your project directory.
 
+See [qlfile syntax](#qlfile-syntax) section to know how to write it.
+
 ### Installation of libraries
 
 You can install libraries into the project directory via:
@@ -150,7 +152,7 @@ github datafly fukamachi/datafly :branch develop
 
 If multiple distributions provide the same library, lower one would take priority over higher ones.
 
-## Installing other place than ./quicklisp/
+## Installing to other place than ./quicklisp/
 
 Set `:quicklisp-home` of your system and `(qlot:install :myapp)`.
 
