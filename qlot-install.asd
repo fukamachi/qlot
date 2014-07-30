@@ -35,7 +35,7 @@
                  (:file "source" :depends-on ("tmp" "util"))
                  (:module "dist-sources"
                   :pathname "source"
-                  :depends-on ("source" "http" "shell" "archive" "tmp")
+                  :depends-on ("source" "http" "shell" "archive" "tmp" "util")
                   :serial t
                   :components
                   ((:file "ql")

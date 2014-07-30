@@ -28,9 +28,11 @@
                    :url url)))
 
 (defmethod freeze-source ((source source-http))
-  (format nil "http ~A ~A"
-          (source-project-name source)
-          (source-http-url source)))
+  (with-output-to-string (s)
+    (princ (call-next-method) s)
+    (format s "http ~A ~A~%"
+            (source-project-name source)
+            (source-http-url source))))
 
 (defmethod print-object ((source source-http) stream)
   (format stream "#<~S ~A ~A>"

@@ -4,6 +4,7 @@
   (:import-from :qlot.tmp
                 :tmp-path)
   (:import-from :qlot.util
+                :find-qlfile
                 :with-package-functions)
   (:import-from :fad
                 :list-directory
@@ -15,7 +16,8 @@
   (:import-from :flexi-streams
                 :with-output-to-sequence)
   (:import-from :alexandria
-                :copy-stream)
+                :copy-stream
+                :when-let)
   (:export :*dist-base-url*
            :source
            :make-source
@@ -155,6 +157,13 @@ distinfo-subscription-url: ~A~A
               :reader source-directory)
    (archive :initarg :archive
             :reader source-archive)))
+
+(defmethod freeze-source ((source source-has-directory))
+  (with-output-to-string (s)
+    (when-let (qlfile (find-qlfile (source-directory source) :errorp nil))
+      (with-package-functions :qlot.parser (parse-qlfile)
+        (loop for source in (parse-qlfile qlfile)
+              do (princ (freeze-source source) s))))))
 
 (defmethod prepare :before ((source source-has-directory))
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))))

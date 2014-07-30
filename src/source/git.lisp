@@ -34,10 +34,12 @@
            args)))
 
 (defmethod freeze-source ((source source-git))
-  (format nil "git ~A ~A :ref ~A"
-          (source-project-name source)
-          (source-git-repos-url source)
-          (retrieve-source-git-ref source)))
+  (with-output-to-string (s)
+    (princ (call-next-method) s)
+    (format s "git ~A ~A :ref ~A~%"
+            (source-project-name source)
+            (source-git-repos-url source)
+            (retrieve-source-git-ref source))))
 
 (defmethod prepare ((source source-git))
   (setf (source-directory source)

@@ -24,6 +24,7 @@
                 :qlot-system
                 :system-quicklisp-home)
   (:import-from :qlot.util
+                :find-qlfile
                 :with-quicklisp-home
                 :with-package-functions)
   (:import-from :fad
@@ -34,7 +35,6 @@
                 :delete-directory-and-files)
   (:export :install-quicklisp
            :install-qlfile
-           :find-qlfile
            :install-project))
 (in-package :qlot.install)
 
@@ -180,21 +180,10 @@
                                               file)
                              :direction :output
                              :if-exists :supersede)
-          (format out "~{~A~%~}" (mapcar #'freeze-source sources)))))
+          (format out "~{~A~&~}" (mapcar #'freeze-source sources)))))
 
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
-
-(defun find-qlfile (directory &key (errorp t) use-snapshot)
-  (check-type directory pathname)
-  (let ((qlfile (merge-pathnames (if use-snapshot
-                                     "qlfile.snapshot"
-                                     "qlfile")
-                                 directory)))
-    (when (and (not (fad:file-exists-p qlfile)) errorp)
-      (error "'~A' is not found at '~A'." qlfile directory))
-
-    qlfile))
 
 (defgeneric install-project (object &rest args)
   (:method ((object symbol) &rest args)

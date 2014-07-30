@@ -3,7 +3,8 @@
   (:use :cl)
   (:export :with-quicklisp-home
            :with-package-functions
-           :pathname-in-directory-p))
+           :pathname-in-directory-p
+           :find-qlfile))
 (in-package :qlot.util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
@@ -28,3 +29,18 @@
           do (return nil)
         finally
            (return t)))
+
+(defun find-qlfile (directory &key (errorp t) use-snapshot)
+  (check-type directory pathname)
+  (unless (probe-file directory)
+    (error "~S does not exist." directory))
+  (let ((qlfile (merge-pathnames (if use-snapshot
+                                     "qlfile.snapshot"
+                                     "qlfile")
+                                 directory)))
+    (unless (probe-file qlfile)
+      (when errorp
+        (error "'~A' is not found at '~A'." qlfile directory))
+      (setf qlfile nil))
+
+    qlfile))
