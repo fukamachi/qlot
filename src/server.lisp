@@ -32,6 +32,11 @@
 (defvar *qlot-port* nil)
 
 (defun localhost (&optional (path ""))
+  ;; Use PATH If PATH is an URL, not an URL path.
+  (when (and (< 0 (length path))
+             (not (char= (aref path 0) #\/)))
+    (return-from localhost path))
+
   (unless *qlot-port*
     (error "~S is not set." '*qlot-port*))
   (format nil "http://127.0.0.1:~D~A"

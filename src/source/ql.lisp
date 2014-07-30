@@ -91,21 +91,6 @@
         (ql-latest-version)
         %version)))
 
-(defmethod project.txt ((source source-ql))
-  (with-slots (project-name) source
-    (if (eq project-name :all)
-        (format nil "name: quicklisp
-version: ~A
-distinfo-subscription-url: ~A~A
-release-index-url: http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt
-system-index-url: http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt
-"
-                (source-version source)
-                *dist-base-url* (url-path-for source 'project.txt)
-                (source-ql-version source)
-                (source-ql-version source))
-        (call-next-method))))
-
 (defmethod distinfo.txt ((source source-ql))
   (format nil "name: ~A
 version: ~A
@@ -134,9 +119,14 @@ distinfo-subscription-url: ~A~A
           (source-ql-releases source)))
 
 (defmethod url-path-for ((source source-ql) (for (eql 'project.txt)))
-  (if (eq (source-project-name source) :all)
-      "/quicklisp.txt"
-      (call-next-method)))
+  (with-slots (project-name %version) source
+    (cond
+      ((and (eq project-name :all)
+            (eq %version :latest))
+       "http://beta.quicklisp.org/dist/quicklisp.txt")
+      ((eq project-name :all)
+       (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/distinfo.txt" (source-version source)))
+      (T (call-next-method)))))
 
 (defmethod url-path-for ((source source-ql) (for (eql 'distinfo.txt)))
   (if (eq (source-project-name source) :all)
