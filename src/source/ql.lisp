@@ -12,11 +12,17 @@
 (defclass source-ql (source)
   ((%version :initarg :%version)))
 
+(defclass source-ql-all (source) ())
+
 (defmethod make-source ((source (eql 'source-ql)) &rest args)
   (destructuring-bind (project-name version) args
-    (make-instance 'source-ql
-                   :project-name project-name
-                   :%version version)))
+    (if (eq project-name :all)
+        (make-instance 'source-ql-all
+                       :project-name "quicklisp"
+                       :version version)
+        (make-instance 'source-ql
+                       :project-name project-name
+                       :%version version))))
 
 (defmethod print-object ((source source-ql) stream)
   (with-slots (project-name %version) source
@@ -32,11 +38,6 @@
 (defmethod prepare ((source source-ql))
   (setf (source-version source)
         (format nil "ql-~A" (source-ql-version source))))
-
-(defmethod source-dist-name ((source source-ql))
-  (if (eq (source-project-name source) :all)
-      "quicklisp"
-      (call-next-method)))
 
 (defcached ql-latest-version ()
   (let ((stream (safety-http-request "http://beta.quicklisp.org/dist/quicklisp.txt"
@@ -118,31 +119,16 @@ distinfo-subscription-url: ~A~A
 "
           (source-ql-releases source)))
 
-(defmethod url-path-for ((source source-ql) (for (eql 'project.txt)))
-  (with-slots (project-name %version) source
-    (cond
-      ((and (eq project-name :all)
-            (eq %version :latest))
-       "http://beta.quicklisp.org/dist/quicklisp.txt")
-      ((eq project-name :all)
-       (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/distinfo.txt" (source-version source)))
-      (T (call-next-method)))))
-
-(defmethod url-path-for ((source source-ql) (for (eql 'distinfo.txt)))
-  (if (eq (source-project-name source) :all)
-      nil
-      (call-next-method)))
-
-(defmethod url-path-for ((source source-ql) (for (eql 'systems.txt)))
-  (if (eq (source-project-name source) :all)
-      nil
-      (call-next-method)))
-
-(defmethod url-path-for ((source source-ql) (for (eql 'releases.txt)))
-  (if (eq (source-project-name source) :all)
-      nil
-      (call-next-method)))
+(defmethod url-path-for ((source source-ql-all) (for (eql 'project.txt)))
+  (with-slots (version) source
+    (if (eq version :latest)
+        "http://beta.quicklisp.org/dist/quicklisp.txt"
+        (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/distinfo.txt" version))))
 
 (defmethod install-source ((source source-ql))
+  ;; do nothing.
+  nil)
+
+(defmethod install-source ((source source-ql-all))
   ;; do nothing.
   nil)
