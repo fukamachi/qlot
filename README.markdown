@@ -51,15 +51,15 @@ You can install libraries into the project directory via:
 (qlot:install :myapp)
 ```
 
-It creates `quicklisp/` directory in the project directory and a file `qlfile.snapshot`.
+It creates `quicklisp/` directory in the project directory and a file `qlfile.lock`.
 
-`qlfile.snapshot` is similar to `qlfile` except the library versions are qualified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
+`qlfile.lock` is similar to `qlfile` except the library versions are qualified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
 
-Make sure you add `qlfile` and `qlfile.snapshot` to your version controlled repository and make the `quicklisp/` directory ignored.
+Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository and make the `quicklisp/` directory ignored.
 
 ```
 $ echo quicklisp/ >> .gitignore
-$ git add qlfile qlfile.snapshot
+$ git add qlfile qlfile.lock
 $ git commit -m 'Start using qlot.'
 ```
 
@@ -79,11 +79,11 @@ You can update the content of `quicklisp/` directory via:
 (qlot:update :myapp)
 ```
 
-It will also overwrite `qlfile.snapshot`.
+It will also overwrite `qlfile.lock`.
 
 ### Deploying your application
 
-`qlot:install` will use `qlfile.snapshot` if it exists.
+`qlot:install` will use `qlfile.lock` if it exists.
 
 ```common-lisp
 (qlot:install :myapp)

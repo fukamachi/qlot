@@ -8,5 +8,5 @@
 .#*
 
 t/tmp
-qlfile.snapshot
-t/data/qlfile2.snapshot
+qlfile.lock
+t/data/qlfile2.lock

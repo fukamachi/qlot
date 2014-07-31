@@ -173,9 +173,9 @@
             (uninstall dist)))))
     (stop-server)
 
-    (unless (string= (pathname-type file) "snapshot")
+    (unless (string= (pathname-type file) "lock")
       (with-quicklisp-home qlhome
-        (with-open-file (out (merge-pathnames (format nil "~A.snapshot" (pathname-name file))
+        (with-open-file (out (merge-pathnames (format nil "~A.lock" (pathname-name file))
                                               file)
                              :direction :output
                              :if-exists :supersede)
@@ -202,7 +202,7 @@
     (let ((object (truename object)))
       (if (fad:directory-pathname-p object)
           (apply #'install-project
-                 (or (find-qlfile object :errorp nil :use-snapshot t)
+                 (or (find-qlfile object :errorp nil :use-lock t)
                      (find-qlfile object :errorp nil)
                      (error "qlfile does not exist in '~S'." object))
                  args)

@@ -30,12 +30,12 @@
         finally
            (return t)))
 
-(defun find-qlfile (directory &key (errorp t) use-snapshot)
+(defun find-qlfile (directory &key (errorp t) use-lock)
   (check-type directory pathname)
   (unless (probe-file directory)
     (error "~S does not exist." directory))
-  (let ((qlfile (merge-pathnames (if use-snapshot
-                                     "qlfile.snapshot"
+  (let ((qlfile (merge-pathnames (if use-lock
+                                     "qlfile.lock"
                                      "qlfile")
                                  directory)))
     (unless (probe-file qlfile)
