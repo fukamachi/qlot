@@ -13,13 +13,13 @@
 
 (plan 6)
 
-(let ((sources (parse-qlfile (merge-pathnames #P"qlfile" (asdf:system-relative-pathname :qlot #P"t/data/"))))
+(let ((qlfile (merge-pathnames #P"qlfile" (asdf:system-relative-pathname :qlot #P"t/data/")))
       (*tmp-directory* (fad:pathname-as-directory
                         (merge-pathnames (fad::generate-random-string)
                                          (asdf:system-relative-pathname :qlot #P"t/tmp/qlot/")))))
   (ensure-directories-exist *tmp-directory*)
   (diag "starting a server..")
-  (start-server sources)
+  (start-server qlfile)
 
   (is (nth-value 1 (http-request (localhost "/quicklisp.txt"))) 404)
   (is (nth-value 1 (http-request (localhost "/clack.txt"))) 200)

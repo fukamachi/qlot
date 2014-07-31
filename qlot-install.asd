@@ -27,7 +27,7 @@
                 :components
                 ((:file "parser" :depends-on ("source" "error"))
                  (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "shell" "asdf" "util"))
-                 (:file "server" :depends-on ("source"))
+                 (:file "server" :depends-on ("source" "parser"))
                  (:file "http")
                  (:file "shell")
                  (:file "tmp")

@@ -9,8 +9,6 @@
                 :with-package-functions)
   (:import-from :function-cache
                 :defcached)
-  (:import-from :alexandria
-                :when-let)
   (:export :source-ql))
 (in-package :qlot.source.ql)
 
@@ -30,17 +28,9 @@
                        :%version version))))
 
 (defmethod freeze-source ((source source-ql))
-  (with-output-to-string (s)
-    (with-package-functions :ql-dist (find-release base-directory)
-      (when-let (qlfile
-                 (find-qlfile (base-directory (find-release (source-project-name source)))
-                              :errorp nil))
-        (with-package-functions :qlot.parser (parse-qlfile)
-          (loop for source in (parse-qlfile qlfile)
-                do (princ (freeze-source source) s)))))
-    (format s "ql ~A ~A~%"
-            (source-project-name source)
-            (source-ql-version source))))
+  (format nil "ql ~A ~A"
+          (source-project-name source)
+          (source-ql-version source)))
 
 (defmethod freeze-source ((source source-ql-all))
   (format nil "ql :all ~A"

@@ -22,6 +22,7 @@
            :source
            :make-source
            :freeze-source
+           :source-direct-dependencies
            :find-source-class
            :prepare
            :project-name
@@ -60,6 +61,10 @@
 (defgeneric make-source (source &rest args))
 
 (defgeneric freeze-source (source))
+
+(defgeneric source-direct-dependencies (source)
+  (:method ((source source))
+    '()))
 
 (defmethod print-object ((source source) stream)
   (format stream "#<~S ~A ~A>"
@@ -158,16 +163,14 @@ distinfo-subscription-url: ~A~A
    (archive :initarg :archive
             :reader source-archive)))
 
-(defmethod freeze-source ((source source-has-directory))
-  (with-output-to-string (s)
-    (when-let (qlfile (find-qlfile (source-directory source) :errorp nil))
-      (with-package-functions :qlot.parser (parse-qlfile)
-        (loop for source in (parse-qlfile qlfile)
-              do (princ (freeze-source source) s))))))
-
 (defmethod prepare :before ((source source-has-directory))
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))))
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source))))))
+
+(defmethod source-direct-dependencies ((source source-has-directory))
+  (when-let (qlfile (find-qlfile (source-directory source) :errorp nil))
+    (with-package-functions :qlot.parser (parse-qlfile)
+      (parse-qlfile qlfile))))
 
 (defgeneric (setf source-directory) (value source)
   (:method (value (source source-has-directory))

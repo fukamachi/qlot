@@ -3,13 +3,15 @@
   (:use :cl)
   (:import-from :qlot.source
                 :*dist-base-url*
-                :prepare
+                :source-prepared
                 :url-path-for
                 :project.txt
                 :distinfo.txt
                 :releases.txt
                 :systems.txt
                 :archive)
+  (:import-from :qlot.parser
+                :prepare-qlfile)
   (:import-from :clack
                 :clackup
                 :stop)
@@ -55,7 +57,6 @@
           return port))
 
 (defun make-app (sources)
-  (map nil #'prepare sources)
   (let ((app (make-instance '<app>)))
     (dolist (source sources)
       (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
@@ -71,17 +72,23 @@
                     (funcall (symbol-function action) source)))))))
     app))
 
-(defun start-server (sources)
-  (when *handler*
-    (stop-server))
+(defgeneric start-server (sources)
+  (:method ((sources list))
+    (unless (every #'source-prepared sources)
+      (error "All ~S must be prepared: ~S" 'sources sources))
 
-  (let ((port (random-port)))
-    (prog1
-        (setf *handler*
-              (let ((*standard-output* (make-broadcast-stream))
-                    (app (make-app sources)))
-                (clackup app :port port)))
-      (setf *qlot-port* port))))
+    (when *handler*
+      (stop-server))
+
+    (let ((port (random-port)))
+      (prog1
+          (setf *handler*
+                (let ((*standard-output* (make-broadcast-stream))
+                      (app (make-app sources)))
+                  (clackup app :port port)))
+        (setf *qlot-port* port))))
+  (:method ((qlfile pathname))
+    (start-server (prepare-qlfile qlfile))))
 
 (defun stop-server ()
   (when *handler*

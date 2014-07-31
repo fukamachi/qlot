@@ -3,7 +3,7 @@
   (:use :cl
         :iterate)
   (:import-from :qlot.parser
-                :parse-qlfile)
+                :prepare-qlfile)
   (:import-from :qlot.server
                 :localhost
                 :start-server
@@ -145,11 +145,11 @@
     (format t "~&Successfully updated.~%")))
 
 (defun apply-qlfile-to-qlhome (file qlhome &key use-snapshot)
-  (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
-                                                                     (merge-pathnames #P"tmp/qlot/" qlhome))))
-        (sources (parse-qlfile file))
-        (dists-map (make-hash-table :test 'equal))
-        (time (get-universal-time)))
+  (let* ((dists-map (make-hash-table :test 'equal))
+         (time (get-universal-time))
+         (*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
+                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
+         (sources (prepare-qlfile file)))
     (start-server sources)
     (with-package-functions :ql-dist (all-dists install-dist uninstall (setf preference) dist name distinfo-subscription-url (setf distinfo-subscription-url))
       (with-package-functions :ql (update-dist)

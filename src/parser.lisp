@@ -4,10 +4,14 @@
         :iterate)
   (:import-from :qlot.source
                 :make-source
-                :find-source-class)
+                :prepare
+                :find-source-class
+                :source-project-name
+                :source-direct-dependencies)
   (:import-from :qlot.error
                 :qlot-qlfile-error)
-  (:export :parse-qlfile))
+  (:export :parse-qlfile
+           :prepare-qlfile))
 (in-package :qlot.parser)
 
 (defun parse-qlfile-line (line)
@@ -46,3 +50,26 @@
                       (parse-qlfile-line line)))
       (when source
         (collect source)))))
+
+(defparameter *prepared-sources* nil)
+
+(defmacro with-prepared-transaction (&body body)
+  `(let ((*prepared-sources* (make-hash-table :test 'equal)))
+     ,@body))
+
+(defun prepare-qlfile (file)
+  (labels ((prepare-source (source)
+             (when (gethash (source-project-name source) *prepared-sources*)
+               (warn "Project named '~S' is already prepared. Ignored."
+                     (source-project-name source))
+               (return-from prepare-source '()))
+
+             (prepare source)
+             (setf (gethash (source-project-name source) *prepared-sources*) t)
+
+             (append (iter (for dep in (reverse (source-direct-dependencies source)))
+                       (appending (prepare-source dep)))
+                     (list source))))
+    (with-prepared-transaction
+      (iter (for source in (parse-qlfile file))
+        (appending (prepare-source source))))))
