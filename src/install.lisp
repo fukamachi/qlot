@@ -165,7 +165,7 @@
                                                  (distinfo-subscription-url dist)
                                                  (localhost)))
                       (update-dist dist :prompt nil))
-                (T (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace t)
+                (T (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)
                    (install-source source))))
             (setf (preference (dist (source-dist-name source)))
                   (incf time)))
