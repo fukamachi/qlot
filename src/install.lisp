@@ -113,7 +113,7 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/") use-snapshot)
+(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
 
@@ -126,10 +126,10 @@
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
     (uninstall-all-dists qlhome)
-    (apply-qlfile-to-qlhome file qlhome :use-snapshot use-snapshot)
+    (apply-qlfile-to-qlhome file qlhome)
     (format t "~&Successfully installed.~%")))
 
-(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") use-snapshot)
+(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
 
@@ -141,10 +141,10 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome :use-snapshot use-snapshot)
+    (apply-qlfile-to-qlhome file qlhome)
     (format t "~&Successfully updated.~%")))
 
-(defun apply-qlfile-to-qlhome (file qlhome &key use-snapshot)
+(defun apply-qlfile-to-qlhome (file qlhome)
   (let* ((dists-map (make-hash-table :test 'equal))
          (time (get-universal-time))
          (*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
@@ -173,8 +173,7 @@
             (uninstall dist)))))
     (stop-server)
 
-    (unless (or use-snapshot
-                (string= (pathname-type file) "snapshot"))
+    (unless (string= (pathname-type file) "snapshot")
       (with-quicklisp-home qlhome
         (with-open-file (out (merge-pathnames (format nil "~A.snapshot" (pathname-name file))
                                               file)
@@ -199,10 +198,14 @@
     (apply #'install-project (asdf:component-pathname object) args))
   (:method ((object asdf:system) &rest args)
     (apply #'install-project (asdf:component-pathname object) args))
-  (:method ((object pathname) &rest args &key use-snapshot &allow-other-keys)
+  (:method ((object pathname) &rest args)
     (let ((object (truename object)))
       (if (fad:directory-pathname-p object)
-          (apply #'install-project (find-qlfile object :use-snapshot use-snapshot) args)
+          (apply #'install-project
+                 (or (find-qlfile object :errorp nil :use-snapshot t)
+                     (find-qlfile object :errorp nil)
+                     (error "qlfile does not exist in '~S'." object))
+                 args)
           (apply #'install-qlfile object args)))))
 
 (defgeneric update-project (object &rest args)
