@@ -146,16 +146,17 @@
 
 (defun apply-qlfile-to-qlhome (file qlhome)
   (let* ((dists-map (make-hash-table :test 'equal))
-         (time (get-universal-time))
          (*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
                                                                       (merge-pathnames #P"tmp/qlot/" qlhome))))
          (sources (prepare-qlfile file)))
     (start-server sources)
-    (with-package-functions :ql-dist (all-dists install-dist uninstall (setf preference) dist name distinfo-subscription-url (setf distinfo-subscription-url))
-      (with-package-functions :ql (update-dist)
-        (with-quicklisp-home qlhome
+    (with-quicklisp-home qlhome
+      (let (to-install to-update to-uninstall)
+        (with-package-functions :ql-dist (all-dists name)
           (iter (for dist in (all-dists))
-            (setf (gethash (name dist) dists-map) dist))
+            (setf (gethash (name dist) dists-map) dist)))
+
+        (with-package-functions :ql-dist (distinfo-subscription-url (setf distinfo-subscription-url))
           (iter (for source in sources)
             (let ((dist (gethash (source-dist-name source) dists-map)))
               (cond
@@ -164,13 +165,34 @@
                             (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
                                                  (distinfo-subscription-url dist)
                                                  (localhost)))
-                      (update-dist dist :prompt nil))
-                (T (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)
-                   (install-source source))))
+                      (push dist to-update))
+                (T (push source to-install))))))
+
+        (iter (for (dist-name dist) in-hashtable dists-map)
+          (push dist to-uninstall))
+
+        ;; Uninstalling
+        (with-package-functions :ql-dist (uninstall)
+          (iter (for dist in to-uninstall)
+            (uninstall dist)))
+
+        ;; Updating
+        (with-package-functions :ql (update-dist)
+          (iter (for dist in to-update)
+            (update-dist dist :prompt nil)))
+
+        ;; Installing
+        (with-package-functions :ql-dist (install-dist)
+          (iter (for source in to-install)
+            (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)
+            (install-source source)))
+
+        (with-package-functions :ql-dist (dist (setf preference))
+          (iter
+            (for source in sources)
+            (for time from (get-universal-time))
             (setf (preference (dist (source-dist-name source)))
-                  (incf time)))
-          (iter (for (dist-name dist) in-hashtable dists-map)
-            (uninstall dist)))))
+                  time)))))
     (stop-server)
 
     (unless (string= (pathname-type file) "lock")
