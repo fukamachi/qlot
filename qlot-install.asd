@@ -8,6 +8,7 @@
   :author "Eitaro Fukamachi"
   :license "MIT"
   :depends-on (:clack
+               :clack-handler-hunchentoot
                :ningle
                :drakma
                :archive
