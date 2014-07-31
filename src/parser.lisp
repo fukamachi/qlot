@@ -7,7 +7,11 @@
                 :prepare
                 :find-source-class
                 :source-project-name
+                :source-version
                 :source-direct-dependencies)
+  (:import-from :qlot.source.ql
+                :source-ql
+                :source-ql-all)
   (:import-from :qlot.error
                 :qlot-qlfile-error)
   (:export :parse-qlfile
@@ -71,5 +75,13 @@
                        (appending (prepare-source dep)))
                      (list source))))
     (with-prepared-transaction
-      (iter (for source in (parse-qlfile file))
-        (appending (prepare-source source))))))
+      (let ((default-ql-source (make-source 'source-ql :all :latest))
+            (sources (iter (for source in (parse-qlfile file))
+                       (appending (prepare-source source)))))
+        (unless (find-if (lambda (source)
+                           (and (typep source 'source-ql-all)
+                                (eq (source-version source) :latest)))
+                         sources)
+          (prepare default-ql-source)
+          (push default-ql-source sources))
+        sources))))

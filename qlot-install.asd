@@ -25,7 +25,7 @@
                :function-cache)
   :components ((:module "src"
                 :components
-                ((:file "parser" :depends-on ("source" "error"))
+                ((:file "parser" :depends-on ("source" "dist-sources" "error"))
                  (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "shell" "asdf" "util"))
                  (:file "server" :depends-on ("source" "parser"))
                  (:file "http")
