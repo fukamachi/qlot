@@ -175,7 +175,7 @@
 
     (unless (string= (pathname-type file) "lock")
       (with-quicklisp-home qlhome
-        (with-open-file (out (merge-pathnames (format nil "~A.lock" (pathname-name file))
+        (with-open-file (out (merge-pathnames (format nil "~A.lock" (file-namestring file))
                                               file)
                              :direction :output
                              :if-exists :supersede)
