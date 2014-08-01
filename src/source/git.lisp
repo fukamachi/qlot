@@ -77,13 +77,14 @@
   (check-type source source-git)
   (labels ((show-ref (pattern)
              (handler-case
-                 (ppcre:scan-to-strings "^\\S+"
-                                        (safety-shell-command "git"
-                                                              (list "--git-dir"
-                                                                    (format nil "~A.git"
-                                                                            (source-directory source))
-                                                                    "show-ref"
-                                                                    pattern)))
+                 (let ((*standard-output* (make-broadcast-stream)))
+                   (ppcre:scan-to-strings "^\\S+"
+                                          (safety-shell-command "git"
+                                                                (list "--git-dir"
+                                                                      (format nil "~A.git"
+                                                                              (source-directory source))
+                                                                      "show-ref"
+                                                                      pattern))))
                (shell-command-error ()
                  (error "No git references named '~A'." pattern))))
            (get-ref (source)
@@ -113,10 +114,11 @@
              (fad:delete-directory-and-files destination))
            (go git-cloning))))
     (when checkout-to
-      (safety-shell-command "git"
-                            (list "--git-dir"
-                                  (format nil "~A.git" destination)
-                                  "--work-tree"
-                                  destination
-                                  "checkout"
-                                  checkout-to)))))
+      (let ((*error-output* (make-broadcast-stream)))
+        (safety-shell-command "git"
+                              (list "--git-dir"
+                                    (format nil "~A.git" destination)
+                                    "--work-tree"
+                                    destination
+                                    "checkout"
+                                    checkout-to))))))
