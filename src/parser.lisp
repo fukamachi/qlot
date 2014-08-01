@@ -64,7 +64,7 @@
 (defun prepare-qlfile (file)
   (labels ((prepare-source (source)
              (when (gethash (source-project-name source) *prepared-sources*)
-               (warn "Project named '~S' is already prepared. Ignored."
+               (warn "Project named ~S is already prepared. Ignored."
                      (source-project-name source))
                (return-from prepare-source '()))
 
