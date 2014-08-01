@@ -37,7 +37,6 @@
            :systems.txt
            :archive
            :url-path-for
-           :install-source
 
            :source-has-directory
            :source-directory
@@ -86,12 +85,6 @@
 
 (defmethod prepare :after (source)
   (setf (source-prepared source) t))
-
-(defgeneric install-source (source)
-  (:method ((source source))
-    (with-package-functions :ql-dist (provided-releases dist ensure-installed)
-      (dolist (release (provided-releases (dist (source-dist-name source))))
-        (ensure-installed release)))))
 
 
 ;;

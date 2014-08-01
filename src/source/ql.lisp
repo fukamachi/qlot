@@ -141,7 +141,3 @@ distinfo-subscription-url: ~A~A
     (if (eq version :latest)
         "http://beta.quicklisp.org/dist/quicklisp.txt"
         (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/distinfo.txt" version))))
-
-(defmethod install-source ((source source-ql-all))
-  ;; do nothing.
-  nil)
