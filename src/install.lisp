@@ -156,7 +156,7 @@
           (iter (for dist in (all-dists))
             (setf (gethash (name dist) dists-map) dist)))
 
-        (with-package-functions :ql-dist (distinfo-subscription-url (setf distinfo-subscription-url))
+        (with-package-functions :ql-dist (distinfo-subscription-url (setf distinfo-subscription-url) available-update)
           (iter (for source in sources)
             (let ((dist (gethash (source-dist-name source) dists-map)))
               (cond
@@ -165,27 +165,46 @@
                             (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
                                                  (distinfo-subscription-url dist)
                                                  (localhost)))
-                      (push dist to-update))
-                (T (push source to-install))))))
+                      (when (available-update dist)
+                        (push dist to-update)))
+                (T (push source to-install))))
+            (finally (setf to-update (nreverse to-update))
+                     (setf to-install (nreverse to-install)))))
 
         (iter (for (dist-name dist) in-hashtable dists-map)
-          (push dist to-uninstall))
+          (push dist to-uninstall)
+          (finally (setf to-uninstall (nreverse to-uninstall))))
 
-        ;; Uninstalling
-        (with-package-functions :ql-dist (uninstall)
-          (iter (for dist in to-uninstall)
-            (uninstall dist)))
-
-        ;; Updating
-        (with-package-functions :ql (update-dist)
-          (iter (for dist in to-update)
-            (update-dist dist :prompt nil)))
+        ;; Report
+        (with-package-functions :ql-dist (name)
+          (when to-install
+            (format t "~&  New dists:~%    ~{~A~^ ~}~%" (mapcar #'source-dist-name to-install)))
+          (when to-update
+            (format t "~&  Updated dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-update)))
+          (when to-uninstall
+            (format t "~&  Removed dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-uninstall))))
 
         ;; Installing
         (with-package-functions :ql-dist (install-dist)
           (iter (for source in to-install)
             (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)
             (install-source source)))
+
+        ;; Updating
+        (with-package-functions :ql-dist (update-in-place available-update name version)
+          (iter (for dist in to-update)
+            (let ((new-dist (available-update dist)))
+              (format t "~&Updating dist ~S version ~S -> ~S.~%"
+                      (name dist)
+                      (version dist)
+                      (version new-dist))
+              (update-in-place dist new-dist))))
+
+        ;; Uninstalling
+        (with-package-functions :ql-dist (uninstall name)
+          (iter (for dist in to-uninstall)
+            (format t "~&Removing dist ~S.~%" (name dist))
+            (uninstall dist)))
 
         (with-package-functions :ql-dist (dist (setf preference))
           (iter
