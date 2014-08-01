@@ -14,7 +14,14 @@ ql log4cl 2014-03-17
 ```
 
 ```common-lisp
+;; Installing libraries project-locally.
 (qlot:install :myapp)
+
+;; Loading a project with its project-local quicklisp.
+(qlot:quickload :myapp)
+
+;; Updating depending libraries of a project.
+(qlot:update :myapp)
 ```
 
 ## What qlot is trying to solve
@@ -25,9 +32,9 @@ However, since what only you can specify is the month of distribution, you have 
 
 "local-projects/" or ASDF configurations may be a solution to this problem, but there are a couple of problems.
 
-1) They are not project-local. If you have multiple projects that use the different version of the same library, it would be a problem.
+1) *They are not project-local.* If you have multiple projects that use the different version of the same library, it would be a problem.
 
-2) They are difficult to fix the version or to update them. If your project need to work on other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
+2) *They are difficult to fix the version or to update them.* If your project need to work on other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
 
 This is what qlot is trying to solve.
 
@@ -35,7 +42,7 @@ This is what qlot is trying to solve.
 
 ### via Quicklisp
 
-As Qlot is going to be included in Quicklisp dist in August 2014, you can install it through Quicklisp.
+As [qlot is going to be included](https://github.com/quicklisp/quicklisp-projects/issues/716) in Quicklisp dist in August 2014, you can install it through Quicklisp.
 
 ```common-lisp
 (ql:quickload :qlot)
@@ -122,6 +129,14 @@ $ git commit -m 'Bundle dependencies.'
 (qlot:update :myapp)
 (qlot:update #P"/path/to/myapp/")
 (qlot:update #P"/path/to/myapp/my-qlfile")
+```
+
+### quickload
+
+`qlot:quickload` is similar to `ql:quickload` except it uses its project-local `quicklisp/` directory.
+
+```common-lisp
+(qlot:quickload :myapp)
 ```
 
 ## `qlfile` syntax
