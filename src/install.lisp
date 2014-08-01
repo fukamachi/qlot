@@ -213,13 +213,14 @@
             (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)))
 
         ;; Updating
-        (with-package-functions :ql-dist (update-in-place available-update name version)
+        (with-package-functions :ql-dist (update-in-place available-update name version uninstall installed-releases)
           (iter (for dist in to-update)
             (let ((new-dist (available-update dist)))
               (format t "~&Updating dist ~S version ~S -> ~S.~%"
                       (name dist)
                       (version dist)
                       (version new-dist))
+              (map nil #'uninstall (installed-releases dist))
               (update-in-place dist new-dist))))
 
         ;; Uninstalling
