@@ -27,7 +27,7 @@ However, since what only you can specify is the month of distribution, you have 
 
 1) They are not project-local. If you have multiple projects that use the different version of the same library, it would be a problem.
 
-2) They are difficult to fix the version or to update them. If your project need to work other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
+2) They are difficult to fix the version or to update them. If your project need to work on other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
 
 This is what qlot is trying to solve.
 
