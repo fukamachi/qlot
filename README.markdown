@@ -9,7 +9,7 @@ Qlot is a project-local library installer using Quicklisp facility. This aims to
 ```
 # "qlfile" of "myapp"
 git clack https://github.com/fukamachi/clack.git
-git shelly https://github.com/fukamachi/datafly.git :branch v0.7.x
+github datafly fukamachi/datafly :branch v0.7.x
 ql log4cl 2014-03-17
 ```
 
@@ -17,22 +17,19 @@ ql log4cl 2014-03-17
 (qlot:install :myapp)
 ```
 
-You can use it from a terminal with [Shelly](http://shlyfile.org/).
-
-```
-$ cd /path/to/myapp/
-$ shly -Lqlot install
-```
-
-## What qlot is going to solve
+## What qlot is trying to solve
 
 We have Quicklisp, the central library registry. It made installation of libraries damn easy.
 
 However, since what only you can specify is the month of distribution, you have to use all libraries at the same moment. You cannot use a newer/older version of a library for your project.
 
-"local-projects/" or ASDF configurations may be a solution to this problem, but these are not project-local. If you have multiple projects that use the different version of the same library, it would be a problem.
+"local-projects/" or ASDF configurations may be a solution to this problem, but there are a couple of problems.
 
-Qlot is going to solve this problem.
+1) They are not project-local. If you have multiple projects that use the different version of the same library, it would be a problem.
+
+2) They are difficult to fix the version or to update them. If your project need to work other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
+
+This is what qlot is trying to solve.
 
 ## Installation
 
@@ -103,6 +100,28 @@ $ echo quicklisp/cache >> .gitignore
 $ echo quicklisp/tmp >> .gitignore
 $ git add .gitignore quicklisp/
 $ git commit -m 'Bundle dependencies.'
+```
+
+## Commands
+
+### install
+
+`qlot:install` will install Quicklisp and libraries that declared in `qlfile` project-locally. `qlfile.lock` will be used with precedence if it exists.
+
+```common-lisp
+(qlot:install :myapp)
+(qlot:install #P"/path/to/myapp/")
+(qlot:install #P"/path/to/myapp/my-qlfile")
+```
+
+### update
+
+`qlot:update` will update the project-local `quicklisp/` directory using `qlfile`.
+
+```common-lisp
+(qlot:update :myapp)
+(qlot:update #P"/path/to/myapp/")
+(qlot:update #P"/path/to/myapp/my-qlfile")
 ```
 
 ## `qlfile` syntax

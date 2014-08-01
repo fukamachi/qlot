@@ -14,6 +14,8 @@
 (in-package :qlot)
 
 (defun install (&rest args)
+  "Install Quicklisp and libraries that declared in qlfile project-locally.
+qlfile.lock will be used with precedence if it exists."
   (unless (find-package :qlot.install)
     #+quicklisp (ql:quickload :qlot-install)
     #-quicklisp (asdf:load-system :qlot-install))
@@ -23,6 +25,7 @@
         (apply #'install-project args))))
 
 (defun update (&rest args)
+  "Update the project-local `quicklisp/` directory using qlfile."
   (unless (find-package :qlot.install)
     #+quicklisp (ql:quickload :qlot-install)
     #-quicklisp (asdf:load-system :qlot-install))
