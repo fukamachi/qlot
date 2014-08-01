@@ -8,7 +8,6 @@ Qlot is a project-local library installer using Quicklisp facility. This aims to
 
 ```
 # "qlfile" of "myapp"
-ql :all :latest
 git clack https://github.com/fukamachi/clack.git
 git shelly https://github.com/fukamachi/datafly.git :branch v0.7.x
 ql log4cl 2014-03-17
@@ -34,6 +33,16 @@ However, since what only you can specify is the month of distribution, you have 
 "local-projects/" or ASDF configurations may be a solution to this problem, but these are not project-local. If you have multiple projects that use the different version of the same library, it would be a problem.
 
 Qlot is going to solve this problem.
+
+## Installation
+
+### via Quicklisp
+
+As Qlot is going to be included in Quicklisp dist in August 2014, you can install it through Quicklisp.
+
+```common-lisp
+(ql:quickload :qlot)
+```
 
 ## Tutorial
 
@@ -94,12 +103,18 @@ It will also overwrite `qlfile.lock`.
 "qlfile" is a collection of Quicklisp dist declarations. Each line of that represents a dist.
 
 ```
-<source> <dist name> [arg1, arg2..]
+<source> <project name> [arg1, arg2..]
 ```
 
 Currently, `<source>` must be one of `ql`, `http`, `git` or `github`.
 
 ### ql
+
+```
+ql <project name> <version>
+ql <project name> :latest
+ql :all <version>
+```
 
 `ql` source will download libraries from Quicklisp official dist, but you can specify the version.
 
@@ -112,10 +127,15 @@ ql clack 2014-01-13
 `ql` source also allows `:all` as `<dist name>` and `:latest` as the version.
 
 ```
-ql :all :latest
+ql :all 2014-01-13
+ql clack :latest
 ```
 
 ### http
+
+```
+http <project name> <url> [<file md5>]
+```
 
 `http` source will download a tarball.
 
@@ -124,6 +144,13 @@ http yason http://netzhansa.com/yason.tar.gz
 ```
 
 ### git
+
+```
+git <project name> <repos url>
+git <project name> <repos url> :ref <commit ref>
+git <project name> <repos url> :branch <branch name>
+git <project name> <repos url> :tag <tag name>
+```
 
 `git` source will download libraries from a public git repository.
 
@@ -140,6 +167,13 @@ git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae
 ```
 
 ### github
+
+```
+github <project name> <repos>
+github <project name> <repos> :ref <commit ref>
+github <project name> <repos> :branch <branch name>
+github <project name> <repos> :tag <tag name>
+```
 
 `github` source is similar to `git`, but it is specifically for GitHub. As it uses GitHub API and tarballs GitHub serves, it doesn't require "git" command.
 
