@@ -11,6 +11,8 @@
   (:import-from :ironclad
                 :byte-array-to-hex-string
                 :digest-file)
+  (:import-from :function-cache
+                :defcached)
   (:import-from :alexandria
                 :copy-stream)
   (:export :source-http
@@ -19,18 +21,22 @@
 
 (defclass source-http (source-has-directory)
   ((url :initarg :url
-        :accessor source-http-url)))
+        :accessor source-http-url)
+   (%version :initarg :%version
+             :accessor source-http-%version)))
 
 (defmethod make-source ((source (eql 'source-http)) &rest args)
-  (destructuring-bind (project-name url) args
+  (destructuring-bind (project-name url &optional version) args
     (make-instance 'source-http
                    :project-name project-name
-                   :url url)))
+                   :url url
+                   :%version version)))
 
 (defmethod freeze-source ((source source-http))
-  (format nil "http ~A ~A"
+  (format nil "http ~A ~A ~A"
           (source-project-name source)
-          (source-http-url source)))
+          (source-http-url source)
+          (source-http-archive-md5 source)))
 
 (defmethod print-object ((source source-http) stream)
   (format stream "#<~S ~A ~A>"
@@ -47,7 +53,16 @@
   (setf (source-directory source)
         (extract-tarball (source-archive source)
                          (tmp-path #P"source-http/repos/")))
-  (setf (source-version source)
-        (format nil "http-~A"
-                (ironclad:byte-array-to-hex-string
-                 (ironclad:digest-file :md5 (source-archive source))))))
+  (let ((file-md5 (source-http-archive-md5 source)))
+    (when (and (source-http-%version source)
+               (not (string= (source-http-%version source) file-md5)))
+      (cerror "Ignore and continue."
+              "File MD5 of ~S is different from ~S.~%The content seems to have changed."
+              (source-http-url source)
+              file-md5))
+    (setf (source-version source)
+          (format nil "http-~A" file-md5))))
+
+(defcached source-http-archive-md5 (source)
+  (ironclad:byte-array-to-hex-string
+   (ironclad:digest-file :md5 (source-archive source))))
