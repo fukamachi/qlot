@@ -90,12 +90,19 @@ You can update the content of `quicklisp/` directory via:
 
 It will also overwrite `qlfile.lock`.
 
-### Deploying your application
+### Bundling libraries
 
-`qlot:install` will use `qlfile.lock` if it exists.
+You can bundle all depending libraries by adding the project-local `quicklisp/` directory to version controll repository.
 
 ```common-lisp
 (qlot:install :myapp)
+```
+
+```
+$ echo quicklisp/cache >> .gitignore
+$ echo quicklisp/tmp >> .gitignore
+$ git add .gitignore quicklisp/
+$ git commit -m 'Bundle dependencies.'
 ```
 
 ## `qlfile` syntax
