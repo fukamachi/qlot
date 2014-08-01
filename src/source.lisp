@@ -196,14 +196,15 @@ distinfo-subscription-url: ~A~A
    (fad:list-directory (source-directory source))))
 
 (defun system-file-systems (name)
-  (let* ((system (asdf:find-system name))
-         (target (asdf:system-source-file system))
-         (result '()))
-    (asdf:map-systems
-     (lambda (system)
-       (when (equalp target (asdf:system-source-file system))
-         (push system result))))
-    result))
+  (handler-bind ((style-warning #'muffle-warning))
+    (let* ((system (asdf:find-system name))
+           (target (asdf:system-source-file system))
+           (result '()))
+      (asdf:map-systems
+       (lambda (system)
+         (when (equalp target (asdf:system-source-file system))
+           (push system result))))
+      result)))
 
 (defmethod systems.txt ((source source-has-directory))
   (with-output-to-string (s)
