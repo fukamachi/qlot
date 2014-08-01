@@ -7,11 +7,10 @@
                 :prepare
                 :find-source-class
                 :source-project-name
-                :source-version
+                :source-dist-name
                 :source-direct-dependencies)
   (:import-from :qlot.source.ql
-                :source-ql
-                :source-ql-all)
+                :source-ql)
   (:import-from :qlot.error
                 :qlot-qlfile-error)
   (:export :parse-qlfile
@@ -78,10 +77,9 @@
       (let ((default-ql-source (make-source 'source-ql :all :latest))
             (sources (iter (for source in (parse-qlfile file))
                        (appending (prepare-source source)))))
-        (unless (find-if (lambda (source)
-                           (and (typep source 'source-ql-all)
-                                (eq (source-version source) :latest)))
-                         sources)
+        (unless (find "quicklisp" sources
+                      :key #'source-dist-name
+                      :test #'string=)
           (prepare default-ql-source)
           (push default-ql-source sources))
         sources))))
