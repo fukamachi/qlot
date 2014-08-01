@@ -23,6 +23,7 @@
   ((url :initarg :url
         :accessor source-http-url)
    (%version :initarg :%version
+             :initform nil
              :accessor source-http-%version)))
 
 (defmethod make-source ((source (eql 'source-http)) &rest args)
