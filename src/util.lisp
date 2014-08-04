@@ -74,7 +74,7 @@
                (let ((asdf::*source-registry* global-source-registry))
                  (and (find (string-downcase component)
                             (asdf:registered-systems) :test #'string=)
-                      (asdf:component-loaded-p component))))
+                      (asdf::component-loaded-p component))))
              (load-system (system-name)
                (with-package-functions :ql-dist (ensure-installed find-system name dependency-tree)
                  (let ((system (find-system system-name)))
@@ -94,11 +94,11 @@
                    (ensure-installed system)
                    (asdf:find-system system-name)
 
-                   (loop for dep in (asdf:component-sideway-dependencies (asdf:find-system system-name))
+                   (loop for dep in (asdf::component-sideway-dependencies (asdf:find-system system-name))
                          do (load-system (string-downcase dep)))))))
       (call-in-local-quicklisp
        (lambda ()
-         (loop for dep in (asdf:component-sideway-dependencies system)
+         (loop for dep in (asdf::component-sideway-dependencies system)
                do (load-system (string-downcase dep)))
          (with-package-functions :ql (quickload)
            (apply #'quickload (asdf:component-name system) quickload-args)))
@@ -116,7 +116,7 @@
                             (mapcan #'system-dependencies (copy-list (required-systems system))))))))
          (map nil #'ensure-installed
               (delete-duplicates (mapcan #'system-dependencies
-                                         (copy-list (asdf:component-sideway-dependencies system)))
+                                         (copy-list (asdf::component-sideway-dependencies system)))
                                  :key #'name
                                  :test #'string=))))
      system
