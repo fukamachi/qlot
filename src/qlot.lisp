@@ -27,7 +27,7 @@ qlfile.lock will be used with precedence if it exists."
         (apply #'install-project args))))
 
 (defun update (&rest args)
-  "Update the project-local `quicklisp/` directory using qlfile."
+  "Update the project-local 'quicklisp/' directory using qlfile."
   (unless (find-package :qlot.install)
     #+quicklisp (ql:quickload :qlot-install)
     #-quicklisp (asdf:load-system :qlot-install))
@@ -37,6 +37,8 @@ qlfile.lock will be used with precedence if it exists."
         (apply #'update-project args))))
 
 (defun install-quicklisp (&optional (path nil path-specified-p))
+  "Install Quicklisp in the given PATH.
+If PATH isn't specified, this installs it to './quicklisp/'."
   (unless (find-package :qlot.install)
     #+quicklisp (ql:quickload :qlot-install)
     #-quicklisp (asdf:load-system :qlot-install))
@@ -46,6 +48,7 @@ qlfile.lock will be used with precedence if it exists."
                                    nil))))
 
 (defun quickload (systems &rest args &key verbose prompt explain &allow-other-keys)
+  "Load SYSTEMS in the each project-local `quicklisp/`."
   (declare (ignore verbose prompt explain))
   (unless (consp systems)
     (setf systems (list systems)))
