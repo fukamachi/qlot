@@ -63,7 +63,7 @@
             asdf::system-source-registry-directory))
         (asdf:*central-registry* (list (asdf:system-source-directory system))))
     #-quicklisp
-    (load (merge-pathnames #P"setup.lisp" qlhome))
+    (load (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
     #+quicklisp
     (push (merge-pathnames #P"quicklisp/" qlhome) asdf:*central-registry*)
 
