@@ -19,8 +19,8 @@
   :components ((:module "src"
                 :components
                 ((:file "qlot" :depends-on ("asdf" "util"))
-                 (:file "asdf" :depends-on ("util"))
-                 (:file "util"))))
+                 (:file "asdf")
+                 (:file "util" :depends-on ("asdf")))))
   :in-order-to ((test-op (test-op qlot-test))))
 
 #-qlot

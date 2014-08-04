@@ -6,11 +6,13 @@
   (:import-from :qlot.util
                 :with-package-functions
                 :pathname-in-directory-p
-                :load-system-with-local-quicklisp)
+                :load-system-with-local-quicklisp
+                :with-local-quicklisp)
   (:export :install
            :update
            :install-quicklisp
-           :quickload))
+           :quickload
+           :with-local-quicklisp))
 (in-package :qlot)
 
 (defun install (&rest args)

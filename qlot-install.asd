@@ -44,6 +44,6 @@
                    (:file "http")
                    (:file "github")))
                  (:file "error")
-                 (:file "asdf" :depends-on ("util"))
-                 (:file "util"))))
+                 (:file "asdf")
+                 (:file "util" :depends-on ("asdf")))))
   :in-order-to ((test-op (test-op qlot-test))))

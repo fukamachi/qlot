@@ -1,11 +1,14 @@
 (in-package :cl-user)
 (defpackage qlot.util
   (:use :cl)
+  (:import-from :qlot.asdf
+                :system-quicklisp-home)
   (:export :with-quicklisp-home
            :with-package-functions
            :pathname-in-directory-p
            :find-qlfile
            :call-in-local-quicklisp
+           :with-local-quicklisp
            :ensure-installed-in-local-quicklisp))
 (in-package :qlot.util)
 
@@ -67,6 +70,12 @@
     (asdf:initialize-source-registry)
 
     (funcall fn)))
+
+(defmacro with-local-quicklisp (system &body body)
+  `(call-in-local-quicklisp
+    (lambda () ,@body)
+    ,system
+    (system-quicklisp-home (asdf:find-system ,system))))
 
 (defun load-system-with-local-quicklisp (system qlhome &key quickload-args (if-does-not-exist :error))
   (let ((global-source-registry asdf::*source-registry*))

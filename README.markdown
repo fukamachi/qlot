@@ -139,6 +139,17 @@ $ git commit -m 'Bundle dependencies.'
 (qlot:quickload :myapp)
 ```
 
+### with-local-quicklisp
+
+Eval the given form in the local quicklisp environment.
+
+```common-lisp
+(qlot:with-local-quicklisp :myapp
+  (ql:quickload :drakma))
+```
+
+NOTE: This macro won't warn when the system in the other place already registered. If you want to ensure loading in the local quicklisp, unregister it by `asdf:clear-system` first.
+
 ## `qlfile` syntax
 
 "qlfile" is a collection of Quicklisp dist declarations. Each line of that represents a dist.
