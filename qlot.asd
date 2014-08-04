@@ -22,3 +22,8 @@
                  (:file "asdf" :depends-on ("util"))
                  (:file "util"))))
   :in-order-to ((test-op (test-op qlot-test))))
+
+#-qlot
+(defmethod perform :after ((o load-op) (c (eql (find-system :qlot))))
+  (declare (ignore o c))
+  (pushnew :qlot *features*))
