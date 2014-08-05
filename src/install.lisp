@@ -131,15 +131,6 @@
     (uninstall-all-dists qlhome)
     (apply-qlfile-to-qlhome file qlhome)
 
-    (when *system-directory*
-      (loop for system-name in (mapcar #'pathname-name
-                                       (remove-if-not (lambda (file)
-                                                        (string= (pathname-type file) "asd"))
-                                                      (fad:list-directory *system-directory*)))
-            for system = (asdf:find-system system-name)
-            do (ensure-installed-in-local-quicklisp
-                system
-                (system-quicklisp-home system))))
     (format t "~&Successfully installed.~%")))
 
 (defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
@@ -156,15 +147,6 @@
 
     (apply-qlfile-to-qlhome file qlhome)
 
-    (when *system-directory*
-      (loop for system-name in (mapcar #'pathname-name
-                                       (remove-if-not (lambda (file)
-                                                        (string= (pathname-type file) "asd"))
-                                                      (fad:list-directory *system-directory*)))
-            for system = (asdf:find-system system-name)
-            do (ensure-installed-in-local-quicklisp
-                system
-                (system-quicklisp-home system))))
     (format t "~&Successfully updated.~%")))
 
 (defun apply-qlfile-to-qlhome (file qlhome)
@@ -228,6 +210,16 @@
           (iter (for dist in to-uninstall)
             (format t "~&Removing dist ~S.~%" (name dist))
             (uninstall dist)))
+
+        (when *system-directory*
+          (loop for system-name in (mapcar #'pathname-name
+                                           (remove-if-not (lambda (file)
+                                                            (string= (pathname-type file) "asd"))
+                                                          (fad:list-directory *system-directory*)))
+                for system = (asdf:find-system system-name)
+                do (ensure-installed-in-local-quicklisp
+                    system
+                    (system-quicklisp-home system))))
 
         (with-package-functions :ql-dist (dist (setf preference))
           (iter
