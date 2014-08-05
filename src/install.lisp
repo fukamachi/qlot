@@ -32,8 +32,7 @@
                 :pathname-absolute-p
                 :pathname-directory-pathname
                 :generate-random-string
-                :delete-directory-and-files
-                :list-directory)
+                :delete-directory-and-files)
   (:export :install-quicklisp
            :install-qlfile
            :install-project))
@@ -114,7 +113,7 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defparameter *system-directory* nil)
+(defparameter *current-system* nil)
 
 (defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
   (unless (probe-file file)
@@ -211,15 +210,14 @@
             (format t "~&Removing dist ~S.~%" (name dist))
             (uninstall dist)))
 
-        (when *system-directory*
-          (loop for system-name in (mapcar #'pathname-name
-                                           (remove-if-not (lambda (file)
-                                                            (string= (pathname-type file) "asd"))
-                                                          (fad:list-directory *system-directory*)))
-                for system = (asdf:find-system system-name)
-                do (ensure-installed-in-local-quicklisp
-                    system
-                    (system-quicklisp-home system))))
+        (when *current-system*
+          (let ((qlhome (system-quicklisp-home *current-system*)))
+            (map nil
+                 (lambda (asd)
+                   (ensure-installed-in-local-quicklisp
+                    (asdf:find-system (pathname-name asd))
+                    qlhome))
+                 (asdf::directory-asd-files (asdf:component-pathname *current-system*)))))
 
         (with-package-functions :ql-dist (dist (setf preference))
           (iter
@@ -240,6 +238,13 @@
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
 
+(defun directory-system-for-qlhome (directory)
+  (iter (for asd in (asdf::directory-asd-files directory))
+    (for system = (asdf:find-system (pathname-name asd)))
+    (when (typep system 'qlot-system)
+      (return-from directory-system-for-qlhome system)))
+  (car (asdf::directory-asd-files directory)))
+
 (defgeneric install-project (object &rest args)
   (:method ((object symbol) &rest args)
     (apply #'install-project (asdf:find-system object) args))
@@ -253,16 +258,17 @@
                    args)))
     (apply #'call-next-method object args))
   (:method ((object asdf:system) &rest args)
-    (let ((*system-directory* (asdf:component-pathname object)))
+    (let ((*current-system* object)
+          (system-dir (asdf:component-pathname object)))
       (apply #'install-qlfile
-             (or (find-qlfile *system-directory* :errorp nil :use-lock t)
-                 (find-qlfile *system-directory* :errorp nil)
-                 (error "qlfile does not exist in '~S'." *system-directory*))
+             (or (find-qlfile system-dir :errorp nil :use-lock t)
+                 (find-qlfile system-dir :errorp nil)
+                 (error "qlfile does not exist in '~S'." system-dir))
              args)))
   (:method ((object pathname) &rest args)
     (let ((object (truename object)))
       (if (fad:directory-pathname-p object)
-          (let ((*system-directory* object))
+          (let ((*current-system* (directory-system-for-qlhome object)))
             (apply #'install-qlfile
                    (or (find-qlfile object :errorp nil :use-lock t)
                        (find-qlfile object :errorp nil)
@@ -283,15 +289,16 @@
                    args)))
     (apply #'call-next-method object args))
   (:method ((object asdf:system) &rest args)
-    (let ((*system-directory* (asdf:component-pathname object)))
+    (let ((*current-system* object)
+          (system-dir (asdf:component-pathname object)))
       (apply #'update-qlfile
-             (or (find-qlfile *system-directory* :errorp nil :use-lock t)
-                 (find-qlfile *system-directory* :errorp nil)
-                 (error "qlfile does not exist in '~S'." *system-directory*))
+             (or (find-qlfile system-dir :errorp nil :use-lock t)
+                 (find-qlfile system-dir :errorp nil)
+                 (error "qlfile does not exist in '~S'." system-dir))
              args)))
   (:method ((object pathname) &rest args)
     (let ((object (truename object)))
       (if (fad:directory-pathname-p object)
-          (let ((*system-directory* object))
+          (let ((*current-system* (directory-system-for-qlhome object)))
             (apply #'update-qlfile (find-qlfile object) args))
           (apply #'update-qlfile object args)))))
