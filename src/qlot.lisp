@@ -6,7 +6,6 @@
   (:import-from :qlot.util
                 :with-package-functions
                 :pathname-in-directory-p
-                :load-system-with-local-quicklisp
                 :with-local-quicklisp)
   (:export :install
            :update
@@ -54,9 +53,6 @@ If PATH isn't specified, this installs it to './quicklisp/'."
     (setf systems (list systems)))
   (with-package-functions :ql (quickload)
     (loop for system-name in systems
-          for system = (asdf:find-system (string-downcase system-name))
-          do (load-system-with-local-quicklisp
-              system
-              (system-quicklisp-home system)
-              :quickload-args args)))
+          do (with-local-quicklisp system-name
+               (apply #'quickload system-name args))))
   systems)
