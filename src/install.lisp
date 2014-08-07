@@ -210,6 +210,13 @@
             (format t "~&Removing dist ~S.~%" (name dist))
             (uninstall dist)))
 
+        (with-package-functions :ql-dist (dist (setf preference))
+          (iter
+            (for source in sources)
+            (for time from (get-universal-time))
+            (setf (preference (dist (source-dist-name source)))
+                  time)))
+
         (when *current-system*
           (let ((qlhome (system-quicklisp-home *current-system*)))
             (map nil
@@ -217,14 +224,7 @@
                    (ensure-installed-in-local-quicklisp
                     (asdf:find-system (pathname-name asd))
                     qlhome))
-                 (asdf::directory-asd-files (asdf:component-pathname *current-system*)))))
-
-        (with-package-functions :ql-dist (dist (setf preference))
-          (iter
-            (for source in sources)
-            (for time from (get-universal-time))
-            (setf (preference (dist (source-dist-name source)))
-                  time)))))
+                 (asdf::directory-asd-files (asdf:component-pathname *current-system*)))))))
     (stop-server)
 
     (unless (string= (pathname-type file) "lock")
