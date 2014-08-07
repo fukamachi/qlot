@@ -211,7 +211,13 @@ distinfo-subscription-url: ~A~A
                   (pathname-name system-file)
                   (asdf:component-name system)
                   (mapcar #'string-downcase
-                          (asdf::component-sideway-dependencies system)))
+                          (remove-duplicates
+                           (append
+                            (and (slot-boundp system 'asdf::defsystem-depends-on)
+                                 (asdf::system-defsystem-depends-on system))
+                            (asdf::component-sideway-dependencies system))
+                           :test #'eq
+                           :from-end t)))
           (asdf:clear-system (asdf:component-name system)))))))
 
 (defmethod releases.txt ((source source-has-directory))
