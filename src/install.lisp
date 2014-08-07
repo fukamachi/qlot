@@ -113,8 +113,6 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defparameter *current-system* nil)
-
 (defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
   (unless (probe-file file)
     (error "File does not exist: ~A" file))
@@ -217,14 +215,12 @@
             (setf (preference (dist (source-dist-name source)))
                   time)))
 
-        (when *current-system*
-          (let ((qlhome (system-quicklisp-home *current-system*)))
-            (map nil
-                 (lambda (asd)
-                   (ensure-installed-in-local-quicklisp
-                    (asdf:find-system (pathname-name asd))
-                    qlhome))
-                 (asdf::directory-asd-files (asdf:component-pathname *current-system*)))))))
+        (map nil
+             (lambda (asd)
+               (ensure-installed-in-local-quicklisp
+                (asdf:find-system (pathname-name asd))
+                qlhome))
+             (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
     (stop-server)
 
     (unless (string= (pathname-type file) "lock")
@@ -250,30 +246,30 @@
     (apply #'install-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
     (apply #'install-project (asdf:find-system object) args))
-  (:method ((object qlot-system) &rest args &key quicklisp-home &allow-other-keys)
-    (unless quicklisp-home
-      (setf args
-            (list* :quicklisp-home
-                   (system-quicklisp-home object)
-                   args)))
-    (apply #'call-next-method object args))
-  (:method ((object asdf:system) &rest args)
-    (let ((*current-system* object)
-          (system-dir (asdf:component-pathname object)))
+  (:method ((object asdf:system) &rest args &key quicklisp-home &allow-other-keys)
+    (let ((system-dir (asdf:component-pathname object)))
+      (unless quicklisp-home
+        (setf args
+              (list* :quicklisp-home (system-quicklisp-home object)
+                     args)))
       (apply #'install-qlfile
              (or (find-qlfile system-dir :errorp nil :use-lock t)
                  (find-qlfile system-dir :errorp nil)
                  (error "qlfile does not exist in '~S'." system-dir))
              args)))
-  (:method ((object pathname) &rest args)
-    (let ((object (truename object)))
+  (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
+    (let ((object (truename object))
+          (current-system (directory-system-for-qlhome (fad:pathname-directory-pathname object))))
+      (unless quicklisp-home
+        (setf args
+              (list* :quicklisp-home (system-quicklisp-home current-system)
+                     args)))
       (if (fad:directory-pathname-p object)
-          (let ((*current-system* (directory-system-for-qlhome object)))
-            (apply #'install-qlfile
-                   (or (find-qlfile object :errorp nil :use-lock t)
-                       (find-qlfile object :errorp nil)
-                       (error "qlfile does not exist in '~S'." object))
-                   args))
+          (apply #'install-qlfile
+                 (or (find-qlfile object :errorp nil :use-lock t)
+                     (find-qlfile object :errorp nil)
+                     (error "qlfile does not exist in '~S'." object))
+                 args)
           (apply #'install-qlfile object args)))))
 
 (defgeneric update-project (object &rest args)
@@ -281,24 +277,24 @@
     (apply #'update-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
     (apply #'update-project (asdf:find-system object) args))
-  (:method ((object qlot-system) &rest args &key quicklisp-home &allow-other-keys)
-    (unless quicklisp-home
-      (setf args
-            (list* :quicklisp-home
-                   (system-quicklisp-home object)
-                   args)))
-    (apply #'call-next-method object args))
-  (:method ((object asdf:system) &rest args)
-    (let ((*current-system* object)
-          (system-dir (asdf:component-pathname object)))
+  (:method ((object asdf:system) &rest args &key quicklisp-home &allow-other-keys)
+    (let ((system-dir (asdf:component-pathname object)))
+      (unless quicklisp-home
+        (setf args
+              (list* :quicklisp-home (system-quicklisp-home object)
+                     args)))
       (apply #'update-qlfile
              (or (find-qlfile system-dir :errorp nil :use-lock t)
                  (find-qlfile system-dir :errorp nil)
                  (error "qlfile does not exist in '~S'." system-dir))
              args)))
-  (:method ((object pathname) &rest args)
-    (let ((object (truename object)))
+  (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
+    (let ((object (truename object))
+          (current-system (directory-system-for-qlhome (fad:pathname-directory-pathname object))))
+      (unless quicklisp-home
+        (setf args
+              (list* :quicklisp-home (system-quicklisp-home current-system)
+                     args)))
       (if (fad:directory-pathname-p object)
-          (let ((*current-system* (directory-system-for-qlhome object)))
-            (apply #'update-qlfile (find-qlfile object) args))
+          (apply #'update-qlfile (find-qlfile object) args)
           (apply #'update-qlfile object args)))))
