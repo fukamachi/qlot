@@ -17,6 +17,13 @@
   (fad:delete-directory-and-files *tmp-directory*))
 (ensure-directories-exist *tmp-directory*)
 
+(let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock"))
+      (lock2 (asdf:system-relative-pathname :qlot #P"t/data/qlfile2.lock")))
+  (when (probe-file lock)
+    (delete-file lock))
+  (when (probe-file lock2)
+    (delete-file lock2)))
+
 (plan 4)
 
 (ok (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))

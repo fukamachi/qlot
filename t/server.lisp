@@ -13,7 +13,11 @@
 
 (plan 6)
 
-(let ((qlfile (merge-pathnames #P"qlfile" (asdf:system-relative-pathname :qlot #P"t/data/")))
+(let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock")))
+  (when (probe-file lock)
+    (delete-file lock)))
+
+(let ((qlfile (asdf:system-relative-pathname :qlot #P"t/data/qlfile"))
       (*tmp-directory* (fad:pathname-as-directory
                         (merge-pathnames (fad::generate-random-string)
                                          (asdf:system-relative-pathname :qlot #P"t/tmp/qlot/")))))
