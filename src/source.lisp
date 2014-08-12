@@ -86,7 +86,9 @@
   (:method ((source source))
     (let ((class-pkg (symbol-package (type-of source))))
       (loop for (k v) on (source-defrost-args source) by #'cddr
-            do (setf (slot-value source (intern (string k) class-pkg)) v)))))
+            for slot-name = (intern (string k) class-pkg)
+            when (slot-exists-p source slot-name)
+              do (setf (slot-value source slot-name) v)))))
 
 (defgeneric source-direct-dependencies (source)
   (:method ((source source))
