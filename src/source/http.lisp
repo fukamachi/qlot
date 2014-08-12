@@ -22,16 +22,16 @@
 (defclass source-http (source-has-directory)
   ((url :initarg :url
         :accessor source-http-url)
-   (%version :initarg :%version
-             :initform nil
-             :accessor source-http-%version)))
+   (archive-md5 :initarg :archive-md5
+                :initform nil
+                :accessor source-http-archive-md5)))
 
 (defmethod make-source ((source (eql 'source-http)) &rest args)
-  (destructuring-bind (project-name url &optional version) args
+  (destructuring-bind (project-name url &optional archive-md5) args
     (make-instance 'source-http
                    :project-name project-name
                    :url url
-                   :%version version)))
+                   :archive-md5 archive-md5)))
 
 (defmethod freeze-source-slots ((source source-http))
   `(:url ,(source-http-url source)
@@ -52,16 +52,17 @@
   (setf (source-directory source)
         (extract-tarball (source-archive source)
                          (tmp-path #P"source-http/repos/")))
-  (let ((file-md5 (source-http-archive-md5 source)))
-    (when (and (source-http-%version source)
-               (not (string= (source-http-%version source) file-md5)))
+  (let ((file-md5 (archive-md5 source)))
+    (when (and (source-http-archive-md5 source)
+               (not (string= (source-http-archive-md5 source) file-md5)))
       (cerror "Ignore and continue."
               "File MD5 of ~S is different from ~S.~%The content seems to have changed."
               (source-http-url source)
               file-md5))
+    (setf (source-http-archive-md5 source) file-md5)
     (setf (source-version source)
           (format nil "http-~A" file-md5))))
 
-(defcached source-http-archive-md5 (source)
+(defcached archive-md5 (source)
   (ironclad:byte-array-to-hex-string
    (ironclad:digest-file :md5 (source-archive source))))

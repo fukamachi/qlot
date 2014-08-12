@@ -44,8 +44,10 @@
                  (source-project-name source)
                  (source-git-identifier source))))
   (git-clone source (source-directory source))
+  (setf (source-git-ref source)
+        (retrieve-source-git-ref source))
   (setf (source-version source)
-        (format nil "git-~A" (retrieve-source-git-ref source)))
+        (format nil "git-~A" (source-git-ref source)))
   (setf (source-archive source)
         (pathname
          (format nil "~A-~A.tar.gz"

@@ -54,7 +54,8 @@
 
 (defmethod freeze-source-slots ((source source-github))
   `(:repos ,(source-github-repos source)
-    :url ,(source-github-url source)))
+    :url ,(source-github-url source)
+    :ref ,(source-github-ref source)))
 
 (defun retrieve-source-git-ref-from-github (source)
   (labels ((retrieve-from-github (action)
@@ -79,5 +80,7 @@
       (T (get-ref "branches" "master")))))
 
 (defmethod prepare :after ((source source-github))
+  (setf (source-github-ref source)
+        (retrieve-source-git-ref-from-github source))
   (setf (source-version source)
-        (format nil "github-~A" (retrieve-source-git-ref-from-github source))))
+        (format nil "github-~A" (source-github-ref source))))
