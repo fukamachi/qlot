@@ -7,6 +7,7 @@
                 :prepare
                 :find-source-class
                 :source-project-name
+                :source-version
                 :source-dist-name
                 :source-direct-dependencies)
   (:import-from :qlot.source.ql
@@ -14,6 +15,7 @@
   (:import-from :qlot.error
                 :qlot-qlfile-error)
   (:export :parse-qlfile
+           :parse-qlfile-lock
            :prepare-qlfile))
 (in-package :qlot.parser)
 
@@ -54,6 +56,12 @@
       (when source
         (collect source)))))
 
+(defun parse-qlfile-lock (file)
+  (iter (for (project-name . args) in-file file)
+    (let ((source (apply #'make-instance (getf args :class) (getf args :initargs))))
+      (setf (source-version source) (getf args :version))
+      (collect source))))
+
 (defparameter *prepared-sources* nil)
 
 (defmacro with-prepared-transaction (&body body)
@@ -74,9 +82,15 @@
                        (appending (prepare-source dep)))
                      (list source))))
     (with-prepared-transaction
-      (let ((default-ql-source (make-source 'source-ql :all :latest))
-            (sources (iter (for source in (parse-qlfile file))
-                       (appending (prepare-source source)))))
+      (let* ((default-ql-source (make-source 'source-ql :all :latest))
+             (lock-file (probe-file
+                         (make-pathname :defaults file
+                                        :name (file-namestring file)
+                                        :type "lock")))
+             (sources (iter (for source in (if lock-file
+                                               (parse-qlfile-lock lock-file)
+                                               (parse-qlfile file)))
+                        (appending (prepare-source source)))))
         (unless (find "quicklisp" sources
                       :key #'source-dist-name
                       :test #'string=)
