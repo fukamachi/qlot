@@ -81,15 +81,19 @@
                (setf (gethash (source-project-name source) hash) source))
              hash)))
     (let ((lock-sources-map (make-sources-map lock-sources)))
-      (iter (for source in sources)
-        (for lock-source = (gethash (source-project-name source)
-                                    lock-sources-map))
-        (collect
-            (if (source-equal source lock-source)
-                (progn
-                  (defrost-source lock-source)
-                  lock-source)
-                source))))))
+      (values
+       (iter (for source in sources)
+         (for lock-source = (gethash (source-project-name source)
+                                     lock-sources-map))
+         (collect
+             (if (source-equal source lock-source)
+                 (progn
+                   (defrost-source lock-source)
+                   lock-source)
+                 source))
+         (remhash (source-project-name source) lock-sources-map))
+       (iter (for (name lock-source) in-hashtable lock-sources-map)
+         (collect lock-source))))))
 
 (defun prepare-qlfile (file)
   (labels ((prepare-source (source)
@@ -105,20 +109,23 @@
                        (appending (prepare-source dep)))
                      (list source))))
     (with-prepared-transaction
-      (let* ((default-ql-source (make-source 'source-ql :all :latest))
-             (lock-file (probe-file
-                         (make-pathname :defaults file
-                                        :name (file-namestring file)
-                                        :type "lock")))
-             (sources (parse-qlfile file))
-             (sources (iter (for source in (if lock-file
-                                               (merging-lock-sources sources
-                                                                     (parse-qlfile-lock lock-file))
-                                               sources))
-                        (appending (prepare-source source)))))
+      (let ((default-ql-source (make-source 'source-ql :all :latest))
+            (lock-file (probe-file
+                        (make-pathname :defaults file
+                                       :name (file-namestring file)
+                                       :type "lock")))
+            (sources (parse-qlfile file))
+            (removed-sources '()))
         (unless (find "quicklisp" sources
                       :key #'source-dist-name
                       :test #'string=)
           (prepare default-ql-source)
           (push default-ql-source sources))
-        sources))))
+        (when lock-file
+          (multiple-value-bind (merged removed)
+              (merging-lock-sources sources
+                                    (parse-qlfile-lock lock-file))
+            (setf sources merged
+                  removed-sources removed)))
+        (setf sources (mapcan #'prepare-source sources))
+        (values sources removed-sources)))))
