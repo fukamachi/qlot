@@ -163,6 +163,7 @@
                (return-from collect-source '()))
 
              (setf (gethash (source-project-name source) *prepared-sources*) t)
+             (prepare source)
 
              (append (iter (for dep in (reverse (source-direct-dependencies source)))
                        (appending (collect-source dep)))
@@ -187,12 +188,9 @@
               (iter (for source in all-sources)
                 (for dist = (find-dist (source-dist-name source)))
                 (if (and dist
-                         (slot-boundp source 'qlot.source::version)
                          (string= (version dist) (source-version source)))
-                    (progn
-                      (prepare source)
-                      (collect source))
-                    (remhash (source-dist-name source) dists-map))))))
+                    (remhash (source-dist-name source) dists-map)
+                    (collect source))))))
 
     (start-server (expand-sources sources))
     (with-quicklisp-home qlhome

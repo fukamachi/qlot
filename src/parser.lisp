@@ -5,6 +5,7 @@
   (:import-from :qlot.source
                 :make-source
                 :find-source-class
+                :prepare
                 :defrost-source
                 :source-project-name
                 :source-version
@@ -81,7 +82,9 @@
                 (progn
                   (defrost-source lock-source)
                   lock-source)
-                source))))))
+                (progn
+                  (prepare source)
+                  source)))))))
 
 (defun prepare-qlfile (file &key ignore-lock)
   (let ((default-ql-source (make-source 'source-ql :all :latest))
@@ -95,8 +98,9 @@
                   :key #'source-dist-name
                   :test #'string=)
       (push default-ql-source sources))
-    (when lock-file
-      (setf sources
-            (merging-lock-sources sources
-                                  (parse-qlfile-lock lock-file))))
+    (setf sources
+          (if lock-file
+              (merging-lock-sources sources
+                                    (parse-qlfile-lock lock-file))
+              (mapc #'prepare sources)))
     sources))
