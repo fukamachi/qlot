@@ -14,8 +14,8 @@
 (in-package :qlot.source.git)
 
 (defclass source-git (source-has-directory)
-  ((repos-url :initarg :repos-url
-              :accessor source-git-repos-url)
+  ((remote-url :initarg :remote-url
+               :accessor source-git-remote-url)
    (ref :initarg :ref
         :initform nil
         :accessor source-git-ref)
@@ -27,14 +27,14 @@
         :accessor source-git-tag)))
 
 (defmethod make-source ((source (eql 'source-git)) &rest initargs)
-  (destructuring-bind (project-name repos-url &rest args) initargs
+  (destructuring-bind (project-name remote-url &rest args) initargs
     (apply #'make-instance 'source-git
            :project-name project-name
-           :repos-url repos-url
+           :remote-url remote-url
            args)))
 
 (defmethod freeze-source-slots ((source source-git))
-  `(:repos-url ,(source-git-repos-url source)
+  `(:remote-url ,(source-git-remote-url source)
     :ref ,(source-git-ref source)))
 
 (defmethod prepare ((source source-git))
@@ -60,8 +60,8 @@
 (defmethod source-equal ((source1 source-git) (source2 source-git))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
-       (string= (source-git-repos-url source1)
-                (source-git-repos-url source2))
+       (string= (source-git-remote-url source1)
+                (source-git-remote-url source2))
        (equal (source-git-ref source1)
               (source-git-ref source2))
        (equal (source-git-branch source1)
@@ -73,7 +73,7 @@
   (format stream "#<~S ~A ~A~:[~;~:* ~A~]>"
           (type-of source)
           (source-project-name source)
-          (source-git-repos-url source)
+          (source-git-remote-url source)
           (source-git-identifier source)))
 
 (defun source-git-identifier (source)
@@ -118,7 +118,7 @@
        (restart-case
            (safety-shell-command "git"
                                  (list "clone"
-                                       (source-git-repos-url source)
+                                       (source-git-remote-url source)
                                        destination))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
