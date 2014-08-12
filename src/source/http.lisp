@@ -33,11 +33,9 @@
                    :url url
                    :%version version)))
 
-(defmethod freeze-source ((source source-http))
-  (format nil "http ~A ~A ~A"
-          (source-project-name source)
-          (source-http-url source)
-          (source-http-archive-md5 source)))
+(defmethod freeze-source-slots ((source source-http))
+  `(:url ,(source-http-url source)
+    :archive-md5 ,(source-http-archive-md5 source)))
 
 (defmethod print-object ((source source-http) stream)
   (format stream "#<~S ~A ~A>"

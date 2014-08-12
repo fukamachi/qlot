@@ -229,7 +229,11 @@
                                               file)
                              :direction :output
                              :if-exists :supersede)
-          (format out "~{~A~&~}" (mapcar #'freeze-source sources)))))
+          (let ((*print-pretty* nil)
+                (*print-case* :downcase))
+            (loop for source in sources
+                  for (project-name . contents) = (freeze-source source)
+                  do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents))))))
 
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))

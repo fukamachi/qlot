@@ -22,6 +22,7 @@
            :source
            :make-source
            :freeze-source
+           :freeze-source-slots
            :source-direct-dependencies
            :find-source-class
            :prepare
@@ -54,12 +55,27 @@
                  :reader source-project-name)
    (version :initarg :version
             :accessor source-version)
+   (initargs :reader source-initargs)
    (prepared :initform nil
              :accessor source-prepared)))
 
+(defmethod initialize-instance :after ((source source) &rest initargs)
+  (setf (slot-value source 'initargs) initargs))
+
 (defgeneric make-source (source &rest args))
 
-(defgeneric freeze-source (source))
+(defgeneric freeze-source-slots (source)
+  (:method ((source source))
+    '()))
+
+(defgeneric freeze-source (source)
+  (:method ((source source))
+    (with-slots (project-name version initargs) source
+      `(,project-name .
+        (:class ,(type-of source)
+         :initargs ,initargs
+         :version ,version
+         ,@(freeze-source-slots source))))))
 
 (defgeneric source-direct-dependencies (source)
   (:method ((source source))

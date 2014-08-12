@@ -52,11 +52,9 @@
                    :branch branch
                    :tag tag)))
 
-(defmethod freeze-source ((source source-github))
-  (format nil "github ~A ~A :ref ~A"
-          (source-project-name source)
-          (source-github-repos source)
-          (retrieve-source-git-ref-from-github source)))
+(defmethod freeze-source-slots ((source source-github))
+  `(:repos ,(source-github-repos source)
+    :url ,(source-github-url source)))
 
 (defun retrieve-source-git-ref-from-github (source)
   (labels ((retrieve-from-github (action)

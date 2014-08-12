@@ -15,26 +15,18 @@
 (defclass source-ql (source)
   ((%version :initarg :%version)))
 
-(defclass source-ql-all (source) ())
+(defclass source-ql-all (source)
+  ((%version :initarg :%version)))
 
 (defmethod make-source ((source (eql 'source-ql)) &rest args)
   (destructuring-bind (project-name version) args
     (if (eq project-name :all)
         (make-instance 'source-ql-all
                        :project-name "quicklisp"
-                       :version version)
+                       :%version version)
         (make-instance 'source-ql
                        :project-name project-name
                        :%version version))))
-
-(defmethod freeze-source ((source source-ql))
-  (format nil "ql ~A ~A"
-          (source-project-name source)
-          (source-ql-version source)))
-
-(defmethod freeze-source ((source source-ql-all))
-  (format nil "ql :all ~A"
-          (source-ql-version source)))
 
 (defmethod print-object ((source source-ql) stream)
   (with-slots (project-name %version) source

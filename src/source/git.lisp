@@ -26,18 +26,16 @@
         :initform nil
         :accessor source-git-tag)))
 
-(defmethod make-source ((source (eql 'source-git)) &rest args)
-  (destructuring-bind (project-name repos-url &rest args) args
+(defmethod make-source ((source (eql 'source-git)) &rest initargs)
+  (destructuring-bind (project-name repos-url &rest args) initargs
     (apply #'make-instance 'source-git
            :project-name project-name
            :repos-url repos-url
            args)))
 
-(defmethod freeze-source ((source source-git))
-  (format nil "git ~A ~A :ref ~A"
-          (source-project-name source)
-          (source-git-repos-url source)
-          (retrieve-source-git-ref source)))
+(defmethod freeze-source-slots ((source source-git))
+  `(:repos-url ,(source-git-repos-url source)
+    :ref ,(source-git-ref source)))
 
 (defmethod prepare ((source source-git))
   (setf (source-directory source)
