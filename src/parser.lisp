@@ -83,12 +83,13 @@
                   lock-source)
                 source))))))
 
-(defun prepare-qlfile (file)
+(defun prepare-qlfile (file &key ignore-lock)
   (let ((default-ql-source (make-source 'source-ql :all :latest))
-        (lock-file (probe-file
-                    (make-pathname :defaults file
-                                   :name (file-namestring file)
-                                   :type "lock")))
+        (lock-file (and (not ignore-lock)
+                        (probe-file
+                         (make-pathname :defaults file
+                                        :name (file-namestring file)
+                                        :type "lock"))))
         (sources (parse-qlfile file)))
     (unless (find "quicklisp" sources
                   :key #'source-dist-name

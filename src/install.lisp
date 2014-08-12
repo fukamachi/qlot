@@ -145,7 +145,7 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome)
+    (apply-qlfile-to-qlhome file qlhome :ignore-lock t)
 
     (format t "~&Successfully updated.~%")))
 
@@ -170,31 +170,33 @@
     (with-prepared-transaction
       (mapcan #'collect-source sources))))
 
-(defun apply-qlfile-to-qlhome (file qlhome)
+(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
   (let ((dists-map (make-hash-table :test 'equal))
         (*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
-        (all-sources (prepare-qlfile file))
+        (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
         (sources '()))
 
     (with-quicklisp-home qlhome
+      (with-package-functions :ql-dist (find-dist all-dists name)
+        (iter (for dist in (all-dists))
+          (setf (gethash (name dist) dists-map) dist)))
+
       (with-package-functions :ql-dist (find-dist version)
         (setf sources
               (iter (for source in all-sources)
                 (for dist = (find-dist (source-dist-name source)))
-                (unless (and dist
-                             (slot-boundp source 'qlot.source::version)
-                             (string= (version dist) (source-version source)))
-                  (prepare source)
-                  (collect source))))))
+                (if (and dist
+                         (slot-boundp source 'qlot.source::version)
+                         (string= (version dist) (source-version source)))
+                    (progn
+                      (prepare source)
+                      (collect source))
+                    (remhash (source-dist-name source) dists-map))))))
 
     (start-server (expand-sources sources))
     (with-quicklisp-home qlhome
       (let (to-install to-update to-uninstall)
-        (with-package-functions :ql-dist (find-dist all-dists name)
-          (iter (for dist in (all-dists))
-            (setf (gethash (name dist) dists-map) dist)))
-
         (with-package-functions :ql-dist (find-dist distinfo-subscription-url (setf distinfo-subscription-url) available-update)
           (iter (for source in sources)
             (remhash (source-dist-name source) dists-map)
