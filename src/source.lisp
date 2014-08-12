@@ -114,6 +114,8 @@
   (setf (source-prepared source) t))
 
 (defgeneric source-equal (source1 source2)
+  (:method ((source1 t) (source2 t))
+    nil)
   (:method ((source1 source) (source2 source))
     (string= (source-project-name source1)
              (source-project-name source2))))
