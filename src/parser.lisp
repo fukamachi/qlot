@@ -4,14 +4,12 @@
         :iterate)
   (:import-from :qlot.source
                 :make-source
-                :prepare
                 :find-source-class
                 :defrost-source
                 :source-project-name
                 :source-version
                 :source-dist-name
                 :source-defrost-args
-                :source-direct-dependencies
                 :source-equal)
   (:import-from :qlot.source.ql
                 :source-ql)
@@ -68,12 +66,6 @@
             (delete-from-plist args :class :initargs))
       (collect source))))
 
-(defparameter *prepared-sources* nil)
-
-(defmacro with-prepared-transaction (&body body)
-  `(let ((*prepared-sources* (make-hash-table :test 'equal)))
-     ,@body))
-
 (defun merging-lock-sources (sources lock-sources)
   (flet ((make-sources-map (sources)
            (let ((hash (make-hash-table :test 'equal)))
@@ -81,51 +73,29 @@
                (setf (gethash (source-project-name source) hash) source))
              hash)))
     (let ((lock-sources-map (make-sources-map lock-sources)))
-      (values
-       (iter (for source in sources)
-         (for lock-source = (gethash (source-project-name source)
-                                     lock-sources-map))
-         (collect
-             (if (source-equal source lock-source)
-                 (progn
-                   (defrost-source lock-source)
-                   lock-source)
-                 source))
-         (remhash (source-project-name source) lock-sources-map))
-       (iter (for (name lock-source) in-hashtable lock-sources-map)
-         (collect lock-source))))))
+      (iter (for source in sources)
+        (for lock-source = (gethash (source-project-name source)
+                                    lock-sources-map))
+        (collect
+            (if (source-equal source lock-source)
+                (progn
+                  (defrost-source lock-source)
+                  lock-source)
+                source))))))
 
 (defun prepare-qlfile (file)
-  (labels ((prepare-source (source)
-             (when (gethash (source-project-name source) *prepared-sources*)
-               (warn "Project named ~S is already prepared. Ignored."
-                     (source-project-name source))
-               (return-from prepare-source '()))
-
-             (prepare source)
-             (setf (gethash (source-project-name source) *prepared-sources*) t)
-
-             (append (iter (for dep in (reverse (source-direct-dependencies source)))
-                       (appending (prepare-source dep)))
-                     (list source))))
-    (with-prepared-transaction
-      (let ((default-ql-source (make-source 'source-ql :all :latest))
-            (lock-file (probe-file
-                        (make-pathname :defaults file
-                                       :name (file-namestring file)
-                                       :type "lock")))
-            (sources (parse-qlfile file))
-            (removed-sources '()))
-        (unless (find "quicklisp" sources
-                      :key #'source-dist-name
-                      :test #'string=)
-          (prepare default-ql-source)
-          (push default-ql-source sources))
-        (when lock-file
-          (multiple-value-bind (merged removed)
-              (merging-lock-sources sources
-                                    (parse-qlfile-lock lock-file))
-            (setf sources merged
-                  removed-sources removed)))
-        (setf sources (mapcan #'prepare-source sources))
-        (values sources removed-sources)))))
+  (let ((default-ql-source (make-source 'source-ql :all :latest))
+        (lock-file (probe-file
+                    (make-pathname :defaults file
+                                   :name (file-namestring file)
+                                   :type "lock")))
+        (sources (parse-qlfile file)))
+    (unless (find "quicklisp" sources
+                  :key #'source-dist-name
+                  :test #'string=)
+      (push default-ql-source sources))
+    (when lock-file
+      (setf sources
+            (merging-lock-sources sources
+                                  (parse-qlfile-lock lock-file))))
+    sources))

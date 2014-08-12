@@ -3,6 +3,7 @@
   (:use :cl)
   (:import-from :qlot.source
                 :*dist-base-url*
+                :prepare
                 :source-prepared
                 :url-path-for
                 :project.txt
@@ -88,7 +89,9 @@
                   (clackup app :port port)))
         (setf *qlot-port* port))))
   (:method ((qlfile pathname))
-    (start-server (prepare-qlfile qlfile))))
+    (let ((sources (prepare-qlfile qlfile)))
+      (map nil #'prepare sources)
+      (start-server sources))))
 
 (defun stop-server ()
   (when *handler*

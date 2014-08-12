@@ -13,7 +13,10 @@
   (:import-from :qlot.source
                 :source-project-name
                 :source-dist-name
+                :source-version
+                :source-direct-dependencies
                 :freeze-source
+                :prepare
                 :url-path-for
                 :project.txt)
   (:import-from :qlot.http
@@ -146,102 +149,127 @@
 
     (format t "~&Successfully updated.~%")))
 
+(defparameter *prepared-sources* nil)
+
+(defmacro with-prepared-transaction (&body body)
+  `(let ((*prepared-sources* (make-hash-table :test 'equal)))
+     ,@body))
+
+(defun expand-sources (sources)
+  (labels ((collect-source (source)
+             (when (gethash (source-project-name source) *prepared-sources*)
+               (warn "Project named ~S is already prepared. Ignored."
+                     (source-project-name source))
+               (return-from collect-source '()))
+
+             (setf (gethash (source-project-name source) *prepared-sources*) t)
+
+             (append (iter (for dep in (reverse (source-direct-dependencies source)))
+                       (appending (collect-source dep)))
+                     (list source))))
+    (with-prepared-transaction
+      (mapcan #'collect-source sources))))
+
 (defun apply-qlfile-to-qlhome (file qlhome)
   (let ((dists-map (make-hash-table :test 'equal))
         (*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
-                                                                     (merge-pathnames #P"tmp/qlot/" qlhome)))))
-    (multiple-value-bind (sources removed-sources)
-        (prepare-qlfile file)
+                                                                     (merge-pathnames #P"tmp/qlot/" qlhome))))
+        (all-sources (prepare-qlfile file))
+        (sources '()))
 
-      (start-server sources)
-      (with-quicklisp-home qlhome
-        (let (to-install to-update to-uninstall)
-          (with-package-functions :ql-dist (uninstall find-dist installedp)
-            (iter (for source in removed-sources)
-              (for dist = (find-dist (source-project-name source)))
-              (when (and dist
-                         (installedp dist))
-                (uninstall dist))))
+    (with-quicklisp-home qlhome
+      (with-package-functions :ql-dist (find-dist version)
+        (setf sources
+              (iter (for source in all-sources)
+                (for dist = (find-dist (source-dist-name source)))
+                (unless (and dist
+                             (slot-boundp source 'qlot.source::version)
+                             (string= (version dist) (source-version source)))
+                  (prepare source)
+                  (collect source))))))
 
-          (with-package-functions :ql-dist (all-dists name)
-            (iter (for dist in (all-dists))
-              (setf (gethash (name dist) dists-map) dist)))
+    (start-server (expand-sources sources))
+    (with-quicklisp-home qlhome
+      (let (to-install to-update to-uninstall)
+        (with-package-functions :ql-dist (find-dist all-dists name)
+          (iter (for dist in (all-dists))
+            (setf (gethash (name dist) dists-map) dist)))
 
-          (with-package-functions :ql-dist (distinfo-subscription-url (setf distinfo-subscription-url) available-update)
-            (iter (for source in sources)
-              (let ((dist (gethash (source-dist-name source) dists-map)))
-                (cond
-                  (dist (remhash (source-dist-name source) dists-map)
-                        (setf (distinfo-subscription-url dist)
-                              (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
-                                                   (distinfo-subscription-url dist)
-                                                   (localhost)))
-                        (when (available-update dist)
-                          (push dist to-update)))
-                  (T (push source to-install))))
-              (finally (setf to-update (nreverse to-update))
-                       (setf to-install (nreverse to-install)))))
+        (with-package-functions :ql-dist (find-dist distinfo-subscription-url (setf distinfo-subscription-url) available-update)
+          (iter (for source in sources)
+            (remhash (source-dist-name source) dists-map)
+            (let ((dist (find-dist (source-dist-name source))))
+              (cond
+                (dist (setf (distinfo-subscription-url dist)
+                            (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
+                                                 (distinfo-subscription-url dist)
+                                                 (localhost)))
+                      (when (available-update dist)
+                        (push dist to-update)))
+                (T (push source to-install))))
+            (finally (setf to-update (nreverse to-update))
+                     (setf to-install (nreverse to-install)))))
 
-          (iter (for (dist-name dist) in-hashtable dists-map)
-            (push dist to-uninstall)
-            (finally (setf to-uninstall (nreverse to-uninstall))))
+        (setf to-uninstall
+              (iter (for (name dist) in-hashtable dists-map)
+                (collect dist)))
 
-          ;; Report
-          (with-package-functions :ql-dist (name)
-            (when to-install
-              (format t "~&  New dists:~%    ~{~A~^ ~}~%" (mapcar #'source-dist-name to-install)))
-            (when to-update
-              (format t "~&  Updated dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-update)))
-            (when to-uninstall
-              (format t "~&  Removed dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-uninstall))))
+        ;; Report
+        (with-package-functions :ql-dist (name)
+          (when to-install
+            (format t "~&  New dists:~%    ~{~A~^ ~}~%" (mapcar #'source-dist-name to-install)))
+          (when to-update
+            (format t "~&  Updated dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-update)))
+          (when to-uninstall
+            (format t "~&  Removed dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-uninstall))))
 
-          ;; Installing
-          (with-package-functions :ql-dist (install-dist)
-            (iter (for source in to-install)
-              (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)))
+        ;; Installing
+        (with-package-functions :ql-dist (install-dist)
+          (iter (for source in to-install)
+            (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)))
 
-          ;; Updating
-          (with-package-functions :ql-dist (update-in-place available-update name version uninstall installed-releases)
-            (iter (for dist in to-update)
-              (let ((new-dist (available-update dist)))
-                (format t "~&Updating dist ~S version ~S -> ~S.~%"
-                        (name dist)
-                        (version dist)
-                        (version new-dist))
-                (map nil #'uninstall (installed-releases dist))
-                (update-in-place dist new-dist))))
+        ;; Updating
+        (with-package-functions :ql-dist (update-in-place available-update name version uninstall installed-releases)
+          (iter (for dist in to-update)
+            (let ((new-dist (available-update dist)))
+              (format t "~&Updating dist ~S version ~S -> ~S.~%"
+                      (name dist)
+                      (version dist)
+                      (version new-dist))
+              (map nil #'uninstall (installed-releases dist))
+              (update-in-place dist new-dist))))
 
-          ;; Uninstalling
-          (with-package-functions :ql-dist (uninstall name)
-            (iter (for dist in to-uninstall)
-              (format t "~&Removing dist ~S.~%" (name dist))
-              (uninstall dist)))
+        ;; Uninstalling
+        (with-package-functions :ql-dist (uninstall name)
+          (iter (for dist in to-uninstall)
+            (format t "~&Removing dist ~S.~%" (name dist))
+            (uninstall dist)))
 
-          (with-package-functions :ql-dist (dist (setf preference))
-            (iter
-              (for source in sources)
-              (for time from (get-universal-time))
-              (setf (preference (dist (source-dist-name source)))
-                    time)))
+        (with-package-functions :ql-dist (dist (setf preference))
+          (iter
+            (for source in all-sources)
+            (for time from (get-universal-time))
+            (setf (preference (dist (source-dist-name source)))
+                  time)))
 
-          (map nil
-               (lambda (asd)
-                 (ensure-installed-in-local-quicklisp
-                  (asdf:find-system (pathname-name asd))
-                  qlhome))
-               (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
-      (stop-server)
+        (map nil
+             (lambda (asd)
+               (ensure-installed-in-local-quicklisp
+                (asdf:find-system (pathname-name asd))
+                qlhome))
+             (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
+    (stop-server)
 
-      (with-quicklisp-home qlhome
-        (with-open-file (out (merge-pathnames (format nil "~A.lock" (file-namestring file))
-                                              file)
-                             :direction :output
-                             :if-exists :supersede)
-          (let ((*print-pretty* nil)
-                (*print-case* :downcase))
-            (loop for source in sources
-                  for (project-name . contents) = (freeze-source source)
-                  do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents))))))
+    (with-quicklisp-home qlhome
+      (with-open-file (out (merge-pathnames (format nil "~A.lock" (file-namestring file))
+                                            file)
+                           :direction :output
+                           :if-exists :supersede)
+        (let ((*print-pretty* nil)
+              (*print-case* :downcase))
+          (loop for source in all-sources
+                for (project-name . contents) = (freeze-source source)
+                do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
