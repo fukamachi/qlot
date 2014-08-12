@@ -223,17 +223,16 @@
              (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
     (stop-server)
 
-    (unless (string= (pathname-type file) "lock")
-      (with-quicklisp-home qlhome
-        (with-open-file (out (merge-pathnames (format nil "~A.lock" (file-namestring file))
-                                              file)
-                             :direction :output
-                             :if-exists :supersede)
-          (let ((*print-pretty* nil)
-                (*print-case* :downcase))
-            (loop for source in sources
-                  for (project-name . contents) = (freeze-source source)
-                  do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents))))))
+    (with-quicklisp-home qlhome
+      (with-open-file (out (merge-pathnames (format nil "~A.lock" (file-namestring file))
+                                            file)
+                           :direction :output
+                           :if-exists :supersede)
+        (let ((*print-pretty* nil)
+              (*print-case* :downcase))
+          (loop for source in sources
+                for (project-name . contents) = (freeze-source source)
+                do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
     (when (probe-file *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
@@ -257,9 +256,7 @@
               (list* :quicklisp-home (system-quicklisp-home object)
                      args)))
       (apply #'install-qlfile
-             (or (find-qlfile system-dir :errorp nil :use-lock t)
-                 (find-qlfile system-dir :errorp nil)
-                 (error "qlfile does not exist in '~S'." system-dir))
+             (find-qlfile system-dir)
              args)))
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
     (let ((object (truename object))
@@ -269,11 +266,7 @@
               (list* :quicklisp-home (system-quicklisp-home current-system)
                      args)))
       (if (fad:directory-pathname-p object)
-          (apply #'install-qlfile
-                 (or (find-qlfile object :errorp nil :use-lock t)
-                     (find-qlfile object :errorp nil)
-                     (error "qlfile does not exist in '~S'." object))
-                 args)
+          (apply #'install-qlfile (find-qlfile object) args)
           (apply #'install-qlfile object args)))))
 
 (defgeneric update-project (object &rest args)
@@ -288,9 +281,7 @@
               (list* :quicklisp-home (system-quicklisp-home object)
                      args)))
       (apply #'update-qlfile
-             (or (find-qlfile system-dir :errorp nil :use-lock t)
-                 (find-qlfile system-dir :errorp nil)
-                 (error "qlfile does not exist in '~S'." system-dir))
+             (find-qlfile system-dir :errorp nil)
              args)))
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
     (let ((object (truename object))
