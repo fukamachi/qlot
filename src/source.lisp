@@ -23,6 +23,7 @@
            :make-source
            :freeze-source
            :freeze-source-slots
+           :defrost-source
            :source-direct-dependencies
            :find-source-class
            :prepare
@@ -32,6 +33,8 @@
            :source-version
            :source-dist-name
            :source-prepared
+           :source-defrost-args
+           :source-equal
            :project.txt
            :distinfo.txt
            :releases.txt
@@ -56,6 +59,8 @@
    (version :initarg :version
             :accessor source-version)
    (initargs :reader source-initargs)
+   (defrost-args :initform '()
+                 :accessor source-defrost-args)
    (prepared :initform nil
              :accessor source-prepared)))
 
@@ -76,6 +81,12 @@
          :initargs ,initargs
          :version ,version
          ,@(freeze-source-slots source))))))
+
+(defgeneric defrost-source (source)
+  (:method ((source source))
+    (let ((class-pkg (symbol-package (type-of source))))
+      (loop for (k v) on (source-defrost-args source) by #'cddr
+            do (setf (slot-value source (intern (string k) class-pkg)) v)))))
 
 (defgeneric source-direct-dependencies (source)
   (:method ((source source))
@@ -101,6 +112,16 @@
 
 (defmethod prepare :after (source)
   (setf (source-prepared source) t))
+
+(defgeneric source-equal (source1 source2)
+  (:method ((source1 source) (source2 source))
+    (string= (source-project-name source1)
+             (source-project-name source2))))
+
+(defmethod source-equal :around ((source1 source) (source2 source))
+  (if (eq (type-of source1) (type-of source2))
+      (call-next-method)
+      nil))
 
 
 ;;

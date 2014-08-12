@@ -63,6 +63,14 @@
     (setf (source-version source)
           (format nil "http-~A" file-md5))))
 
+(defmethod source-equal ((source1 source-http) (source2 source-http))
+  (and (string= (source-project-name source1)
+                (source-project-name source2))
+       (string= (source-http-url source1)
+                (source-http-url source2))
+       (equal (source-http-archive-md5 source1)
+              (source-http-archive-md5 source2))))
+
 (defcached archive-md5 (source)
   (ironclad:byte-array-to-hex-string
    (ironclad:digest-file :md5 (source-archive source))))

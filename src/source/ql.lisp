@@ -28,6 +28,17 @@
                        :project-name project-name
                        :%version version))))
 
+(defmethod print-object ((source source-ql-all) stream)
+  (with-slots (project-name %version) source
+    (format stream "#<~S ~A ~A>"
+            (type-of source)
+            (if (stringp project-name)
+                project-name
+                (prin1-to-string project-name))
+            (if (stringp %version)
+                %version
+                (prin1-to-string %version)))))
+
 (defmethod print-object ((source source-ql) stream)
   (with-slots (project-name %version) source
     (format stream "#<~S ~A ~A>"
@@ -39,9 +50,24 @@
                 %version
                 (prin1-to-string %version)))))
 
+(defmethod prepare ((source source-ql-all))
+  (setf (source-version source) (ql-latest-version)))
+
 (defmethod prepare ((source source-ql))
   (setf (source-version source)
         (format nil "ql-~A" (source-ql-version source))))
+
+(defmethod source-equal ((source1 source-ql-all) (source2 source-ql-all))
+  (and (string= (source-project-name source1)
+                (source-project-name source2))
+       (string= (slot-value source1 '%version)
+                (slot-value source2 '%version))))
+
+(defmethod source-equal ((source1 source-ql) (source2 source-ql))
+  (and (string= (source-project-name source1)
+                (source-project-name source2))
+       (string= (slot-value source1 '%version)
+                (slot-value source2 '%version))))
 
 (defcached ql-latest-version ()
   (let ((stream (safety-http-request "http://beta.quicklisp.org/dist/quicklisp.txt"

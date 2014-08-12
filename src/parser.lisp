@@ -6,14 +6,19 @@
                 :make-source
                 :prepare
                 :find-source-class
+                :defrost-source
                 :source-project-name
                 :source-version
                 :source-dist-name
-                :source-direct-dependencies)
+                :source-defrost-args
+                :source-direct-dependencies
+                :source-equal)
   (:import-from :qlot.source.ql
                 :source-ql)
   (:import-from :qlot.error
                 :qlot-qlfile-error)
+  (:import-from :alexandria
+                :delete-from-plist)
   (:export :parse-qlfile
            :parse-qlfile-lock
            :prepare-qlfile))
@@ -59,7 +64,8 @@
 (defun parse-qlfile-lock (file)
   (iter (for (project-name . args) in-file file)
     (let ((source (apply #'make-instance (getf args :class) (getf args :initargs))))
-      (setf (source-version source) (getf args :version))
+      (setf (source-defrost-args source)
+            (delete-from-plist args :class :initargs))
       (collect source))))
 
 (defparameter *prepared-sources* nil)
@@ -67,6 +73,23 @@
 (defmacro with-prepared-transaction (&body body)
   `(let ((*prepared-sources* (make-hash-table :test 'equal)))
      ,@body))
+
+(defun merging-lock-sources (sources lock-sources)
+  (flet ((make-sources-map (sources)
+           (let ((hash (make-hash-table :test 'equal)))
+             (iter (for source in sources)
+               (setf (gethash (source-project-name source) hash) source))
+             hash)))
+    (let ((lock-sources-map (make-sources-map lock-sources)))
+      (iter (for source in sources)
+        (for lock-source = (gethash (source-project-name source)
+                                    lock-sources-map))
+        (collect
+            (if (source-equal source lock-source)
+                (progn
+                  (defrost-source lock-source)
+                  lock-source)
+                source))))))
 
 (defun prepare-qlfile (file)
   (labels ((prepare-source (source)
@@ -87,9 +110,11 @@
                          (make-pathname :defaults file
                                         :name (file-namestring file)
                                         :type "lock")))
+             (sources (parse-qlfile file))
              (sources (iter (for source in (if lock-file
-                                               (parse-qlfile-lock lock-file)
-                                               (parse-qlfile file)))
+                                               (merging-lock-sources sources
+                                                                     (parse-qlfile-lock lock-file))
+                                               sources))
                         (appending (prepare-source source)))))
         (unless (find "quicklisp" sources
                       :key #'source-dist-name

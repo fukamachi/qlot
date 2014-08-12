@@ -57,6 +57,18 @@
   (create-tarball (source-directory source)
                   (source-archive source)))
 
+(defmethod source-equal ((source1 source-git) (source2 source-git))
+  (and (string= (source-project-name source1)
+                (source-project-name source2))
+       (string= (source-git-repos-url source1)
+                (source-git-repos-url source2))
+       (equal (source-git-ref source1)
+              (source-git-ref source2))
+       (equal (source-git-branch source1)
+              (source-git-branch source2))
+       (equal (source-git-tag source1)
+              (source-git-tag source2))))
+
 (defmethod print-object ((source source-git) stream)
   (format stream "#<~S ~A ~A~:[~;~:* ~A~]>"
           (type-of source)
