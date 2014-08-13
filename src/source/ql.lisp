@@ -155,6 +155,7 @@ distinfo-subscription-url: ~A~A
           (source-ql-releases source)))
 
 (defmethod url-path-for ((source source-ql-all) (for (eql 'project.txt)))
+  (prepare source)
   (with-slots (version) source
     (if (eq version :latest)
         "http://beta.quicklisp.org/dist/quicklisp.txt"

@@ -150,22 +150,27 @@
     (format t "~&Successfully updated.~%")))
 
 (defun already-installed-p (source)
-  (with-package-functions :ql-dist (find-dist version)
-    (let ((dist (find-dist (source-dist-name source))))
-      (and dist
-           (string= (version dist) (source-version source))))))
+  (with-package-functions :ql-dist (find-dist)
+    (and (find-dist (source-dist-name source))
+         T)))
 
 (defun update-available-p (source)
   (with-package-functions :ql-dist (find-dist version)
     (let ((dist (find-dist (source-dist-name source))))
-      (and dist
-           (not (string= (version dist) (source-version source)))))))
+      (unless dist
+        (return-from update-available-p nil))
+
+      (unless (slot-boundp source 'qlot.source::version)
+        (prepare source))
+
+      (not (string= (version dist) (source-version source))))))
 
 (defun install-source (source)
   (with-package-functions :ql-dist (install-dist)
-    (format t "~&Installing dist ~S version ~S.~%"
+    (format t "~&Installing dist ~S~:[~; version ~:*~S~].~%"
             (source-dist-name source)
-            (source-version source))
+            (and (slot-boundp source 'qlot.source::version)
+                 (source-version source)))
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))
@@ -187,29 +192,22 @@
           (update-in-place dist new-dist))))))
 
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
-  (let* ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
-                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
-         (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
-         (sources '()))
+  (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
+                                                                     (merge-pathnames #P"tmp/qlot/" qlhome))))
+        (all-sources (prepare-qlfile file :ignore-lock ignore-lock)))
 
-    (with-quicklisp-home qlhome
-      (with-package-functions :ql-dist (find-dist version)
-        (setf sources
-              (remove-if #'already-installed-p
-                         all-sources))))
-
-    (start-server (mapc #'prepare sources))
+    (start-server all-sources)
     (with-quicklisp-home qlhome
       (iter (for source in all-sources)
         (for time from (get-universal-time))
 
         (cond
-          ((already-installed-p source)
-           (format t "~&Already have dist ~S version ~S.~%"
-                   (source-dist-name source)
-                   (source-version source)))
+          ((not (already-installed-p source))
+           (install-source source))
           ((update-available-p source) (update-source source))
-          (T (install-source source)))
+          (T (format t "~&Already have dist ~S version ~S.~%"
+                     (source-dist-name source)
+                     (source-version source))))
 
         (with-package-functions :ql-dist (dist (setf preference))
           (setf (preference (dist (source-dist-name source)))

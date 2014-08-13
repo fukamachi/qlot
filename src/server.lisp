@@ -13,6 +13,8 @@
                 :archive)
   (:import-from :qlot.parser
                 :prepare-qlfile)
+  (:import-from :qlot.tmp
+                :*tmp-directory*)
   (:import-from :clack
                 :clackup
                 :stop)
@@ -58,26 +60,32 @@
           return port))
 
 (defun make-app (sources)
-  (let ((app (make-instance '<app>)))
-    (dolist (source sources)
-      (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
-        (when-let ((path (url-path-for source action)))
-          (setf (route app path)
-                (lambda (params)
-                  (declare (ignore params))
-                  (let ((action-name (symbol-name action)))
-                    (when (string-equal (subseq action-name (- (length action-name) 4))
-                                        ".txt")
-                      (setf (headers *response* :content-type) "text/plain")))
-                  (let ((*dist-base-url* (localhost)))
-                    (funcall (symbol-function action) source)))))))
-    app))
+  (flet ((make-route (source action)
+           (lambda (params)
+             (declare (ignore params))
+             (let ((action-name (symbol-name action)))
+               (when (string-equal (subseq action-name (- (length action-name) 4))
+                                   ".txt")
+                 (setf (headers *response* :content-type) "text/plain")))
+             (let ((*dist-base-url* (localhost)))
+               (funcall (symbol-function action) source)))))
+    (let ((app (make-instance '<app>))
+          (tmp-directory *tmp-directory*))
+      (dolist (source sources)
+        (setf (route app (url-path-for source 'project.txt))
+              (lambda (params)
+                (let ((*tmp-directory* tmp-directory))
+                  (prepare source))
+                (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
+                  (when-let ((path (url-path-for source action)))
+                    (setf (route app path)
+                          (make-route source action))))
+
+                (funcall (make-route source 'project.txt) params))))
+      app)))
 
 (defgeneric start-server (sources)
   (:method ((sources list))
-    (unless (every #'source-prepared sources)
-      (error "All ~S must be prepared: ~S" 'sources sources))
-
     (when *handler*
       (stop-server))
 
@@ -89,9 +97,7 @@
                   (clackup app :port port)))
         (setf *qlot-port* port))))
   (:method ((qlfile pathname))
-    (let ((sources (prepare-qlfile qlfile)))
-      (map nil #'prepare sources)
-      (start-server sources))))
+    (start-server (prepare-qlfile qlfile))))
 
 (defun stop-server ()
   (when *handler*
