@@ -187,10 +187,10 @@
           (update-in-place dist new-dist))))))
 
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
-  (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
-                                                                     (merge-pathnames #P"tmp/qlot/" qlhome))))
-        (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
-        (sources '()))
+  (let* ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
+                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
+         (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
+         (sources '()))
 
     (with-quicklisp-home qlhome
       (with-package-functions :ql-dist (find-dist version)
