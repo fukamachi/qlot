@@ -209,6 +209,14 @@
                      (source-dist-name source)
                      (source-version source))))
 
+        ;; Install all releases.
+        (unless (typep source 'qlot.source.ql:source-ql-all)
+          (let ((*standard-output* (make-broadcast-stream))
+                (*trace-output* (make-broadcast-stream)))
+            (with-package-functions :ql-dist (dist provided-releases ensure-installed)
+              (map nil #'ensure-installed
+                   (provided-releases (dist (source-dist-name source)))))))
+
         (with-package-functions :ql-dist (dist (setf preference))
           (setf (preference (dist (source-dist-name source)))
                 time)))
@@ -220,16 +228,16 @@
           (iter (for dist in (all-dists))
             (unless (gethash (name dist) sources-map)
               (format t "~&Removing dist ~S.~%" (name dist))
-              (uninstall dist)))))
+              (uninstall dist))))))
 
-      (let ((*standard-output* (make-broadcast-stream))
-            (*trace-output* (make-broadcast-stream)))
-        (map nil
-             (lambda (asd)
-               (ensure-installed-in-local-quicklisp
-                (asdf:find-system (pathname-name asd))
-                qlhome))
-             (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (map nil
+           (lambda (asd)
+             (ensure-installed-in-local-quicklisp
+              (asdf:find-system (pathname-name asd))
+              qlhome))
+           (asdf::directory-asd-files (fad:pathname-directory-pathname file))))
     (stop-server)
 
     (with-quicklisp-home qlhome

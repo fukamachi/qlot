@@ -9,7 +9,8 @@
                 :with-package-functions)
   (:import-from :function-cache
                 :defcached)
-  (:export :source-ql))
+  (:export :source-ql
+           :source-ql-all))
 (in-package :qlot.source.ql)
 
 (defclass source-ql (source)
