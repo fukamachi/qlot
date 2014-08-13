@@ -226,7 +226,12 @@
         ;; Installing
         (with-package-functions :ql-dist (install-dist)
           (iter (for source in to-install)
-            (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)))
+            (format t "~&Installing dist ~S version ~S.~%"
+                    (source-dist-name source)
+                    (source-version source))
+            (let ((*standard-output* (make-broadcast-stream))
+                  (*trace-output* (make-broadcast-stream)))
+              (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))
 
         ;; Updating
         (with-package-functions :ql-dist (update-in-place available-update name version uninstall installed-releases)
@@ -237,7 +242,8 @@
                       (version dist)
                       (version new-dist))
               (map nil #'uninstall (installed-releases dist))
-              (update-in-place dist new-dist))))
+              (let ((*trace-output* (make-broadcast-stream)))
+                (update-in-place dist new-dist)))))
 
         ;; Uninstalling
         (with-package-functions :ql-dist (uninstall name)
@@ -252,12 +258,14 @@
             (setf (preference (dist (source-dist-name source)))
                   time)))
 
-        (map nil
-             (lambda (asd)
-               (ensure-installed-in-local-quicklisp
-                (asdf:find-system (pathname-name asd))
-                qlhome))
-             (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
+        (let ((*standard-output* (make-broadcast-stream))
+              (*trace-output* (make-broadcast-stream)))
+          (map nil
+               (lambda (asd)
+                 (ensure-installed-in-local-quicklisp
+                  (asdf:find-system (pathname-name asd))
+                  qlhome))
+               (asdf::directory-asd-files (fad:pathname-directory-pathname file))))))
     (stop-server)
 
     (with-quicklisp-home qlhome
