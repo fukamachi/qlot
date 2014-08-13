@@ -149,123 +149,89 @@
 
     (format t "~&Successfully updated.~%")))
 
-(defparameter *prepared-sources* nil)
+(defun already-installed-p (source)
+  (with-package-functions :ql-dist (find-dist version)
+    (let ((dist (find-dist (source-dist-name source))))
+      (and dist
+           (string= (version dist) (source-version source))))))
 
-(defmacro with-prepared-transaction (&body body)
-  `(let ((*prepared-sources* (make-hash-table :test 'equal)))
-     ,@body))
+(defun update-available-p (source)
+  (with-package-functions :ql-dist (find-dist version)
+    (let ((dist (find-dist (source-dist-name source))))
+      (and dist
+           (not (string= (version dist) (source-version source)))))))
 
-(defun expand-sources (sources)
-  (labels ((collect-source (source)
-             (when (gethash (source-project-name source) *prepared-sources*)
-               (warn "Project named ~S is already prepared. Ignored."
-                     (source-project-name source))
-               (return-from collect-source '()))
+(defun install-source (source)
+  (with-package-functions :ql-dist (install-dist)
+    (format t "~&Installing dist ~S version ~S.~%"
+            (source-dist-name source)
+            (source-version source))
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))
 
-             (setf (gethash (source-project-name source) *prepared-sources*) t)
-             (prepare source)
-
-             (append (iter (for dep in (reverse (source-direct-dependencies source)))
-                       (appending (collect-source dep)))
-                     (list source))))
-    (with-prepared-transaction
-      (mapcan #'collect-source sources))))
+(defun update-source (source)
+  (with-package-functions :ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
+    (let ((dist (find-dist (source-dist-name source))))
+      (setf (distinfo-subscription-url dist)
+            (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
+                                 (distinfo-subscription-url dist)
+                                 (localhost)))
+      (let ((new-dist (available-update dist)))
+        (format t "~&Updating dist ~S version ~S -> ~S.~%"
+                (name dist)
+                (version dist)
+                (version new-dist))
+        (map nil #'uninstall (installed-releases dist))
+        (let ((*trace-output* (make-broadcast-stream)))
+          (update-in-place dist new-dist))))))
 
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
-  (let ((dists-map (make-hash-table :test 'equal))
-        (*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
+  (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
         (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
         (sources '()))
 
     (with-quicklisp-home qlhome
-      (with-package-functions :ql-dist (find-dist all-dists name)
-        (iter (for dist in (all-dists))
-          (setf (gethash (name dist) dists-map) dist)))
-
       (with-package-functions :ql-dist (find-dist version)
         (setf sources
-              (iter (for source in all-sources)
-                (for dist = (find-dist (source-dist-name source)))
-                (if (and dist
-                         (string= (version dist) (source-version source)))
-                    (remhash (source-dist-name source) dists-map)
-                    (collect source))))))
+              (remove-if #'already-installed-p
+                         all-sources))))
 
-    (start-server (expand-sources sources))
+    (start-server (mapc #'prepare sources))
     (with-quicklisp-home qlhome
-      (let (to-install to-update to-uninstall)
-        (with-package-functions :ql-dist (find-dist distinfo-subscription-url (setf distinfo-subscription-url) available-update)
-          (iter (for source in sources)
-            (remhash (source-dist-name source) dists-map)
-            (let ((dist (find-dist (source-dist-name source))))
-              (cond
-                (dist (setf (distinfo-subscription-url dist)
-                            (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
-                                                 (distinfo-subscription-url dist)
-                                                 (localhost)))
-                      (when (available-update dist)
-                        (push dist to-update)))
-                (T (push source to-install))))
-            (finally (setf to-update (nreverse to-update))
-                     (setf to-install (nreverse to-install)))))
+      (iter (for source in all-sources)
+        (for time from (get-universal-time))
 
-        (setf to-uninstall
-              (iter (for (name dist) in-hashtable dists-map)
-                (collect dist)))
-
-        ;; Report
-        (with-package-functions :ql-dist (name)
-          (when to-install
-            (format t "~&  New dists:~%    ~{~A~^ ~}~%" (mapcar #'source-dist-name to-install)))
-          (when to-update
-            (format t "~&  Updated dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-update)))
-          (when to-uninstall
-            (format t "~&  Removed dists:~%    ~{~A~^ ~}~%" (mapcar #'name to-uninstall))))
-
-        ;; Installing
-        (with-package-functions :ql-dist (install-dist)
-          (iter (for source in to-install)
-            (format t "~&Installing dist ~S version ~S.~%"
-                    (source-dist-name source)
-                    (source-version source))
-            (let ((*standard-output* (make-broadcast-stream))
-                  (*trace-output* (make-broadcast-stream)))
-              (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))
-
-        ;; Updating
-        (with-package-functions :ql-dist (update-in-place available-update name version uninstall installed-releases)
-          (iter (for dist in to-update)
-            (let ((new-dist (available-update dist)))
-              (format t "~&Updating dist ~S version ~S -> ~S.~%"
-                      (name dist)
-                      (version dist)
-                      (version new-dist))
-              (map nil #'uninstall (installed-releases dist))
-              (let ((*trace-output* (make-broadcast-stream)))
-                (update-in-place dist new-dist)))))
-
-        ;; Uninstalling
-        (with-package-functions :ql-dist (uninstall name)
-          (iter (for dist in to-uninstall)
-            (format t "~&Removing dist ~S.~%" (name dist))
-            (uninstall dist)))
+        (cond
+          ((already-installed-p source)
+           (format t "~&Already have dist ~S version ~S.~%"
+                   (source-dist-name source)
+                   (source-version source)))
+          ((update-available-p source) (update-source source))
+          (T (install-source source)))
 
         (with-package-functions :ql-dist (dist (setf preference))
-          (iter
-            (for source in all-sources)
-            (for time from (get-universal-time))
-            (setf (preference (dist (source-dist-name source)))
-                  time)))
+          (setf (preference (dist (source-dist-name source)))
+                time)))
 
-        (let ((*standard-output* (make-broadcast-stream))
-              (*trace-output* (make-broadcast-stream)))
-          (map nil
-               (lambda (asd)
-                 (ensure-installed-in-local-quicklisp
-                  (asdf:find-system (pathname-name asd))
-                  qlhome))
-               (asdf::directory-asd-files (fad:pathname-directory-pathname file))))))
+      (with-package-functions :ql-dist (uninstall name all-dists)
+        (let ((sources-map (make-hash-table :test 'equal)))
+          (iter (for source in all-sources)
+            (setf (gethash (source-dist-name source) sources-map) t))
+          (iter (for dist in (all-dists))
+            (unless (gethash (name dist) sources-map)
+              (format t "~&Removing dist ~S.~%" (name dist))
+              (uninstall dist)))))
+
+      (let ((*standard-output* (make-broadcast-stream))
+            (*trace-output* (make-broadcast-stream)))
+        (map nil
+             (lambda (asd)
+               (ensure-installed-in-local-quicklisp
+                (asdf:find-system (pathname-name asd))
+                qlhome))
+             (asdf::directory-asd-files (fad:pathname-directory-pathname file)))))
     (stop-server)
 
     (with-quicklisp-home qlhome
