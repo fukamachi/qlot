@@ -231,7 +231,10 @@ distinfo-subscription-url: ~A~A
                   (not (search "skeleton" (pathname-name path)))))
            (collect-asd-files (path)
              (cond
-               ((fad:directory-pathname-p path)
+               ((and (fad:directory-pathname-p path)
+                     (not (find (car (last (pathname-directory path)))
+                                asdf::*default-source-registry-exclusions*
+                                :test #'string=)))
                 (collect-asd-files-in-directory path))
                ((asd-file-p path) (list path) )
                (T (list))))
