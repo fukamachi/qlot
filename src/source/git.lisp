@@ -118,6 +118,7 @@
        (restart-case
            (safety-shell-command "git"
                                  (list "clone"
+                                       "--recursive"
                                        (source-git-remote-url source)
                                        destination))
          (retry-git-clone ()
