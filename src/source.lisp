@@ -8,6 +8,7 @@
                 :with-package-functions)
   (:import-from :fad
                 :list-directory
+                :directory-pathname-p
                 :pathname-absolute-p)
   (:import-from :ironclad
                 :byte-array-to-hex-string
@@ -224,10 +225,19 @@ distinfo-subscription-url: ~A~A
 
 (defun source-system-files (source)
   (check-type source source-has-directory)
-  (remove-if-not
-   (lambda (path)
-     (equal (pathname-type path) "asd"))
-   (fad:list-directory (source-directory source))))
+  (labels ((asd-file-p (path)
+             (and (equal (pathname-type path) "asd")
+                  ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                  (not (search "skeleton" (pathname-name path)))))
+           (collect-asd-files (path)
+             (cond
+               ((fad:directory-pathname-p path)
+                (collect-asd-files-in-directory path))
+               ((asd-file-p path) (list path) )
+               (T (list))))
+           (collect-asd-files-in-directory (dir)
+             (mapcan #'collect-asd-files (fad:list-directory dir))))
+    (collect-asd-files-in-directory (source-directory source))))
 
 (defun system-file-systems (name)
   (handler-bind ((style-warning #'muffle-warning))
