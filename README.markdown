@@ -84,6 +84,21 @@ To load your qlot-ready application, use `qlot:quickload` instead of `ql:quicklo
 (qlot:quickload :myapp)
 ```
 
+### Executing forms with project-local Quicklisp
+
+Although `qlot:quickload` loads a project with its project-local Quicklisp, the Quicklisp path will be restored to the default one after that.
+
+This could cause significant problem if your application loads other libraries during run-time.
+
+For example, [Clack](http://clacklisp.org/) loads a server handler when executing `clackup` and, the important part is, it loads with the system default Quicklisp, not the project-local one.
+
+To prevent the mess, wrap all code which would load other libraries in run-time with `qlot:with-local-quicklisp`.
+
+```common-lisp
+(qlot:with-local-quicklisp :myapp
+  (clack:clackup *app* :server :wookie))
+```
+
 ### Updating the project-local quicklisp
 
 You can update the content of `quicklisp/` directory via:
