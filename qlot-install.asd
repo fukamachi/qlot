@@ -15,8 +15,8 @@
                :salza2
                :gzip-stream
                :ironclad
-               :flexi-streams
                :yason
+               :cl-fad
                :alexandria
                :cl-ppcre
                :external-program

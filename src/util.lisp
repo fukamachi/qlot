@@ -37,7 +37,8 @@
 
 (defun find-qlfile (directory &key (errorp t) use-lock)
   (check-type directory pathname)
-  (unless (probe-file directory)
+  (unless #+clisp (ext:probe-directory directory)
+          #-clisp (probe-file directory)
     (error "~S does not exist." directory))
   (let ((qlfile (merge-pathnames (if use-lock
                                      "qlfile.lock"
@@ -51,7 +52,8 @@
     qlfile))
 
 (defun call-in-local-quicklisp (fn system qlhome)
-  (unless (probe-file qlhome)
+  (unless #+clisp (ext:probe-directory qlhome)
+          #-clisp (probe-file qlhome)
     (error "Directory ~S does not exist." qlhome))
 
   (let (#+quicklisp

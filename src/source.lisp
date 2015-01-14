@@ -14,8 +14,6 @@
                 :byte-array-to-hex-string
                 :digest-file
                 :digest-sequence)
-  (:import-from :flexi-streams
-                :with-output-to-sequence)
   (:import-from :alexandria
                 :copy-stream
                 :when-let)
@@ -284,8 +282,9 @@ distinfo-subscription-url: ~A~A
                    (ironclad:digest-file :md5 tarball-file))
                   (ironclad:byte-array-to-hex-string
                    (ironclad:digest-sequence :sha1
-                                             (flex:with-output-to-sequence (out)
-                                               (alexandria:copy-stream in out :finish-output t))))))
+                                             (let ((out (make-array (file-length in) :element-type '(unsigned-byte 8))))
+                                               (read-sequence out in)
+                                               out)))))
       (with-slots (project-name) source
         (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
 ~A ~A~A ~A ~A ~A ~A~{ ~A~}

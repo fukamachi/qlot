@@ -13,15 +13,14 @@
   :license "MIT"
   :depends-on (:qlot
                :qlot-install
-               :cl-test-more)
+               :cl-fad
+               :prove)
   :components ((:module "t"
                 :components
                 ((:test-file "parser")
                  (:test-file "server")
                  (:test-file "qlot"))))
 
-  :defsystem-depends-on (:cl-test-more)
+  :defsystem-depends-on (:prove-asdf)
   :perform (test-op :after (op c)
-                    (funcall (intern #. (string :run-test-system) :cl-test-more)
-                             c)
-                    (asdf:clear-system c)))
+                    (funcall (intern #.(string :run-test-system) :prove.asdf) c)))

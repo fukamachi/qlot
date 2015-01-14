@@ -1,6 +1,8 @@
 (in-package :cl-user)
 (defpackage qlot.http
   (:use :cl)
+  (:import-from :fad
+                :file-exists-p)
   (:import-from :alexandria
                 :with-gensyms
                 :once-only
@@ -47,7 +49,7 @@
        (restart-case (setf stream (safety-http-request url :want-stream t))
          (retry-download ()
            :report "Retry to download."
-           (when (probe-file output)
+           (when (fad:file-exists-p output)
              (delete-file output))
            (go downloading))))
     (with-open-file (out output

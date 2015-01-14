@@ -2,7 +2,7 @@
 (defpackage qlot-test.parser
   (:use :cl
         :qlot.parser
-        :cl-test-more)
+        :prove)
   (:import-from :qlot.source
                 :source-project-name)
   (:import-from :qlot.source.ql

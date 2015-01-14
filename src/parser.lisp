@@ -15,6 +15,8 @@
                 :source-ql)
   (:import-from :qlot.error
                 :qlot-qlfile-error)
+  (:import-from :fad
+                :file-exists-p)
   (:import-from :alexandria
                 :delete-from-plist)
   (:export :parse-qlfile
@@ -86,7 +88,7 @@
 (defun prepare-qlfile (file &key ignore-lock)
   (let ((default-ql-source (make-source 'source-ql :all :latest))
         (lock-file (and (not ignore-lock)
-                        (probe-file
+                        (fad:file-exists-p
                          (make-pathname :defaults file
                                         :name (file-namestring file)
                                         :type "lock"))))

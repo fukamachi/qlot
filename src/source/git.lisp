@@ -9,6 +9,9 @@
   (:import-from :qlot.shell
                 :safety-shell-command
                 :shell-command-error)
+  (:import-from :fad
+                :directory-exists-p
+                :delete-directory-and-files)
   (:export :source-git
            :retry-git-clone))
 (in-package :qlot.source.git)
@@ -123,7 +126,7 @@
                                        destination))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
-           (when (probe-file destination)
+           (when (fad:directory-exists-p destination)
              (fad:delete-directory-and-files destination))
            (go git-cloning))))
     (when checkout-to

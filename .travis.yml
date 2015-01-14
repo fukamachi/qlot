@@ -1,0 +1,17 @@
+language: common-lisp
+
+env:
+  matrix:
+    - LISP=sbcl
+    - LISP=clisp
+
+matrix:
+  allow_failures:
+    - env: LISP=clisp
+
+install:
+  # Install cl-travis
+  - curl https://raw.githubusercontent.com/luismbo/cl-travis/master/install.sh | bash
+
+script:
+  - cl -l prove -e '(or (prove:run :qlot-test) (uiop:quit -1))'
