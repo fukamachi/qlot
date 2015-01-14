@@ -17,6 +17,7 @@
   (when (probe-file lock)
     (delete-file lock)))
 
+#+thread-support
 (let ((qlfile (asdf:system-relative-pathname :qlot #P"t/data/qlfile"))
       (*tmp-directory* (fad:pathname-as-directory
                         (merge-pathnames (fad::generate-random-string)
@@ -32,9 +33,11 @@
   (is (nth-value 1 (http-request (localhost "/datafly.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/log4cl.txt"))) 200)
 
-  (fad:delete-directory-and-files *tmp-directory*))
+  (fad:delete-directory-and-files *tmp-directory*)
 
-(diag "stopping the server..")
-(stop-server)
+  (diag "stopping the server..")
+  (stop-server))
+#-thread-support
+(skip 6 "because your Lisp doesn't support threads")
 
 (finalize)
