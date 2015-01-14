@@ -3,7 +3,6 @@ language: common-lisp
 env:
   matrix:
     - LISP=sbcl
-    - LISP=ccl
     - LISP=clisp
 
 install:
