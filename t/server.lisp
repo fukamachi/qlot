@@ -2,7 +2,7 @@
 (defpackage qlot-test.server
   (:use :cl
         :qlot.server
-        :cl-test-more)
+        :prove)
   (:import-from :qlot.parser
                 :parse-qlfile)
   (:import-from :qlot.tmp

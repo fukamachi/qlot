@@ -7,7 +7,7 @@
 (defpackage qlot-test
   (:use :cl
         :qlot
-        :cl-test-more)
+        :prove)
   (:import-from :qlot.install
                 :uninstall-all-dists))
 (in-package :qlot-test)
