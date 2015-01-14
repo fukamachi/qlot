@@ -28,7 +28,7 @@ ql log4cl 2014-03-17
 
 We have Quicklisp, the central library registry. It made installation of libraries damn easy.
 
-However, what only you can specify is the month of distribution. Which means you have to use all libraries of the same moment. You cannot use a newer/older version of a library for your project.
+However, what only you can specify is the month of distribution. Which means you have to use all libraries of the same moment and you cannot use a newer/older version of a library for your project.
 
 "local-projects/" or ASDF configurations may be a solution to this problem, but there are a couple of problems.
 

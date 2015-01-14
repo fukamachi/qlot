@@ -41,7 +41,7 @@
          ,body))))
 
 (defun download-file (url output &key (element-type '(unsigned-byte 8)))
-  (format t "~&Downloading '~A' to '~A'...~%" url output)
+  (format t "~&Downloading ~S to ~S...~%" url output)
   (let (stream)
     (tagbody downloading
        (restart-case (setf stream (safety-http-request url :want-stream t))
