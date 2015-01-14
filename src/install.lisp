@@ -260,8 +260,7 @@
   (iter (for asd in (asdf::directory-asd-files directory))
     (for system = (asdf:find-system (pathname-name asd)))
     (when (typep system 'qlot-system)
-      (return-from directory-system-for-qlhome system)))
-  (car (asdf::directory-asd-files directory)))
+      (return-from directory-system-for-qlhome system))))
 
 (defgeneric install-project (object &rest args)
   (:method ((object symbol) &rest args)
@@ -278,11 +277,14 @@
              (find-qlfile system-dir)
              args)))
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
-    (let ((object (truename object))
-          (current-system (directory-system-for-qlhome (fad:pathname-directory-pathname object))))
+    (let* ((object (truename object))
+           (dir (fad:pathname-directory-pathname object))
+           (current-system (directory-system-for-qlhome dir)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (system-quicklisp-home current-system)
+              (list* :quicklisp-home (if current-system
+                                         (system-quicklisp-home current-system)
+                                         (merge-pathnames #P"quicklisp/" dir))
                      args)))
       (if (fad:directory-pathname-p object)
           (apply #'install-qlfile (find-qlfile object) args)
@@ -303,11 +305,14 @@
              (find-qlfile system-dir :errorp nil)
              args)))
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
-    (let ((object (truename object))
-          (current-system (directory-system-for-qlhome (fad:pathname-directory-pathname object))))
+    (let* ((object (truename object))
+           (dir (fad:pathname-directory-pathname object))
+           (current-system (directory-system-for-qlhome dir)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (system-quicklisp-home current-system)
+              (list* :quicklisp-home (if current-system
+                                         (system-quicklisp-home current-system)
+                                         (merge-pathnames #P"quicklisp/" dir))
                      args)))
       (if (fad:directory-pathname-p object)
           (apply #'update-qlfile (find-qlfile object) args)
