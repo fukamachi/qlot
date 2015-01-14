@@ -15,7 +15,6 @@
                :salza2
                :gzip-stream
                :ironclad
-               :flexi-streams
                :yason
                :alexandria
                :cl-ppcre
