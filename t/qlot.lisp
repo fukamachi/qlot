@@ -9,19 +9,22 @@
         :qlot
         :prove)
   (:import-from :qlot.install
-                :uninstall-all-dists))
+                :uninstall-all-dists)
+  (:import-from :fad
+                :file-exists-p
+                :delete-directory-and-files))
 (in-package :qlot-test)
 
 (defparameter *tmp-directory* (asdf:system-relative-pathname :qlot #P"t/tmp/"))
-(when (probe-file *tmp-directory*)
+(when (fad:file-exists-p *tmp-directory*)
   (fad:delete-directory-and-files *tmp-directory*))
 (ensure-directories-exist *tmp-directory*)
 
 (let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock"))
       (lock2 (asdf:system-relative-pathname :qlot #P"t/data/qlfile2.lock")))
-  (when (probe-file lock)
+  (when (fad:file-exists-p lock)
     (delete-file lock))
-  (when (probe-file lock2)
+  (when (fad:file-exists-p lock2)
     (delete-file lock2)))
 
 (plan 4)

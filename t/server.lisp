@@ -8,13 +8,18 @@
   (:import-from :qlot.tmp
                 :*tmp-directory*)
   (:import-from :drakma
-                :http-request))
+                :http-request)
+  (:import-from :fad
+                :file-exists-p
+                :pathname-as-directory
+                :generate-random-string
+                :delete-directory-and-files))
 (in-package :qlot-test.server)
 
 (plan 6)
 
 (let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock")))
-  (when (probe-file lock)
+  (when (fad:file-exists-p lock)
     (delete-file lock)))
 
 #+thread-support

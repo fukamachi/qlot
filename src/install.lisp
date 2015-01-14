@@ -36,6 +36,8 @@
                 :pathname-absolute-p
                 :pathname-directory-pathname
                 :generate-random-string
+                :file-exists-p
+                :directory-exists-p
                 :delete-directory-and-files)
   (:export :install-quicklisp
            :install-qlfile
@@ -118,12 +120,12 @@
       (merge-pathnames qlhome base)))
 
 (defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
-  (unless (probe-file file)
+  (unless (fad:file-exists-p file)
     (error "File does not exist: ~A" file))
 
   (let ((qlhome (canonical-qlhome quicklisp-home (fad:pathname-directory-pathname file))))
 
-    (unless (probe-file qlhome)
+    (unless (fad:file-exists-p qlhome)
       (install-quicklisp qlhome))
 
     (unless (find-package :ql)
@@ -134,12 +136,12 @@
     (format t "~&Successfully installed.~%")))
 
 (defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
-  (unless (probe-file file)
+  (unless (fad:file-exists-p file)
     (error "File does not exist: ~A" file))
 
   (let ((qlhome (canonical-qlhome quicklisp-home (fad:pathname-directory-pathname file))))
 
-    (unless (probe-file qlhome)
+    (unless (fad:directory-exists-p qlhome)
       (error "~S does not exist." qlhome))
 
     (unless (find-package :ql)
@@ -251,7 +253,7 @@
                 for (project-name . contents) = (freeze-source source)
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-    (when (probe-file *tmp-directory*)
+    (when (fad:directory-exists-p *tmp-directory*)
       (fad:delete-directory-and-files *tmp-directory*))))
 
 (defun directory-system-for-qlhome (directory)

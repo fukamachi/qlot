@@ -16,6 +16,7 @@
                :gzip-stream
                :ironclad
                :yason
+               :cl-fad
                :alexandria
                :cl-ppcre
                :external-program

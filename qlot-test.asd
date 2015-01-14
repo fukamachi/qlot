@@ -13,6 +13,7 @@
   :license "MIT"
   :depends-on (:qlot
                :qlot-install
+               :cl-fad
                :prove)
   :components ((:module "t"
                 :components
