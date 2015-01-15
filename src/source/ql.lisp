@@ -55,7 +55,10 @@
 
 (defmethod prepare ((source source-ql-all))
   (unless (slot-boundp source 'version)
-    (setf (source-version source) (ql-latest-version))))
+    (setf (source-version source)
+          (if (eq (slot-value source '%version) :latest)
+              (ql-latest-version)
+              (slot-value source '%version)))))
 
 (defmethod prepare ((source source-ql))
   (setf (source-version source)

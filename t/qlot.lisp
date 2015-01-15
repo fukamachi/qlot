@@ -21,13 +21,16 @@
 (ensure-directories-exist *tmp-directory*)
 
 (let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock"))
-      (lock2 (asdf:system-relative-pathname :qlot #P"t/data/qlfile2.lock")))
+      (lock2 (asdf:system-relative-pathname :qlot #P"t/data/qlfile2.lock"))
+      (lock3 (asdf:system-relative-pathname :qlot #P"t/data/qlfile3.lock")))
   (when (fad:file-exists-p lock)
     (delete-file lock))
   (when (fad:file-exists-p lock2)
-    (delete-file lock2)))
+    (delete-file lock2))
+  (when (fad:file-exists-p lock3)
+    (delete-file lock3)))
 
-(plan 4)
+(plan 5)
 
 (ok (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))
     "can install Quicklisp")
@@ -65,5 +68,19 @@
       "shelly")
     :test #'equal
     "can update dists from qlfile")
+
+(install (asdf:system-relative-pathname :qlot #P"t/data/qlfile3")
+         :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
+
+(is (mapcar (lambda (path)
+              (car (last (pathname-directory path))))
+            (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+    '("quicklisp")
+    :test #'equal
+    "can install dists from qlfile")
+
+(like (alexandria:read-file-into-string (merge-pathnames #P"quicklisp/dists/quicklisp/distinfo.txt" *tmp-directory*))
+      "version: 2014-12-17"
+      "can install old Quicklisp dist")
 
 (finalize)
