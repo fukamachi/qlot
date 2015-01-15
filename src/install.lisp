@@ -206,7 +206,12 @@
         (cond
           ((not (already-installed-p source))
            (install-source source))
-          ((update-available-p source) (update-source source))
+          ((update-available-p source)
+           (if (string= (source-dist-name source) "quicklisp")
+               (with-package-functions :ql-dist (uninstall dist)
+                 (uninstall (dist "quicklisp"))
+                 (install-source source))
+               (update-source source)))
           (T (format t "~&Already have dist ~S version ~S.~%"
                      (source-dist-name source)
                      (source-version source))))

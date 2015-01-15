@@ -30,15 +30,17 @@
                        :%version version))))
 
 (defmethod print-object ((source source-ql-all) stream)
-  (with-slots (project-name %version) source
-    (format stream "#<~S ~A ~A>"
+  (with-slots (project-name %version version) source
+    (format stream "#<~S ~A ~A~:[~;~:*(~A)~]>"
             (type-of source)
             (if (stringp project-name)
                 project-name
                 (prin1-to-string project-name))
             (if (stringp %version)
                 %version
-                (prin1-to-string %version)))))
+                (prin1-to-string %version))
+            (and (slot-boundp source 'version)
+                 (source-version source)))))
 
 (defmethod print-object ((source source-ql) stream)
   (with-slots (project-name %version) source
@@ -52,7 +54,8 @@
                 (prin1-to-string %version)))))
 
 (defmethod prepare ((source source-ql-all))
-  (setf (source-version source) (ql-latest-version)))
+  (unless (slot-boundp source 'version)
+    (setf (source-version source) (ql-latest-version))))
 
 (defmethod prepare ((source source-ql))
   (setf (source-version source)
