@@ -30,7 +30,7 @@
   (when (fad:file-exists-p lock3)
     (delete-file lock3)))
 
-(plan 5)
+(plan 6)
 
 (ok (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))
     "can install Quicklisp")
@@ -69,8 +69,8 @@
     :test #'equal
     "can update dists from qlfile")
 
-(install (asdf:system-relative-pathname :qlot #P"t/data/qlfile3")
-         :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
+(update (asdf:system-relative-pathname :qlot #P"t/data/qlfile3")
+        :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
 
 (is (mapcar (lambda (path)
               (car (last (pathname-directory path))))
