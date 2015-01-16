@@ -18,7 +18,7 @@
   "Install Quicklisp and libraries that declared in qlfile project-locally.
 qlfile.lock will be used with precedence if it exists."
   (unless (find-package :qlot.install)
-    #+quicklisp (ql:quickload :qlot-install)
+    #+quicklisp (ql:quickload :qlot-install :silent t)
     #-quicklisp (asdf:load-system :qlot-install))
   (with-package-functions :qlot.install (install-project)
     (if (evenp (length args))
@@ -28,7 +28,7 @@ qlfile.lock will be used with precedence if it exists."
 (defun update (&rest args)
   "Update the project-local 'quicklisp/' directory using qlfile."
   (unless (find-package :qlot.install)
-    #+quicklisp (ql:quickload :qlot-install)
+    #+quicklisp (ql:quickload :qlot-install :silent t)
     #-quicklisp (asdf:load-system :qlot-install))
   (with-package-functions :qlot.install (update-project)
     (if (evenp (length args))
@@ -39,7 +39,7 @@ qlfile.lock will be used with precedence if it exists."
   "Install Quicklisp in the given PATH.
 If PATH isn't specified, this installs it to './quicklisp/'."
   (unless (find-package :qlot.install)
-    #+quicklisp (ql:quickload :qlot-install)
+    #+quicklisp (ql:quickload :qlot-install :silent t)
     #-quicklisp (asdf:load-system :qlot-install))
   (with-package-functions :qlot.install (install-quicklisp)
     (apply #'install-quicklisp (if path-specified-p
