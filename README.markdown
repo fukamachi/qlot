@@ -10,7 +10,7 @@ Qlot is a project-local library installer using Quicklisp facility. This aims to
 
 ```
 # "qlfile" of "myapp"
-git clack https://github.com/fukamachi/clack.git
+git clone https://github.com/fukamachi/clack.git
 github datafly fukamachi/datafly :branch v0.7.x
 ql log4cl 2014-03-17
 ```
