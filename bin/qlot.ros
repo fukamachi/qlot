@@ -1,0 +1,37 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+
+#|
+Roswell script for installing and updating qlot project.
+
+* How to use
+
+1. Install Roswell (https://github.com/snmsts/roswell)
+2. Copy this script to somewhere your shell can find (ex. /usr/local/bin).
+|#
+
+(ql:quickload :qlot :silent t)
+
+(defun help ()
+  (format t "~&Usage: ~A [install | update]~%"
+          (read-from-string
+           (second (assoc "script"
+                          (let ((*read-eval*))
+                            (read-from-string (asdf::getenv "ROS_OPTS")))
+                          :test 'equal)))))
+
+(defun main (&optional cmd)
+  (handler-case
+      (cond
+        ((null cmd) (help) (asdf::quit -1))
+        ((string= cmd "install")
+         (qlot:install))
+        ((string= cmd "update")
+         (qlot:update))
+        (T (help) (asdf::quit -1)))
+    (error (e)
+      (format *error-output* "~&Error: ~A~%" e)
+      (asdf::quit -1))))
