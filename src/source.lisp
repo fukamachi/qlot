@@ -240,37 +240,64 @@ distinfo-subscription-url: ~A~A
              (mapcan #'collect-asd-files (fad:list-directory dir))))
     (collect-asd-files-in-directory (source-directory source))))
 
+(defparameter *dependencies* nil)
+
+(defun make-hook (old-hook)
+  (labels ((dep-list-name (dep)
+             (ecase (first dep)
+               ((:version :require) (second dep))
+               (:feature (third dep))))
+           (normalize (dep)
+             (cond
+               ((and (consp dep)
+                     (keywordp (car dep)))
+                (dep-list-name dep))
+               ((or (symbolp dep)
+                    (stringp dep))
+                (string-downcase dep))
+               (error "Can't normalize dependency: ~S" dep))))
+    (lambda (fun form env)
+      (when (and (consp form)
+                 (eq (car form) 'asdf:defsystem))
+        (let ((defsystem-depends-on (getf (cddr form) :defsystem-depends-on))
+              (depends-on (getf (cddr form) :depends-on))
+              (weakly-depends-on (getf (cddr form) :weakly-depends-on)))
+          #+quicklisp
+          (when defsystem-depends-on
+            (ql:quickload defsystem-depends-on))
+          (setf (gethash (string-downcase (cadr form)) *dependencies*)
+                (remove-duplicates
+                 (mapcar #'normalize
+                         (append defsystem-depends-on depends-on weakly-depends-on))
+                 :test #'equalp))))
+      (funcall old-hook fun form env))))
+
 (defun system-file-systems (name)
   (handler-bind ((style-warning #'muffle-warning))
-    (let* ((system (asdf:find-system name))
+    (let* ((*macroexpand-hook* (make-hook *macroexpand-hook*))
+           (system (asdf:find-system name))
            (target (asdf:system-source-file system))
            (result '()))
       (asdf:map-systems
        (lambda (system)
          (when (equalp target (asdf:system-source-file system))
            (push system result))))
-      result)))
+      (nreverse result))))
 
 (defmethod systems.txt ((source source-has-directory))
   (with-output-to-string (s)
     (format s "# project system-file system-name [dependency1..dependencyN]~%")
     (let ((asdf:*central-registry* (cons (source-directory source)
-                                         asdf:*central-registry*)))
+                                         asdf:*central-registry*))
+          (*dependencies* (make-hash-table :test 'equal)))
       (dolist (system-file (source-system-files source))
         (dolist (system (system-file-systems (pathname-name system-file)))
           (format s "~A ~A ~A ~{~A~^ ~}~%"
                   (source-project-name source)
                   (pathname-name system-file)
                   (asdf:component-name system)
-                  (mapcar #'string-downcase
-                          (remove-duplicates
-                           (append
-                            (and (slot-boundp system 'asdf::defsystem-depends-on)
-                                 (asdf::system-defsystem-depends-on system))
-                            (asdf::component-sideway-dependencies system))
-                           :test #'eq
-                           :from-end t)))
-          (asdf:clear-system (asdf:component-name system)))))))
+                  (gethash (asdf:component-name system) *dependencies*))
+          (asdf:clear-system system))))))
 
 (defmethod releases.txt ((source source-has-directory))
   (let ((tarball-file (source-archive source))
