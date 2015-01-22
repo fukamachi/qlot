@@ -3,6 +3,7 @@ language: common-lisp
 env:
   matrix:
     - LISP=sbcl
+    - LISP=ccl
     - LISP=clisp
 
 matrix:
@@ -12,6 +13,9 @@ matrix:
 install:
   # Install cl-travis
   - curl https://raw.githubusercontent.com/luismbo/cl-travis/master/install.sh | bash
+
+before_script:
+  - git clone https://github.com/froydnj/archive ~/lisp/archive
 
 script:
   - cl -l prove -e '(or (prove:run :qlot-test) (uiop:quit -1))'
