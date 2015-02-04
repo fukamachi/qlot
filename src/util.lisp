@@ -58,6 +58,8 @@
 
   (let (#+quicklisp
         (ql:*quicklisp-home* qlhome)
+        #+quicklisp
+        (ql:*local-project-directories* (list (merge-pathnames #P"local-projects/" qlhome)))
         (asdf::*source-registry* (make-hash-table :test 'equal))
         (asdf::*default-source-registries*
           '(asdf::environment-source-registry
