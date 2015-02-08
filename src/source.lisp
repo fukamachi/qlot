@@ -26,6 +26,7 @@
            :source-direct-dependencies
            :find-source-class
            :prepare
+           :package-source
            :project-name
            :version
            :source-project-name
@@ -113,6 +114,13 @@
 
 (defmethod prepare :after (source)
   (setf (source-prepared source) t))
+
+(defgeneric package-source (source)
+  (:method ((source source))))
+
+(defmethod package-source :before ((source source))
+  (unless (source-prepared source)
+    (prepare source)))
 
 (defgeneric source-equal (source1 source2)
   (:method ((source1 t) (source2 t))

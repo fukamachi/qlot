@@ -6,6 +6,7 @@
                 :make-source
                 :find-source-class
                 :defrost-source
+                :prepare
                 :source-project-name
                 :source-version
                 :source-dist-name
@@ -101,4 +102,5 @@
       (setf sources
             (merging-lock-sources sources
                                   (parse-qlfile-lock lock-file))))
+    (mapc #'prepare sources)
     sources))

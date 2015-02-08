@@ -55,8 +55,9 @@
         (pathname
          (format nil "~A-~A.tar.gz"
                  (source-project-name source)
-                 (source-version source))))
+                 (source-version source)))))
 
+(defmethod package-source ((source source-git))
   (create-tarball (source-directory source)
                   (source-archive source)))
 
