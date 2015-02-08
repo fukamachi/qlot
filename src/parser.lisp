@@ -10,12 +10,15 @@
                 :source-project-name
                 :source-version
                 :source-dist-name
+                :source-direct-dependencies
                 :source-defrost-args
-                :source-equal)
+                :source-equal
+                :source-compatible)
   (:import-from :qlot.source.ql
                 :source-ql)
   (:import-from :qlot.error
-                :qlot-qlfile-error)
+                :qlot-qlfile-error
+                :qlot-sources-incompatible)
   (:import-from :fad
                 :file-exists-p)
   (:import-from :alexandria
@@ -86,6 +89,32 @@
                   lock-source)
                 source))))))
 
+(defun merge-dependency-sources (sources dependency-sources)
+  (let ((new-sources nil))
+    (iter (for dep-source in dependency-sources)
+          (for orig-source = (find (source-dist-name dep-source) sources
+                                   :key #'source-dist-name
+                                   :test #'string=))
+          (if orig-source
+              (unless (source-compatible orig-source dep-source)
+                (error 'qlot-sources-incompatible
+                       :format-control "Sources ~A and ~A are not compatible."
+                       :format-arguments (list orig-source dep-source)))
+              (push dep-source new-sources)))
+    (values (append new-sources sources) new-sources)))
+
+(defun prepare-dependency-qlfiles (all-sources dependencies)
+  ;; First, prepare all the dependencies.
+  (mapc #'prepare all-sources)
+  ;; Now walk all the dependencies, merging their dependencies into new-sources.
+  (iter (for dependency in dependencies)
+        (for direct-dependencies = (source-direct-dependencies dependency))
+        (for (values merged-sources new-dependencies)
+             = (merge-dependency-sources all-sources direct-dependencies))
+        (setf all-sources merged-sources)
+        (appending new-dependencies into new-sources)
+        (finally (return (values all-sources new-sources)))))
+
 (defun prepare-qlfile (file &key ignore-lock)
   (let ((default-ql-source (make-source 'source-ql :all :latest))
         (lock-file (and (not ignore-lock)
@@ -102,5 +131,8 @@
       (setf sources
             (merging-lock-sources sources
                                   (parse-qlfile-lock lock-file))))
-    (mapc #'prepare sources)
-    sources))
+    (iter (for (values all-sources new-sources)
+               first (prepare-dependency-qlfiles sources sources)
+               then (prepare-dependency-qlfiles all-sources new-sources))
+          (while new-sources)
+          (finally (return all-sources)))))

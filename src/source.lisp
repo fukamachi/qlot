@@ -35,6 +35,7 @@
            :source-prepared
            :source-defrost-args
            :source-equal
+           :source-compatible
            :project.txt
            :distinfo.txt
            :releases.txt
@@ -134,6 +135,9 @@
       (call-next-method)
       nil))
 
+(defgeneric source-compatible (source1 source2)
+  (:method ((source1 source) (source2 source))
+    (source-equal source1 source2)))
 
 ;;
 ;; Pages
