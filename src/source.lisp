@@ -255,7 +255,8 @@ distinfo-subscription-url: ~A~A
                ((or (symbolp dep)
                     (stringp dep))
                 (string-downcase dep))
-               (error "Can't normalize dependency: ~S" dep))))
+               (t
+                (error "Can't normalize dependency: ~S" dep)))))
     (lambda (fun form env)
       (when (and (consp form)
                  (eq (car form) 'asdf:defsystem))
