@@ -51,22 +51,30 @@
 
     qlfile))
 
+(defun merge-hash-tables (from-table to-table)
+  "Add all entries from FROM-TABLE to TO-TABLE, overwriting existing entries
+with the same key."
+  (flet ((add-to-original (value key)
+           (setf (gethash value to-table) key)))
+    (maphash #'add-to-original from-table)))
+
 (defun call-in-local-quicklisp (fn system qlhome)
   (unless #+clisp (ext:probe-directory qlhome)
           #-clisp (probe-file qlhome)
     (error "Directory ~S does not exist." qlhome))
 
-  (let (#+quicklisp
-        (ql:*quicklisp-home* qlhome)
-        #+quicklisp
-        (ql:*local-project-directories* (list (merge-pathnames #P"local-projects/" qlhome)))
-        (asdf::*source-registry* (make-hash-table :test 'equal))
-        (asdf::*default-source-registries*
+  (let* (#+quicklisp
+         (ql:*quicklisp-home* qlhome)
+         #+quicklisp
+         (ql:*local-project-directories* (list (merge-pathnames #P"local-projects/" qlhome)))
+         (asdf:*central-registry* (list (asdf:system-source-directory system)))
+         (asdf::*source-registry* (make-hash-table :test 'equal))
+         (asdf::*default-source-registries*
           '(asdf::environment-source-registry
             asdf::system-source-registry
             asdf::system-source-registry-directory))
-        (asdf::*defined-systems* (make-hash-table :test 'equal))
-        (asdf:*central-registry* (list (asdf:system-source-directory system))))
+         (original-defined-systems asdf::*defined-systems*)
+         (asdf::*defined-systems* (make-hash-table :test 'equal)))
 
     (asdf::clear-defined-systems)
 
@@ -77,7 +85,10 @@
 
     (asdf:initialize-source-registry)
 
-    (funcall fn)))
+    (prog1 (funcall fn)
+      ;; Make all systems that were actually loaded from the local quicklisp
+      ;; visible through ASDF outside of the local environment.
+      (merge-hash-tables asdf::*defined-systems* original-defined-systems))))
 
 (defmacro with-local-quicklisp (system &body body)
   (let ((qlot-dir (gensym "QLOT-DIR"))
