@@ -5,7 +5,6 @@
                 :system-quicklisp-home)
   (:import-from :qlot.util
                 :with-package-functions
-                :pathname-in-directory-p
                 :with-local-quicklisp)
   (:export :install
            :update
