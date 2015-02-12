@@ -76,7 +76,13 @@ with the same key."
          (original-defined-systems asdf::*defined-systems*)
          (asdf::*defined-systems* (make-hash-table :test 'equal)))
 
-    (asdf::clear-defined-systems)
+    ;; Set systems already loaded to prevent reloading the same library in the local Quicklisp.
+    (maphash (lambda (name system)
+               (let ((system-path (asdf:system-source-directory (cdr system))))
+                 (when (and system-path
+                            (pathname-in-directory-p system-path qlhome))
+                   (setf (gethash name asdf::*defined-systems*) system))))
+             original-defined-systems)
 
     #-quicklisp
     (load (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
