@@ -84,7 +84,7 @@
     (or
      (loop for line = (read-line stream nil nil)
            while line
-           when (starts-with-subseq line "version: ")
+           when (starts-with-subseq "version: " line)
              do (return (subseq line 9)))
      (error "Failed to get the latest version of Quicklisp."))))
 
