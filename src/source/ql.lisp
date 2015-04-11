@@ -9,6 +9,8 @@
                 :with-package-functions)
   (:import-from :function-cache
                 :defcached)
+  (:import-from :alexandria
+                :starts-with-subseq)
   (:export :source-ql
            :source-ql-all))
 (in-package :qlot.source.ql)
@@ -82,7 +84,7 @@
     (or
      (loop for line = (read-line stream nil nil)
            while line
-           when (string= (subseq line 0 9) "version: ")
+           when (starts-with-subseq line "version: ")
              do (return (subseq line 9)))
      (error "Failed to get the latest version of Quicklisp."))))
 
