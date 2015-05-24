@@ -1,0 +1,27 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -L sbcl-bin -Q -- $0 "$@"
+|#
+
+(defun main (&optional $1 &rest argv)
+  (declare (ignorable argv))
+  (cond ((equal "install" $1)
+         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:install)")))
+        ((equal "update" $1)
+         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:update")))
+        ((equal "exec" $1)
+         (unless (ros:getenv "QUICKLISP_HOME")
+           (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
+         (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
+                         (merge-pathnames (ros:getenv "QUICKLISP_HOME")
+                                          (make-pathname :defaults *load-pathname* :name nil :type nil)))))
+           (unless (probe-file path)
+             (format t "Error: '~A' does not exist.~%" (ros:getenv "QUICKLISP_HOME"))
+             (ros:quit 1))
+           (unless (probe-file (merge-pathnames "setup.lisp" path))
+             (format t "Error: Invalid Quicklisp directory: '~A'~%" (ros:getenv "QUICKLISP_HOME"))
+             (ros:quit 1)))
+         (ros:exec argv))
+        (t (format t "Usage: ~A [install | update | exec shell-args..]~%" (namestring *load-pathname*))
+           (ros:quit 1))))
