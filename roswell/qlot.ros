@@ -9,7 +9,7 @@ exec ros -L sbcl-bin -Q -- $0 "$@"
   (cond ((equal "install" $1)
          (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:install)")))
         ((equal "update" $1)
-         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:update")))
+         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:update)")))
         ((equal "exec" $1)
          (unless (ros:getenv "QUICKLISP_HOME")
            (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
