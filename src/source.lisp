@@ -26,6 +26,7 @@
            :source-direct-dependencies
            :find-source-class
            :prepare
+           :package-source
            :project-name
            :version
            :source-project-name
@@ -34,6 +35,7 @@
            :source-prepared
            :source-defrost-args
            :source-equal
+           :source-compatible
            :project.txt
            :distinfo.txt
            :releases.txt
@@ -114,6 +116,13 @@
 (defmethod prepare :after (source)
   (setf (source-prepared source) t))
 
+(defgeneric package-source (source)
+  (:method ((source source))))
+
+(defmethod package-source :before ((source source))
+  (unless (source-prepared source)
+    (prepare source)))
+
 (defgeneric source-equal (source1 source2)
   (:method ((source1 t) (source2 t))
     nil)
@@ -126,6 +135,9 @@
       (call-next-method)
       nil))
 
+(defgeneric source-compatible (source1 source2)
+  (:method ((source1 source) (source2 source))
+    (source-equal source1 source2)))
 
 ;;
 ;; Pages
@@ -255,7 +267,8 @@ distinfo-subscription-url: ~A~A
                ((or (symbolp dep)
                     (stringp dep))
                 (string-downcase dep))
-               (error "Can't normalize dependency: ~S" dep))))
+               (t
+                (error "Can't normalize dependency: ~S" dep)))))
     (lambda (fun form env)
       (when (and (consp form)
                  (eq (car form) 'asdf:defsystem))

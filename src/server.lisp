@@ -3,7 +3,7 @@
   (:use :cl)
   (:import-from :qlot.source
                 :*dist-base-url*
-                :prepare
+                :package-source
                 :source-prepared
                 :url-path-for
                 :project.txt
@@ -75,7 +75,7 @@
         (setf (route app (url-path-for source 'project.txt))
               (lambda (params)
                 (let ((*tmp-directory* tmp-directory))
-                  (prepare source))
+                  (package-source source))
                 (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
                   (when-let ((path (url-path-for source action)))
                     (setf (route app path)
