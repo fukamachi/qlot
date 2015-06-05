@@ -113,7 +113,7 @@ It will also overwrite `qlfile.lock`.
 
 ### Bundling libraries
 
-You can bundle all depending libraries by adding the project-local `quicklisp/` directory to version controll repository.
+You can bundle all depending libraries by adding the project-local `quicklisp/` directory to version controlled repository.
 
 ```common-lisp
 (qlot:install :myapp)
