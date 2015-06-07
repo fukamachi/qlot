@@ -30,7 +30,6 @@
   (ensure-directories-exist *tmp-directory*)
   (diag "starting a server..")
   (start-server qlfile)
-  (sleep 1)
 
   (is (nth-value 1 (http-request (localhost "/quicklisp.txt"))) 404)
   (is (nth-value 1 (http-request (localhost "/clack.txt"))) 200)

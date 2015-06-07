@@ -92,7 +92,8 @@
                 (let ((*standard-output* (make-broadcast-stream))
                       (app (make-app sources)))
                   (clackup app :port port)))
-        (setf *qlot-port* port))))
+        (setf *qlot-port* port)
+        (sleep 0.5))))
   (:method ((qlfile pathname))
     (start-server (prepare-qlfile qlfile))))
 
