@@ -300,8 +300,9 @@ distinfo-subscription-url: ~A~A
           (asdf:clear-system system))))))
 
 (defmethod releases.txt ((source source-has-directory))
-  (let ((tarball-file (source-archive source))
-        (prefix (car (last (pathname-directory (source-directory source))))))
+  (let* ((tarball-file (source-archive source))
+         (source-dir (source-directory source))
+         (prefix (car (last (pathname-directory source-dir)))))
     (multiple-value-bind (size file-md5 content-sha1)
         (with-open-file (in tarball-file :element-type '(unsigned-byte 8))
           (values (file-length in)
@@ -322,7 +323,8 @@ distinfo-subscription-url: ~A~A
                 file-md5
                 content-sha1
                 prefix
-                (mapcar #'file-namestring
+                (mapcar (lambda (file)
+                          (subseq (namestring file) (length (namestring source-dir))))
                         (source-system-files source)))))))
 
 (defmethod archive ((source source-has-directory))
