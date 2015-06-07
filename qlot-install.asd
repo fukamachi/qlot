@@ -9,7 +9,6 @@
   :license "MIT"
   :depends-on (:clack
                :clack-handler-hunchentoot
-               :ningle
                :drakma
                :archive
                :salza2

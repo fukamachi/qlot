@@ -239,12 +239,12 @@
 
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
-      (map nil
-           (lambda (asd)
-             (ensure-installed-in-local-quicklisp
-              (asdf:find-system (pathname-name asd))
-              qlhome))
-           (asdf::directory-asd-files (fad:pathname-directory-pathname file))))
+      (asdf::collect-sub*directories-asd-files
+       (fad:pathname-directory-pathname file)
+       :collect (lambda (asd)
+                  (ensure-installed-in-local-quicklisp
+                   (asdf:find-system (pathname-name asd))
+                   qlhome))))
     (stop-server)
 
     (with-quicklisp-home qlhome
