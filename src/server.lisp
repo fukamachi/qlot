@@ -18,13 +18,6 @@
   (:import-from :clack
                 :clackup
                 :stop)
-  (:import-from :clack.response
-                :headers)
-  (:import-from :ningle
-                :<app>
-                :route
-                :not-found
-                :*response*)
   (:import-from :alexandria
                 :when-let)
   (:export :localhost
@@ -61,28 +54,32 @@
 
 (defun make-app (sources)
   (flet ((make-route (source action)
-           (lambda (params)
-             (declare (ignore params))
-             (let ((action-name (symbol-name action)))
-               (when (string-equal (subseq action-name (- (length action-name) 4))
-                                   ".txt")
-                 (setf (headers *response* :content-type) "text/plain")))
-             (let ((*dist-base-url* (localhost)))
-               (funcall (symbol-function action) source)))))
-    (let ((app (make-instance '<app>))
+           (let ((*dist-base-url* (localhost))
+                 (action-name (symbol-name action)))
+             (lambda ()
+               (list 200
+                     (if (string-equal (subseq action-name (- (length action-name) 4))
+                                       ".txt")
+                         (list :content-type "text/plain")
+                         '())
+                     (list (funcall (symbol-function action) source)))))))
+    (let ((route (make-hash-table :test 'equal))
           (tmp-directory *tmp-directory*))
       (dolist (source sources)
-        (setf (route app (url-path-for source 'project.txt))
-              (lambda (params)
+        (setf (gethash (url-path-for source 'project.txt) route)
+              (lambda ()
                 (let ((*tmp-directory* tmp-directory))
                   (prepare source))
                 (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
-                  (when-let ((path (url-path-for source action)))
-                    (setf (route app path)
+                  (when-let (path (url-path-for source action))
+                    (setf (gethash path route)
                           (make-route source action))))
-
-                (funcall (make-route source 'project.txt) params))))
-      app)))
+                (funcall (make-route source 'project.txt)))))
+      (lambda (env)
+        (let ((fn (gethash (getf env :path-info) route)))
+          (if fn
+              (funcall fn)
+              '(404 (:content-type "text/plain") ("Not Found"))))))))
 
 (defgeneric start-server (sources)
   (:method ((sources list))
