@@ -54,15 +54,15 @@
 
 (defun make-app (sources)
   (flet ((make-route (source action)
-           (let ((*dist-base-url* (localhost))
-                 (action-name (symbol-name action)))
+           (let ((action-name (symbol-name action)))
              (lambda ()
-               (list 200
-                     (if (string-equal (subseq action-name (- (length action-name) 4))
-                                       ".txt")
-                         (list :content-type "text/plain")
-                         '())
-                     (list (funcall (symbol-function action) source)))))))
+               (let ((*dist-base-url* (localhost)))
+                 (list 200
+                       (if (string-equal (subseq action-name (- (length action-name) 4))
+                                         ".txt")
+                           (list :content-type "text/plain")
+                           '())
+                       (list (funcall (symbol-function action) source))))))))
     (let ((route (make-hash-table :test 'equal))
           (tmp-directory *tmp-directory*))
       (dolist (source sources)
