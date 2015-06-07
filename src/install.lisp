@@ -238,12 +238,16 @@
               (uninstall dist))))))
 
     (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream))
-          (project-dir (fad:pathname-directory-pathname file)))
+          (*trace-output* (make-broadcast-stream)))
       (with-package-functions :ql (bundle-systems)
         (bundle-systems
-         (mapcar #'pathname-name (asdf::directory-asd-files project-dir))
-         :to (merge-pathnames #P"bundle-libs/" project-dir))))
+         (let (system-names)
+           (asdf::collect-sub*directories-asd-files
+            (fad:pathname-directory-pathname file)
+            :collect (lambda (asd)
+                       (push (pathname-name asd) system-names)))
+           system-names)
+         :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file)))))
     (stop-server)
 
     (with-quicklisp-home qlhome
