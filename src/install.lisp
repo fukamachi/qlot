@@ -255,7 +255,16 @@
                                  (member system systems :key #'name :test #'string-equal))
                                (delete-duplicates (mapcan #'required-systems systems)
                                                   :test #'string-equal)))
-              (format t "~&Bundling ~{~S~^, ~}...~%" required-systems)
+              (format t "~&Bundle ~D systems:~%" (length required-systems))
+              (princ "  ")
+              (loop for i from 1
+                    for (system . rest) on required-systems
+                    do (princ system)
+                    if (zerop (mod i 5))
+                      do (format t "~&  ")
+                    else if rest
+                      do (write-char #\Space))
+              (fresh-line)
               (bundle-systems required-systems
                               :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file))))
             (format t "~&Nothing to bundle.~%"))))
