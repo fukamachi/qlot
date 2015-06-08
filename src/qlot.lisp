@@ -54,5 +54,6 @@ If PATH isn't specified, this installs it to './quicklisp/'."
     (loop for system-name in systems
           for bundle.lisp = (asdf:system-relative-pathname system-name #P"bundle-libs/bundle.lisp")
           when (probe-file bundle.lisp)
-            do (load bundle.lisp)))
+            do (load bundle.lisp)
+          do (quickload system-name)))
   systems)
