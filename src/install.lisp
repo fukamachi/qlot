@@ -30,7 +30,8 @@
                 :find-qlfile
                 :with-quicklisp-home
                 :with-package-functions
-                :ensure-installed-in-local-quicklisp)
+                :ensure-installed-in-local-quicklisp
+                :pathname-in-directory-p)
   (:import-from :fad
                 :pathname-as-directory
                 :pathname-absolute-p
@@ -237,17 +238,23 @@
               (format t "~&Removing dist ~S.~%" (name dist))
               (uninstall dist))))))
 
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (with-package-functions :ql (bundle-systems)
-        (bundle-systems
-         (let (system-names)
-           (asdf::collect-sub*directories-asd-files
-            (fad:pathname-directory-pathname file)
-            :collect (lambda (asd)
-                       (push (pathname-name asd) system-names)))
-           system-names)
-         :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file)))))
+    (let (system-names)
+      (with-package-functions :ql (bundle-systems find-system)
+        (asdf::collect-sub*directories-asd-files
+         (fad:pathname-directory-pathname file)
+         :collect (lambda (asd)
+                    (when (and (not (pathname-in-directory-p asd qlhome))
+                               (find-system (pathname-name asd)))
+                      (push (pathname-name asd) system-names)))
+         :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))
+        (if system-names
+            (progn
+              (setf system-names (delete-duplicates system-names :test #'string-equal))
+              (format t "~&Bundling ~{~S~^, ~}...~%" system-names)
+              (bundle-systems
+               system-names
+               :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file))))
+            (format t "~&Nothing to bundle.~%"))))
     (stop-server)
 
     (with-quicklisp-home qlhome
