@@ -254,7 +254,7 @@
                          (all-required-systems (mapcar #'name systems))))
         (if required-systems
             (progn
-              (format t "~&Bundle ~D systems:~%" (length required-systems))
+              (format t "~&Bundle ~D ~:*system~[s~;~:;s~]:~%" (length required-systems))
               (princ "  ")
               (loop for i from 1
                     for (system . rest) on required-systems
