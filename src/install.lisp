@@ -30,7 +30,6 @@
                 :find-qlfile
                 :with-quicklisp-home
                 :with-package-functions
-                :ensure-installed-in-local-quicklisp
                 :pathname-in-directory-p)
   (:import-from :fad
                 :pathname-as-directory

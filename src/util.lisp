@@ -8,8 +8,7 @@
            :pathname-in-directory-p
            :find-qlfile
            :call-in-local-quicklisp
-           :with-local-quicklisp
-           :ensure-installed-in-local-quicklisp))
+           :with-local-quicklisp))
 (in-package :qlot.util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
@@ -121,20 +120,3 @@ with the same key."
             ,@body)
           ,system
           (system-quicklisp-home (asdf:find-system ,system)))))))
-
-(defun ensure-installed-in-local-quicklisp (system qlhome)
-  (with-package-functions :ql-dist (find-system required-systems name ensure-installed)
-    (call-in-local-quicklisp
-     (lambda ()
-       (labels ((system-dependencies (system-name)
-                  (let ((system (find-system (string-downcase system-name))))
-                    (when system
-                      (cons system
-                            (mapcan #'system-dependencies (copy-list (required-systems system))))))))
-         (map nil #'ensure-installed
-              (delete-duplicates (mapcan #'system-dependencies
-                                         (copy-list (asdf::component-sideway-dependencies system)))
-                                 :key #'name
-                                 :test #'string=))))
-     system
-     qlhome)))
