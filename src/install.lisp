@@ -238,22 +238,26 @@
               (format t "~&Removing dist ~S.~%" (name dist))
               (uninstall dist))))))
 
-    (let (system-names)
-      (with-package-functions :ql (bundle-systems find-system)
+    (let (systems required-systems)
+      (with-package-functions :ql (bundle-systems find-system required-systems name)
         (asdf::collect-sub*directories-asd-files
          (fad:pathname-directory-pathname file)
          :collect (lambda (asd)
-                    (when (and (not (pathname-in-directory-p asd qlhome))
-                               (find-system (pathname-name asd)))
-                      (push (pathname-name asd) system-names)))
+                    (unless (pathname-in-directory-p asd qlhome)
+                      (let ((system (find-system (pathname-name asd))))
+                        (when system
+                          (push system systems)))))
          :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))
-        (if system-names
+        (if systems
             (progn
-              (setf system-names (delete-duplicates system-names :test #'string-equal))
-              (format t "~&Bundling ~{~S~^, ~}...~%" system-names)
-              (bundle-systems
-               system-names
-               :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file))))
+              (setf required-systems
+                    (delete-if (lambda (system)
+                                 (member system systems :key #'name :test #'string-equal))
+                               (delete-duplicates (mapcan #'required-systems systems)
+                                                  :test #'string-equal)))
+              (format t "~&Bundling ~{~S~^, ~}...~%" required-systems)
+              (bundle-systems required-systems
+                              :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file))))
             (format t "~&Nothing to bundle.~%"))))
     (stop-server)
 
