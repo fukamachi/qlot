@@ -30,7 +30,8 @@
                 :find-qlfile
                 :with-quicklisp-home
                 :with-package-functions
-                :pathname-in-directory-p)
+                :pathname-in-directory-p
+                :all-required-systems)
   (:import-from :fad
                 :pathname-as-directory
                 :pathname-absolute-p
@@ -247,13 +248,12 @@
                         (when system
                           (push system systems)))))
          :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))
-        (if systems
+        (setf required-systems
+              (delete-if (lambda (system)
+                           (member system systems :key #'name :test #'string-equal))
+                         (all-required-systems (mapcar #'name systems))))
+        (if required-systems
             (progn
-              (setf required-systems
-                    (delete-if (lambda (system)
-                                 (member system systems :key #'name :test #'string-equal))
-                               (delete-duplicates (mapcan #'required-systems systems)
-                                                  :test #'string-equal)))
               (format t "~&Bundle ~D systems:~%" (length required-systems))
               (princ "  ")
               (loop for i from 1
@@ -262,7 +262,7 @@
                     if (zerop (mod i 5))
                       do (format t "~&  ")
                     else if rest
-                      do (write-char #\Space))
+                           do (write-char #\Space))
               (fresh-line)
               (bundle-systems required-systems
                               :to (merge-pathnames #P"bundle-libs/" (fad:pathname-directory-pathname file))))
