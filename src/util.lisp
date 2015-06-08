@@ -1,8 +1,6 @@
 (in-package :cl-user)
 (defpackage qlot.util
   (:use :cl)
-  (:import-from :qlot.asdf
-                :system-quicklisp-home)
   (:export :with-quicklisp-home
            :with-package-functions
            :pathname-in-directory-p
@@ -120,7 +118,7 @@ with the same key."
             (,register-directory ,qlot-dir)
             ,@body)
           ,system
-          (system-quicklisp-home (asdf:find-system ,system)))))))
+          (asdf:system-relative-pathname ,system #P"quicklisp/"))))))
 
 (defun all-required-systems (systems)
   (let ((systems (if (listp systems) systems (list systems))))

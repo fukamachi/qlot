@@ -26,7 +26,7 @@
   :components ((:module "src"
                 :components
                 ((:file "parser" :depends-on ("source" "dist-sources" "error" "util"))
-                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "shell" "asdf" "util"))
+                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "shell" "util"))
                  (:file "server" :depends-on ("source" "parser" "tmp"))
                  (:file "http")
                  (:file "shell")
@@ -43,6 +43,5 @@
                    (:file "http")
                    (:file "github")))
                  (:file "error")
-                 (:file "asdf")
-                 (:file "util" :depends-on ("asdf")))))
+                 (:file "util"))))
   :in-order-to ((test-op (test-op qlot-test))))

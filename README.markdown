@@ -253,18 +253,6 @@ github datafly fukamachi/datafly :branch develop
 
 If multiple distributions provide the same library, lower one would take priority over higher ones.
 
-## Installing to other place than ./quicklisp/
-
-Set `:quicklisp-home` of your system and `(qlot:install :myapp)`.
-
-```common-lisp
-(defsystem myapp
-  :defsystem-depends-on (:qlot)
-  :class :qlot-system
-  :quicklisp-home #P".ql/"
-  :components ((:file "src/myapp")))
-```
-
 ## Author
 
 * Eitaro Fukamachi (e.arrows@gmail.com)
