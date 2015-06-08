@@ -1,8 +1,6 @@
 (in-package :cl-user)
 (defpackage qlot
   (:use :cl)
-  (:import-from :qlot.asdf
-                :system-quicklisp-home)
   (:import-from :qlot.util
                 :with-package-functions
                 :with-local-quicklisp)

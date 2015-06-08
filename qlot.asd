@@ -18,9 +18,8 @@
   :license "MIT"
   :components ((:module "src"
                 :components
-                ((:file "qlot" :depends-on ("asdf" "util"))
-                 (:file "asdf")
-                 (:file "util" :depends-on ("asdf")))))
+                ((:file "qlot" :depends-on ("util"))
+                 (:file "util"))))
   :in-order-to ((test-op (test-op qlot-test))))
 
 #-qlot
