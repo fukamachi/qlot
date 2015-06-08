@@ -272,15 +272,14 @@ distinfo-subscription-url: ~A~A
                  :test #'equalp))))
       (funcall old-hook fun form env))))
 
-(defun system-file-systems (name)
+(defun system-file-systems (system-file)
   (handler-bind ((style-warning #'muffle-warning))
-    (let* ((*macroexpand-hook* (make-hook *macroexpand-hook*))
-           (system (asdf:find-system name))
-           (target (asdf:system-source-file system))
-           (result '()))
+    (let ((*macroexpand-hook* (make-hook *macroexpand-hook*))
+          (result '()))
+      (load system-file)
       (asdf:map-systems
        (lambda (system)
-         (when (equalp target (asdf:system-source-file system))
+         (when (equalp system-file (asdf:system-source-file system))
            (push system result))))
       (nreverse result))))
 
@@ -291,7 +290,7 @@ distinfo-subscription-url: ~A~A
                                          asdf:*central-registry*))
           (*dependencies* (make-hash-table :test 'equal)))
       (dolist (system-file (source-system-files source))
-        (dolist (system (system-file-systems (pathname-name system-file)))
+        (dolist (system (system-file-systems system-file))
           (format s "~A ~A ~A ~{~A~^ ~}~%"
                   (source-project-name source)
                   (pathname-name system-file)
