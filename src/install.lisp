@@ -240,7 +240,9 @@
         (asdf::collect-sub*directories-asd-files
          (fad:pathname-directory-pathname file)
          :collect (lambda (asd)
-                    (unless (pathname-in-directory-p asd qlhome)
+                    (unless (or (pathname-in-directory-p asd qlhome)
+                                ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                                (search "skeleton" (pathname-name asd)))
                       (let ((system (find-system (pathname-name asd))))
                         (when system
                           (push system systems)))))
