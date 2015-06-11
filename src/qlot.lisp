@@ -50,9 +50,6 @@ If PATH isn't specified, this installs it to './quicklisp/'."
     (setf systems (list systems)))
   (with-package-functions :ql (quickload)
     (loop for system-name in systems
-          for bundle.lisp = (asdf:system-relative-pathname system-name #P"bundle-libs/bundle.lisp")
-          unless (probe-file bundle.lisp)
-            do (error "~S is not ready to qlot:quickload. Try qlot:install first." system-name)
-          do (load bundle.lisp)
-             (quickload system-name)))
+          do (with-local-quicklisp system-name
+               (apply #'quickload system-name args))))
   systems)
