@@ -1,6 +1,5 @@
 # qlot
 
-[![Build Status](https://travis-ci.org/fukamachi/qlot.svg?branch=master)](https://travis-ci.org/fukamachi/qlot)
 [![Circle CI](https://circleci.com/gh/fukamachi/qlot.svg?style=svg)](https://circleci.com/gh/fukamachi/qlot)
 
 Qlot is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
