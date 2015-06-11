@@ -27,6 +27,7 @@
                 :find-qlfile
                 :with-quicklisp-home
                 :with-package-functions
+                :ensure-installed-in-local-quicklisp
                 :pathname-in-directory-p
                 :all-required-systems)
   (:import-from :fad
