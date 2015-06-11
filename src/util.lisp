@@ -124,9 +124,11 @@ with the same key."
   (let ((systems (if (listp systems) systems (list systems))))
     (with-package-functions :ql (required-systems find-system)
       (labels ((main (system-name)
-                 (unless (sbcl-contrib-p system-name)
+                 (unless (or (string-equal system-name "asdf")
+                             (sbcl-contrib-p system-name))
                    (let* ((system (find-system system-name))
-                          (req (and system (required-systems system))))
+                          (req (and system (required-systems system)))
+                          (req (remove :asdf req :test #'string-equal)))
                      (if req
                          (append req (mapcan #'main req))
                          ()))))
