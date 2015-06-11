@@ -1,0 +1,17 @@
+checkout:
+  pre:
+    - curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh
+    - case $CIRCLE_NODE_INDEX in
+        0) ros config set default.lisp sbcl-bin ;;
+        1) ros install ccl-bin;
+           ros config set default.lisp ccl-bin ;;
+      esac
+    - ros run -- --version
+
+dependencies:
+  pre:
+    - git clone https://github.com/froydnj/archive ~/lisp/archive
+
+test:
+  override:
+    - ros -s prove -e '(or (prove:run :qlot-test) (uiop:quit -1))': {parallel: true}
