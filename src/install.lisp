@@ -236,7 +236,7 @@
               (uninstall dist))))))
 
     (let (systems required-systems)
-      (with-package-functions :ql (bundle-systems required-systems)
+      (with-package-functions :ql (bundle-systems)
         (asdf::collect-sub*directories-asd-files
          (fad:pathname-directory-pathname file)
          :collect (lambda (asd)
