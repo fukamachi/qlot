@@ -1,9 +1,10 @@
 dependencies:
   cache_directories:
+    - /usr/local/bin/ros
     - ~/.roswell
     - ~/lisp
   pre:
-    - if [ ! -d ~/.roswell/ ]; then
+    - if ! which ros >/dev/null; then
         curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh;
       fi
     - case $CIRCLE_NODE_INDEX in
