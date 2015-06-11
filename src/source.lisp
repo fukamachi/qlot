@@ -275,6 +275,7 @@ distinfo-subscription-url: ~A~A
 (defun system-file-systems (system-file)
   (handler-bind ((style-warning #'muffle-warning))
     (let ((*macroexpand-hook* (make-hook *macroexpand-hook*))
+          (*package* (find-package :asdf-user))
           (result '()))
       (load system-file)
       (asdf:map-systems
