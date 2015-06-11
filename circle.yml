@@ -1,12 +1,8 @@
 dependencies:
   cache_directories:
-    - /usr/local/bin/ros
-    - ~/.roswell
     - ~/lisp
   pre:
-    - if ! which ros >/dev/null; then
-        curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh;
-      fi
+    - curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh;
     - case $CIRCLE_NODE_INDEX in
         0) ros config set default.lisp sbcl-bin ;;
         1) ros install ccl-bin;
