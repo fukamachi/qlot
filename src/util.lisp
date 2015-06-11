@@ -124,8 +124,14 @@ with the same key."
   (let ((systems (if (listp systems) systems (list systems))))
     (with-package-functions :ql (required-systems find-system)
       (labels ((main (system-name)
-                 (let ((req (required-systems (find-system system-name))))
-                   (if req
-                       (append req (mapcan #'main req))
-                       ()))))
+                 (unless (sbcl-contrib-p system-name)
+                   (let* ((system (find-system system-name))
+                          (req (and system (required-systems system))))
+                     (if req
+                         (append req (mapcan #'main req))
+                         ()))))
+               (sbcl-contrib-p (name)
+                 (let ((name (princ-to-string name)))
+                   (and (<= 3 (length name))
+                        (string-equal name "sb-" :end1 3)))))
         (delete-duplicates (mapcan #'main systems) :test #'string-equal)))))

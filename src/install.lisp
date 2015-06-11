@@ -236,21 +236,25 @@
               (uninstall dist))))))
 
     (let (systems required-systems)
-      (with-package-functions :ql (bundle-systems find-system required-systems name)
+      (with-package-functions :ql (bundle-systems required-systems)
         (asdf::collect-sub*directories-asd-files
          (fad:pathname-directory-pathname file)
          :collect (lambda (asd)
                     (unless (or (pathname-in-directory-p asd qlhome)
                                 ;; KLUDGE: Ignore skeleton.asd of CL-Project
                                 (search "skeleton" (pathname-name asd)))
-                      (let ((system (find-system (pathname-name asd))))
-                        (when system
-                          (push system systems)))))
+                      (push asd systems)))
          :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))
+        (let ((*package* (find-package :asdf-user)))
+          (mapc #'load systems))
         (setf required-systems
               (delete-if (lambda (system)
-                           (member system systems :key #'name :test #'string-equal))
-                         (all-required-systems (mapcar #'name systems))))
+                           (member system systems :key #'pathname-name :test #'string-equal))
+                         (delete-duplicates
+                          (mapcan #'all-required-systems
+                                  (mapcan #'asdf:component-sideway-dependencies
+                                          (mapcar #'asdf:find-system (mapcar #'pathname-name systems))))
+                          :test #'string-equal)))
         (if required-systems
             (progn
               (format t "~&Bundle ~D ~:*system~[s~;~:;s~]:~%" (length required-systems))
