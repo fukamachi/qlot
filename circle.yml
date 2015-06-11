@@ -1,21 +1,22 @@
-checkout:
-  post:
-    - if [ ! -d .roswell/ ]; then
-        curl -L https://raw.githubusercontent.com/fukamachi/roswell/install-for-ci/scripts/install-for-ci.sh | ROSWELL_INSTALL_DIR=$PWD/.roswell sh;
+dependencies:
+  cache_directories:
+    - ~/.roswell
+    - ~/lisp
+  pre:
+    - if [ ! -d ~/.roswell/ ]; then
+        curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh;
       fi
     - case $CIRCLE_NODE_INDEX in
-        0) .roswell/bin/ros config set default.lisp sbcl-bin ;;
-        1) .roswell/bin/ros install ccl-bin;
-           .roswell/bin/ros config set default.lisp ccl-bin ;;
+        0) ros config set default.lisp sbcl-bin ;;
+        1) ros install ccl-bin;
+           ros config set default.lisp ccl-bin ;;
       esac
-    - .roswell/bin/ros run -- --version
-
-dependencies:
-  pre:
-    - git clone https://github.com/froydnj/archive ~/lisp/archive
-  cache_directories:
-    - ".roswell"
+    - ros run -- --version
+  post:
+    - if [ ! -d ~/lisp/archive ]; then
+        git clone https://github.com/froydnj/archive ~/lisp/archive;
+      fi
 
 test:
   override:
-    - .roswell/bin/ros -s prove -e '(or (prove:run :qlot-test) (uiop:quit -1))': {parallel: true}
+    - ros -s prove -e '(or (prove:run :qlot-test) (uiop:quit -1))': {parallel: true}
