@@ -22,7 +22,7 @@
 (defun test-qlfile (name)
   (merge-pathnames name (asdf:system-relative-pathname :qlot #P"t/data/")))
 
-(plan 12)
+(plan 16)
 
 (diag "parse-qlfile-line")
 
@@ -42,10 +42,22 @@
           "invalid source")
 (is (parse-qlfile-line "# This is a comment.")
     nil
-    "comment")
+    "# comment")
 (is (parse-qlfile-line " # This is a comment.")
     nil
-    "comment")
+    " # comment")
+(is (parse-qlfile-line "; This is a comment.")
+    nil
+    "; comment")
+(is (parse-qlfile-line " ; This is a comment.")
+    nil
+    " ; comment")
+(is (parse-qlfile-line ";; This is a comment.")
+    nil
+    ";; comment")
+(is (parse-qlfile-line " ;; This is a comment.")
+    nil
+    " ;; comment")
 (is-type (parse-qlfile-line "git myapp http://myapp.com/\\#/myapp.git")
          'source-git
          "can escape a sharp")
