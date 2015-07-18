@@ -26,7 +26,7 @@
 
 (defun parse-qlfile-line (line)
   (labels ((trim-comment (line)
-             (ppcre:regex-replace "(?<!\\\\)#.*" line ""))
+             (ppcre:regex-replace "(?<!\\\\)[#|;].*" line ""))
            (canonical-line (line)
              (string-trim '(#\Space #\Tab)
                           (trim-comment line))))
