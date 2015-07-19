@@ -1,8 +1,6 @@
 (in-package :cl-user)
 (defpackage qlot.shell
   (:use :cl)
-  (:import-from :external-program
-                :run)
   (:export :safety-shell-command
            :shell-command-error))
 (in-package :qlot.shell)
@@ -24,13 +22,13 @@
 (defun safety-shell-command (program args)
   (with-output-to-string (stdout)
     (let ((stderr (make-string-output-stream)))
-      (multiple-value-bind (status code)
-          (external-program:run program args
-                                :output (make-broadcast-stream *standard-output*
-                                                               stdout)
-                                :error (make-broadcast-stream *error-output*
-                                                              stderr))
-        (declare (ignore status))
+      (multiple-value-bind (output error code)
+          (uiop:run-program (cons program args)
+                            :output (make-broadcast-stream *standard-output*
+                                                           stdout)
+                            :error (make-broadcast-stream *error-output*
+                                                          stderr))
+        (declare (ignore output error))
         (unless (zerop code)
           (error 'shell-command-error
                  :command (cons program args)

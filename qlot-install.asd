@@ -18,7 +18,7 @@
                :cl-fad
                :alexandria
                :cl-ppcre
-               :external-program
+               :uiop
                :usocket
                :split-sequence
                :iterate
