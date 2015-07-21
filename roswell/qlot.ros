@@ -10,6 +10,8 @@ exec ros -Q -- $0 "$@"
          (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:install)")))
         ((equal "update" $1)
          (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:update)")))
+        ((equal "bundle" $1)
+         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:bundle)")))
         ((equal "exec" $1)
          (unless (ros:getenv "QUICKLISP_HOME")
            (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
