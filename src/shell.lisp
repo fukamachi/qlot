@@ -20,17 +20,16 @@
              (slot-value condition 'stderr)))))
 
 (defun safety-shell-command (program args)
-  (with-output-to-string (stdout)
-    (let ((stderr (make-string-output-stream)))
-      (multiple-value-bind (output error code)
-          (uiop:run-program (cons program args)
-                            :output (make-broadcast-stream *standard-output*
-                                                           stdout)
-                            :error (make-broadcast-stream *error-output*
-                                                          stderr))
-        (declare (ignore output error))
-        (unless (zerop code)
-          (error 'shell-command-error
-                 :command (cons program args)
-                 :code code
-                 :stderr (get-output-stream-string stderr)))))))
+  (setf args (mapcar #'princ-to-string args))
+  (with-output-to-string (stderr)
+    (multiple-value-bind (output error code)
+        (uiop:run-program (cons program args)
+                          :output *standard-output*
+                          :error-output stderr)
+      (declare (ignore output error))
+      (unless (zerop code)
+        (error 'shell-command-error
+               :command (cons program args)
+               :code code
+               :stderr (get-output-stream-string stderr)))))
+  t)
