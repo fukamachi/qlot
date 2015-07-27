@@ -123,7 +123,9 @@
                                  (list "clone"
                                        "--recursive"
                                        (source-git-remote-url source)
-                                       destination))
+                                       (if (pathnamep destination)
+                                           (namestring destination)
+                                           destination)))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
            (when (fad:directory-exists-p destination)
