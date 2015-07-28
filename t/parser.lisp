@@ -22,7 +22,7 @@
 (defun test-qlfile (name)
   (merge-pathnames name (asdf:system-relative-pathname :qlot #P"t/data/")))
 
-(plan 16)
+(plan 17)
 
 (diag "parse-qlfile-line")
 
@@ -67,5 +67,10 @@
 
 (is-error (parse-qlfile (test-qlfile #P"qlfile.error"))
           'qlot-qlfile-error)
+
+;; https://github.com/fukamachi/qlot/issues/18
+(subtest "CRLF"
+  (let ((parsed (parse-qlfile (test-qlfile #P"qlfile-crlf"))))
+    (is (length parsed) 5)))
 
 (finalize)

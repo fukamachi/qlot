@@ -1,0 +1,6 @@
+git clack https://github.com/fukamachi/clack.git
+git shelly https://github.com/fukamachi/shelly.git :branch v0.7.x
+git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae51de8b95a6b0cf4b
+github datafly fukamachi/datafly
+
+ql log4cl 2014-03-17
