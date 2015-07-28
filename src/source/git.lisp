@@ -122,6 +122,8 @@
            (safety-shell-command "git"
                                  (list "clone"
                                        "--recursive"
+                                       "--config" "core.eol=lf"
+                                       "--config" "core.autocrlf=input"
                                        (source-git-remote-url source)
                                        destination))
          (retry-git-clone ()
