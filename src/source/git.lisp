@@ -94,6 +94,12 @@
              (handler-case
                  (let ((*standard-output* (make-broadcast-stream)))
                    (ppcre:scan-to-strings "^\\S+"
+                                          (inferior-shell:run (list "git" "--git-dir"
+                                                                    (format nil "~A.git"
+                                                                            (source-directory source))
+                                                                    "show-ref"
+                                                                    pattern))
+                                          #+nil
                                           (safety-shell-command "git"
                                                                 (list "--git-dir"
                                                                       (format nil "~A.git"
@@ -119,11 +125,10 @@
                          (source-git-tag source))))
     (tagbody git-cloning
        (restart-case
-           (safety-shell-command "git"
-                                 (list "clone"
-                                       "--recursive"
-                                       (source-git-remote-url source)
-                                       destination))
+           (inferior-shell:run (list "git" "clone"
+                                     "--recursive"
+                                     (source-git-remote-url source)
+                                     destination))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
            (when (fad:directory-exists-p destination)
@@ -131,10 +136,9 @@
            (go git-cloning))))
     (when checkout-to
       (let ((*error-output* (make-broadcast-stream)))
-        (safety-shell-command "git"
-                              (list "--git-dir"
-                                    (format nil "~A.git" destination)
-                                    "--work-tree"
-                                    destination
-                                    "checkout"
-                                    checkout-to))))))
+        (inferior-shell:run (list "git" "--git-dir"
+                                  (format nil "~A.git" destination)
+                                  "--work-tree"
+                                  destination
+                                  "checkout"
+                                  checkout-to))))))

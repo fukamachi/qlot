@@ -13,6 +13,7 @@
                :archive
                :salza2
                :gzip-stream
+               :inferior-shell
                :ironclad
                :yason
                :cl-fad
@@ -26,16 +27,15 @@
   :components ((:module "src"
                 :components
                 ((:file "parser" :depends-on ("source" "dist-sources" "error" "util"))
-                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "shell" "util"))
+                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "util"))
                  (:file "server" :depends-on ("source" "parser" "tmp"))
                  (:file "http")
-                 (:file "shell")
                  (:file "tmp")
                  (:file "archive")
                  (:file "source" :depends-on ("tmp" "util"))
                  (:module "dist-sources"
                   :pathname "source"
-                  :depends-on ("source" "http" "shell" "archive" "tmp" "util")
+                  :depends-on ("source" "http" "archive" "tmp" "util")
                   :serial t
                   :components
                   ((:file "ql")
