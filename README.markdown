@@ -50,6 +50,26 @@ As [qlot is going to be included](https://github.com/quicklisp/quicklisp-project
 (ql:quickload :qlot)
 ```
 
+### via Roswell
+
+It also can be installed with [Roswell](https://github.com/snmsts/roswell).
+
+```
+$ ros install qlot
+
+# Install from a local copy
+$ ros -l qlot.asd install qlot
+```
+
+It's almost the same as using Quicklisp, except it also introduces a shell command "qlot".
+
+```
+$ which qlot
+/Users/nitro_idiot/.roswell/bin/qlot
+$ qlot
+Usage: qlot [install | update | bundle | exec shell-args..]
+```
+
 ## Tutorial
 
 ### Adding "qlfile"
