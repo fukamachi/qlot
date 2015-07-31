@@ -27,7 +27,8 @@
           (uiop:run-program (cons program args)
                             :output (make-broadcast-stream *standard-output*
                                                            stdout)
-                            :error-output stderr)
+                            :error-output stderr
+                            :ignore-error-status t)
         (declare (ignore output error))
         (unless (zerop code)
           (error 'shell-command-error
