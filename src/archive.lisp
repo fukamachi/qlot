@@ -29,6 +29,7 @@
     (flet ((to-relative (path)
              (make-pathname
               :defaults path
+              :device nil
               :directory (cons :relative
                                (nthcdr ignore-len (pathname-directory path)))))
            (git-dir-p (path)
