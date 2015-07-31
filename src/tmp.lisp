@@ -6,7 +6,8 @@
 (in-package :qlot.tmp)
 
 (defvar *tmp-directory*
-  (merge-pathnames #P"qlot/" (uiop:temporary-directory)))
+  (merge-pathnames (format nil "qlot-~A/" (fad::generate-random-string))
+                   (uiop:temporary-directory)))
 
 (defun tmp-path (&rest pathnames)
   (reduce #'merge-pathnames
