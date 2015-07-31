@@ -133,16 +133,14 @@ It will also overwrite `qlfile.lock`.
 
 ### Bundling libraries
 
-You can bundle all depending libraries by adding the project-local `quicklisp/` directory to version controlled repository.
+You can bundle all depending libraries by `qlot:bundle` into `bundle-libs/`.
 
 ```common-lisp
-(qlot:install :myapp)
+(qlot:bundle :myapp)
 ```
 
 ```
-$ echo quicklisp/cache >> .gitignore
-$ echo quicklisp/tmp >> .gitignore
-$ git add .gitignore quicklisp/
+$ git add bundle-libs/
 $ git commit -m 'Bundle dependencies.'
 ```
 
@@ -166,6 +164,15 @@ $ git commit -m 'Bundle dependencies.'
 (qlot:update :myapp)
 (qlot:update #P"/path/to/myapp/")
 (qlot:update #P"/path/to/myapp/my-qlfile")
+```
+
+### bundle
+
+`qlot:bundle` will bundle dependencies into `bundle-libs/` by using `ql:bundle-systems`.
+
+```common-lisp
+(qlot:bundle :myapp)
+(qlot:bundle #P"/path/to/myapp/")
 ```
 
 ### quickload
