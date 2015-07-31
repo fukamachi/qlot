@@ -58,26 +58,30 @@
     :ref ,(source-github-ref source)))
 
 (defun retrieve-source-git-ref-from-github (source)
-  (labels ((retrieve-from-github (action)
-             (yason:parse
-              (safety-http-request
-               (format nil "https://api.github.com/repos/~A/~A" (source-github-repos source) action)
-               :want-stream t)))
-           (find-ref (results name)
-             (let ((result (find-if (lambda (result)
-                                      (string= (gethash "name" result) name))
-                                    results)))
-               (and result
-                    (gethash "sha" (gethash "commit" result)))))
-           (get-ref (action name)
-             (find-ref (retrieve-from-github action) name)))
-    (cond
-      ((source-github-ref source))
-      ((source-github-branch source)
-       (get-ref "branches" (source-github-branch source)))
-      ((source-github-tag source)
-       (get-ref "tags" (source-github-tag source)))
-      (T (get-ref "branches" "master")))))
+  (let ((github-access-token (uiop:getenv "GITHUB_ACCESS_TOKEN")))
+    (labels ((retrieve-from-github (action)
+               (yason:parse
+                (apply #'safety-http-request
+                       (format nil "https://api.github.com/repos/~A/~A" (source-github-repos source) action)
+                       :want-stream t
+                       (if github-access-token
+                           (list :basic-authorization (list github-access-token "x-auth-basic"))
+                           '()))))
+             (find-ref (results name)
+               (let ((result (find-if (lambda (result)
+                                        (string= (gethash "name" result) name))
+                                      results)))
+                 (and result
+                      (gethash "sha" (gethash "commit" result)))))
+             (get-ref (action name)
+               (find-ref (retrieve-from-github action) name)))
+      (cond
+        ((source-github-ref source))
+        ((source-github-branch source)
+         (get-ref "branches" (source-github-branch source)))
+        ((source-github-tag source)
+         (get-ref "tags" (source-github-tag source)))
+        (T (get-ref "branches" "master"))))))
 
 (defmethod prepare :after ((source source-github))
   (setf (source-github-ref source)

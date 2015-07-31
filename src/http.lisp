@@ -30,17 +30,15 @@
                  (list :user-agent (format nil "qlot/~A"
                                            (asdf::component-version (asdf:find-system :qlot)))))))
 
-(defmacro safety-http-request (url &rest args)
-  (with-gensyms (body status)
-    (once-only (url)
-      `(multiple-value-bind (,body ,status)
-           (http-request ,url ,@args)
-         (unless (= ,status 200)
-           (error 'http-request-failed
-                  :url ,url
-                  :status ,status))
+(defun safety-http-request (url &rest args)
+  (multiple-value-bind (body status)
+      (apply #'http-request url args)
+    (unless (= status 200)
+      (error 'http-request-failed
+             :url url
+             :status status))
 
-         ,body))))
+    body))
 
 (defun download-file (url output &key (element-type '(unsigned-byte 8)))
   (format t "~&Downloading ~S to ~S...~%" url output)
