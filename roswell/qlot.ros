@@ -25,5 +25,5 @@ exec ros -Q -- $0 "$@"
              (format t "Error: Invalid Quicklisp directory: '~A'~%" (ros:getenv "QUICKLISP_HOME"))
              (ros:quit 1)))
          (ros:exec argv))
-        (t (format t "Usage: ~A [install | update | exec shell-args..]~%" (namestring *load-pathname*))
+        (t (format t "Usage: ~A [install | update | bundle | exec shell-args..]~%" (file-namestring *load-pathname*))
            (ros:quit 1))))
