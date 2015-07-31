@@ -58,6 +58,9 @@ If PATH isn't specified, this installs it to './quicklisp/'."
   systems)
 
 (defun bundle (&optional (project-dir *default-pathname-defaults*))
+  (typecase project-dir
+    ((or symbol string)
+     (setf project-dir (asdf:find-system project-dir))))
   (let ((qlhome (merge-pathnames #P"quicklisp/" project-dir))
         systems required-systems)
     (unless (probe-file qlhome)
