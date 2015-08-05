@@ -65,7 +65,7 @@
                        (format nil "https://api.github.com/repos/~A/~A" (source-github-repos source) action)
                        :want-stream t
                        (if github-access-token
-                           (list :basic-authorization (list github-access-token "x-auth-basic"))
+                           (list :basic-authorization (list github-access-token "x-oauth-basic"))
                            '()))))
              (find-ref (results name)
                (let ((result (find-if (lambda (result)
