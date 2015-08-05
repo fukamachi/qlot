@@ -40,6 +40,7 @@
            :systems.txt
            :archive
            :url-path-for
+           :url-for
 
            :source-has-directory
            :source-directory
@@ -132,35 +133,23 @@
 
 (defgeneric project.txt (source)
   (:method ((source source))
-    (format nil "name: ~A
-version: ~A
-distinfo-subscription-url: ~A~A
-release-index-url: ~A~A
-system-index-url: ~A~A
-"
-            (source-dist-name source)
-            (source-version source)
-            *dist-base-url* (url-path-for source 'project.txt)
-            *dist-base-url* (url-path-for source 'releases.txt)
-            *dist-base-url* (url-path-for source 'systems.txt))))
+    (format nil "~{~(~A~): ~A~%~}"
+            (list :name                      (source-dist-name source)
+                  :version                   (source-version source)
+                  :distinfo-subscription-url (url-for source 'project.txt)
+                  :release-index-url         (url-for source 'releases.txt)
+                  :system-index-url          (url-for source 'systems.txt)))))
 
 (defgeneric distinfo.txt (source)
   (:method ((source source))
-    (format nil "name: ~A
-version: ~A
-system-index-url: ~A~A
-release-index-url: ~A~A
-archive-base-url: ~A/
-canonical-distinfo-url: ~A~A
-distinfo-subscription-url: ~A~A
-"
-            (source-dist-name source)
-            (source-version source)
-            *dist-base-url* (url-path-for source 'systems.txt)
-            *dist-base-url* (url-path-for source 'releases.txt)
-            *dist-base-url*
-            *dist-base-url* (url-path-for source 'distinfo.txt)
-            *dist-base-url* (url-path-for source 'project.txt))))
+    (format nil "~{~(~A~): ~A~%~}"
+            (list :name                      (source-dist-name source)
+                  :version                   (source-version source)
+                  :system-index-url          (url-for source 'systems.txt)
+                  :release-index-url         (url-for source 'releases.txt)
+                  :archive-base-url          *dist-base-url*
+                  :canonical-distinfo-url    (url-for source 'distinfo.txt)
+                  :distinfo-subscription-url (url-for source 'project.txt)))))
 
 (defgeneric releases.txt (source))
 
@@ -185,6 +174,9 @@ distinfo-subscription-url: ~A~A
             (source-version source)))
   (:method (source (for (eql 'archive)))
     nil))
+
+(defun url-for (source for)
+  (concatenate 'string *dist-base-url* (url-path-for source for)))
 
 
 ;;
@@ -314,9 +306,7 @@ distinfo-subscription-url: ~A~A
                                                (read-sequence out in)
                                                out)))))
       (with-slots (project-name) source
-        (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
-~A ~A~A ~A ~A ~A ~A~{ ~A~}
-"
+        (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A~A ~A ~A ~A ~A~{ ~A~}~%"
                 project-name
                 *dist-base-url* (url-path-for source 'archive)
                 size

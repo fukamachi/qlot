@@ -28,7 +28,7 @@
   (labels ((trim-comment (line)
              (ppcre:regex-replace "(?<!\\\\)[#|;].*" line ""))
            (canonical-line (line)
-             (string-trim '(#\Space #\Tab)
+             (string-trim '(#\Space #\Tab #\Newline #\Return)
                           (trim-comment line))))
     (setf line (canonical-line line))
     (when (string= line "")

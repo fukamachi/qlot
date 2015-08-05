@@ -137,30 +137,21 @@
           version))))
 
 (defmethod distinfo.txt ((source source-ql))
-  (format nil "name: ~A
-version: ~A
-system-index-url: ~A~A
-release-index-url: ~A~A
-archive-base-url: http://beta.quicklisp.org/
-canonical-distinfo-url: ~A~A
-distinfo-subscription-url: ~A~A
-"
-          (source-project-name source)
-          (source-version source)
-          *dist-base-url* (url-path-for source 'systems.txt)
-          *dist-base-url* (url-path-for source 'releases.txt)
-          *dist-base-url* (url-path-for source 'distinfo.txt)
-          *dist-base-url* (url-path-for source 'project.txt)))
+  (format nil "~{~(~A~): ~A~%~}"
+          (list :name                      (source-project-name source)
+                :version                   (source-version source)
+                :system-index-url          (url-for source 'systems.txt)
+                :release-index-url         (url-for source 'releases.txt)
+                :archive-base-url          "http://beta.quicklisp.org/"
+                :canonical-distinfo-url    (url-for source 'distinfo.txt)
+                :distinfo-subscription-url (url-for source 'project.txt))))
 
 (defmethod systems.txt ((source source-ql))
-  (format nil "# project system-file system-name [dependency1..dependencyN]
-~{~{~A~^ ~}~%~}"
+  (format nil "# project system-file system-name [dependency1..dependencyN]~%~{~{~A~^ ~}~%~}"
           (source-ql-systems source)))
 
 (defmethod releases.txt ((source source-ql))
-  (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
-~{~A~^ ~}
-"
+  (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~{~A~^ ~}~%"
           (source-ql-releases source)))
 
 (defmethod url-path-for ((source source-ql-all) (for (eql 'project.txt)))

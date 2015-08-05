@@ -4,8 +4,6 @@
         :qlot.source)
   (:import-from :qlot.tmp
                 :tmp-path)
-  (:import-from :qlot.archive
-                :create-tarball)
   (:import-from :qlot.shell
                 :safety-shell-command
                 :shell-command-error)
@@ -51,14 +49,18 @@
         (retrieve-source-git-ref source))
   (setf (source-version source)
         (format nil "git-~A" (source-git-ref source)))
-  (setf (source-archive source)
-        (pathname
-         (format nil "~A-~A.tar.gz"
-                 (source-project-name source)
-                 (source-version source))))
 
-  (create-tarball (source-directory source)
-                  (source-archive source)))
+  (let ((prefix (car (last (pathname-directory (source-directory source)))))
+        (cwd (uiop:getcwd)))
+    (uiop:chdir (source-directory source))
+    (setf (source-archive source)
+          (pathname
+           (format nil "~A.tar.gz" prefix)))
+    (safety-shell-command "git"
+                          `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
+                                      ,(source-git-ref source)
+                                      "-o" ,(source-archive source)))
+    (uiop:chdir cwd)))
 
 (defmethod source-equal ((source1 source-git) (source2 source-git))
   (and (string= (source-project-name source1)
@@ -122,6 +124,8 @@
            (safety-shell-command "git"
                                  (list "clone"
                                        "--recursive"
+                                       "--config" "core.eol=lf"
+                                       "--config" "core.autocrlf=input"
                                        (source-git-remote-url source)
                                        destination))
          (retry-git-clone ()
