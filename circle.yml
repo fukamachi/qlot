@@ -1,22 +1,26 @@
 machine:
   environment:
-    PATH: ~/.roswell/bin:$PATH
+    PATH: $HOME/.roswell/bin:$PATH
+    ROSWELL_BRANCH: master
+    ROSWELL_INSTALL_DIR: $HOME/.roswell
+    CIRCLE_NODE_LISP_0: sbcl-bin
+    CIRCLE_NODE_LISP_1: ccl-bin
 
 dependencies:
-  pre:
-    - curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh;
-    - case $CIRCLE_NODE_INDEX in
-        0) ros config set default.lisp sbcl-bin ;;
-        1) ros install ccl-bin;
-           ros config set default.lisp ccl-bin ;;
-      esac
-    - ros run -- --version
-  post:
+  override:
+    - curl -L https://raw.githubusercontent.com/snmsts/roswell/$ROSWELL_BRANCH/scripts/install-for-ci.sh
+        | LISP=$(eval echo \$"CIRCLE_NODE_LISP_$CIRCLE_NODE_INDEX") sh
     - if [ ! -d ~/lisp/archive ]; then
         git clone https://github.com/froydnj/archive ~/lisp/archive;
       fi
     - git clone https://github.com/fukamachi/prove ~/lisp/prove
     - ros -l ~/lisp/prove/prove.asd install prove
+  post:
+    - ros --version
+    - ros config
+  cache_directories:
+    - "~/.roswell"
+    - "~/.config/common-lisp"
 
 test:
   override:
