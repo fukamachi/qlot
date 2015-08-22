@@ -7,7 +7,9 @@
                 :pathname-in-directory-p
                 :all-required-systems)
   (:export :install
+           :install-user-local
            :update
+           :update-user-local
            :install-quicklisp
            :quickload
            :bundle
@@ -29,6 +31,12 @@ qlfile.lock will be used with precedence if it exists."
         (apply #'install-project *default-pathname-defaults* args)
         (apply #'install-project args))))
 
+(defun install-user-local ()
+  (let ((qlfile (merge-pathnames #P"qlfile" (user-homedir-pathname))))
+    (unless (probe-file qlfile)
+      (error "File does not exist: '~A'" qlfile))
+    (install qlfile :userlocal t)))
+
 (defun update (&rest args)
   "Update the project-local 'quicklisp/' directory using qlfile."
   (ensure-qlot-install)
@@ -36,6 +44,12 @@ qlfile.lock will be used with precedence if it exists."
     (if (evenp (length args))
         (apply #'update-project *default-pathname-defaults* args)
         (apply #'update-project args))))
+
+(defun update-user-local ()
+  (let ((qlfile (merge-pathnames #P"qlfile" (user-homedir-pathname))))
+    (unless (probe-file qlfile)
+      (error "File does not exist: '~A'" qlfile))
+    (update qlfile :userlocal t)))
 
 (defun install-quicklisp (&optional (path nil path-specified-p))
   "Install Quicklisp in the given PATH.

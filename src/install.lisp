@@ -118,7 +118,7 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/") userlocal)
   (unless (fad:file-exists-p file)
     (error "File does not exist: ~A" file))
 
@@ -130,11 +130,11 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome)
+    (apply-qlfile-to-qlhome file qlhome :not-install-asd userlocal)
 
     (format t "~&Successfully installed.~%")))
 
-(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") userlocal)
   (unless (fad:file-exists-p file)
     (error "File does not exist: ~A" file))
 
@@ -146,7 +146,7 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome :ignore-lock t)
+    (apply-qlfile-to-qlhome file qlhome :ignore-lock t :not-install-asd userlocal)
 
     (format t "~&Successfully updated.~%")))
 
@@ -192,7 +192,7 @@
         (let ((*trace-output* (make-broadcast-stream)))
           (update-in-place dist new-dist))))))
 
-(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
+(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock not-install-asd)
   (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
                                                                      (merge-pathnames #P"tmp/qlot/" qlhome))))
         (all-sources (prepare-qlfile file :ignore-lock ignore-lock)))
@@ -236,21 +236,22 @@
               (format t "~&Removing dist ~S.~%" (name dist))
               (uninstall dist))))))
 
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream))
-          (*package* (find-package :asdf-user)))
-      (with-package-functions :ql (bundle-systems)
-        (asdf::collect-sub*directories-asd-files
-         (fad:pathname-directory-pathname file)
-         :collect (lambda (asd)
-                    (unless (or (pathname-in-directory-p asd qlhome)
-                                ;; KLUDGE: Ignore skeleton.asd of CL-Project
-                                (search "skeleton" (pathname-name asd)))
-                      (load asd)
-                      (ensure-installed-in-local-quicklisp
-                       (asdf:find-system (pathname-name asd))
-                       qlhome)))
-         :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))))
+    (unless not-install-asd
+      (let ((*standard-output* (make-broadcast-stream))
+            (*trace-output* (make-broadcast-stream))
+            (*package* (find-package :asdf-user)))
+        (with-package-functions :ql (bundle-systems)
+          (asdf::collect-sub*directories-asd-files
+           (fad:pathname-directory-pathname file)
+           :collect (lambda (asd)
+                      (unless (or (pathname-in-directory-p asd qlhome)
+                                  ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                                  (search "skeleton" (pathname-name asd)))
+                        (load asd)
+                        (ensure-installed-in-local-quicklisp
+                         (asdf:find-system (pathname-name asd))
+                         qlhome)))
+           :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*)))))
     (stop-server)
 
     (with-quicklisp-home qlhome
@@ -272,21 +273,25 @@
     (apply #'install-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
     (apply #'install-project (asdf:find-system object) args))
-  (:method ((object asdf:system) &rest args &key quicklisp-home &allow-other-keys)
+  (:method ((object asdf:system) &rest args &key quicklisp-home userlocal &allow-other-keys)
     (let ((system-dir (asdf:component-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (asdf:system-relative-pathname object #P"quicklisp/")
+              (list* :quicklisp-home (if userlocal
+                                         ql:*quicklisp-home*
+                                         (asdf:system-relative-pathname object #P"quicklisp/"))
                      args)))
       (apply #'install-qlfile
              (find-qlfile system-dir)
              args)))
-  (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
+  (:method ((object pathname) &rest args &key quicklisp-home userlocal &allow-other-keys)
     (let* ((object (truename object))
            (dir (fad:pathname-directory-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (merge-pathnames #P"quicklisp/" dir)
+              (list* :quicklisp-home (if userlocal
+                                         ql:*quicklisp-home*
+                                         (merge-pathnames #P"quicklisp/" dir))
                      args)))
       (if (fad:directory-pathname-p object)
           (apply #'install-qlfile (find-qlfile object) args)
@@ -297,21 +302,25 @@
     (apply #'update-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
     (apply #'update-project (asdf:find-system object) args))
-  (:method ((object asdf:system) &rest args &key quicklisp-home &allow-other-keys)
+  (:method ((object asdf:system) &rest args &key quicklisp-home userlocal &allow-other-keys)
     (let ((system-dir (asdf:component-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (asdf:system-relative-pathname object #P"quicklisp/")
+              (list* :quicklisp-home (if userlocal
+                                         ql:*quicklisp-home*
+                                         (asdf:system-relative-pathname object #P"quicklisp/"))
                      args)))
       (apply #'update-qlfile
              (find-qlfile system-dir :errorp nil)
              args)))
-  (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
+  (:method ((object pathname) &rest args &key quicklisp-home userlocal &allow-other-keys)
     (let* ((object (truename object))
            (dir (fad:pathname-directory-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (merge-pathnames #P"quicklisp/" dir)
+              (list* :quicklisp-home (if userlocal
+                                         ql:*quicklisp-home*
+                                         (merge-pathnames #P"quicklisp/" dir))
                      args)))
       (if (fad:directory-pathname-p object)
           (apply #'update-qlfile (find-qlfile object) args)
