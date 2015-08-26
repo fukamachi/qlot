@@ -10,24 +10,24 @@
         :prove)
   (:import-from :qlot.install
                 :uninstall-all-dists)
-  (:import-from :fad
+  (:import-from :uiop
                 :file-exists-p
-                :delete-directory-and-files))
+                :delete-directory-tree
+                :subdirectories))
 (in-package :qlot-test)
 
 (defparameter *tmp-directory* (asdf:system-relative-pathname :qlot #P"t/tmp/"))
-(when (fad:file-exists-p *tmp-directory*)
-  (fad:delete-directory-and-files *tmp-directory*))
+(uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)
 (ensure-directories-exist *tmp-directory*)
 
 (let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock"))
       (lock2 (asdf:system-relative-pathname :qlot #P"t/data/qlfile2.lock"))
       (lock3 (asdf:system-relative-pathname :qlot #P"t/data/qlfile3.lock")))
-  (when (fad:file-exists-p lock)
+  (when (uiop:file-exists-p lock)
     (delete-file lock))
-  (when (fad:file-exists-p lock2)
+  (when (uiop:file-exists-p lock2)
     (delete-file lock2))
-  (when (fad:file-exists-p lock3)
+  (when (uiop:file-exists-p lock3)
     (delete-file lock3)))
 
 (plan 6)
@@ -37,7 +37,7 @@
 
 (uninstall-all-dists (merge-pathnames #P"quicklisp/" *tmp-directory*))
 
-(is (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*))
+(is (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*))
     '()
     "can uninstall all dists")
 
@@ -46,7 +46,7 @@
 
 (is (mapcar (lambda (path)
               (car (last (pathname-directory path))))
-            (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+            (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
     '("cl-dbi"
       "clack"
       "datafly"
@@ -61,7 +61,7 @@
 
 (is (mapcar (lambda (path)
               (car (last (pathname-directory path))))
-            (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+            (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
     '("datafly"
       "log4cl"
       "quicklisp"
@@ -74,7 +74,7 @@
 
 (is (mapcar (lambda (path)
               (car (last (pathname-directory path))))
-            (fad:list-directory (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+            (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
     '("quicklisp")
     :test #'equal
     "can install dists from qlfile")

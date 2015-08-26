@@ -15,7 +15,6 @@
                :gzip-stream
                :ironclad
                :yason
-               :cl-fad
                :alexandria
                :cl-ppcre
                :uiop
@@ -30,7 +29,7 @@
                  (:file "server" :depends-on ("source" "parser" "tmp"))
                  (:file "http")
                  (:file "shell")
-                 (:file "tmp")
+                 (:file "tmp" :depends-on ("util"))
                  (:file "archive")
                  (:file "source" :depends-on ("tmp" "util"))
                  (:module "dist-sources"

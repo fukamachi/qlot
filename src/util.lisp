@@ -8,7 +8,8 @@
            :call-in-local-quicklisp
            :with-local-quicklisp
            :ensure-installed-in-local-quicklisp
-           :all-required-systems))
+           :all-required-systems
+           :generate-random-string))
 (in-package :qlot.util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
@@ -155,3 +156,6 @@ with the same key."
                                  :test #'string=))))
      system
      qlhome)))
+
+(defun generate-random-string ()
+  (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5))))

@@ -29,15 +29,16 @@
                 :with-package-functions
                 :ensure-installed-in-local-quicklisp
                 :pathname-in-directory-p
-                :all-required-systems)
-  (:import-from :fad
-                :pathname-as-directory
-                :pathname-absolute-p
-                :pathname-directory-pathname
-                :generate-random-string
+                :all-required-systems
+                :generate-random-string)
+  (:import-from :uiop
+                :ensure-directory-pathname
+                :absolute-pathname-p
                 :file-exists-p
                 :directory-exists-p
-                :delete-directory-and-files)
+                :directory-pathname-p
+                :pathname-directory-pathname
+                :delete-directory-tree)
   (:export :install-quicklisp
            :install-qlfile
            :install-project))
@@ -56,7 +57,7 @@
   (format t "~&Installing Quicklisp to ~A ...~%" path)
   (let ((*standard-output* (make-broadcast-stream))
         (quicklisp-file (merge-pathnames (format nil "quicklisp-~A.lisp"
-                                                 (fad::generate-random-string))
+                                                 (generate-random-string))
                                          *tmp-directory*)))
     (ensure-directories-exist *tmp-directory*)
     (download-file "http://beta.quicklisp.org/quicklisp.lisp"
@@ -113,18 +114,18 @@
       (mapc #'uninstall (all-dists)))))
 
 (defun canonical-qlhome (qlhome &optional (base *default-pathname-defaults*))
-  (setf qlhome (fad:pathname-as-directory qlhome))
-  (if (fad:pathname-absolute-p qlhome)
+  (setf qlhome (uiop:ensure-directory-pathname qlhome))
+  (if (uiop:absolute-pathname-p qlhome)
       qlhome
       (merge-pathnames qlhome base)))
 
 (defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
-  (unless (fad:file-exists-p file)
+  (unless (uiop:file-exists-p file)
     (error "File does not exist: ~A" file))
 
-  (let ((qlhome (canonical-qlhome quicklisp-home (fad:pathname-directory-pathname file))))
+  (let ((qlhome (canonical-qlhome quicklisp-home (uiop:pathname-directory-pathname file))))
 
-    (unless (fad:file-exists-p qlhome)
+    (unless (uiop:directory-exists-p qlhome)
       (install-quicklisp qlhome))
 
     (unless (find-package :ql)
@@ -135,12 +136,12 @@
     (format t "~&Successfully installed.~%")))
 
 (defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
-  (unless (fad:file-exists-p file)
+  (unless (uiop:file-exists-p file)
     (error "File does not exist: ~A" file))
 
-  (let ((qlhome (canonical-qlhome quicklisp-home (fad:pathname-directory-pathname file))))
+  (let ((qlhome (canonical-qlhome quicklisp-home (uiop:pathname-directory-pathname file))))
 
-    (unless (fad:directory-exists-p qlhome)
+    (unless (uiop:directory-exists-p qlhome)
       (error "~S does not exist." qlhome))
 
     (unless (find-package :ql)
@@ -193,8 +194,8 @@
           (update-in-place dist new-dist))))))
 
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
-  (let ((*tmp-directory* (fad:pathname-as-directory (merge-pathnames (fad::generate-random-string)
-                                                                     (merge-pathnames #P"tmp/qlot/" qlhome))))
+  (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
+                                                                          (merge-pathnames #P"tmp/qlot/" qlhome))))
         (all-sources (prepare-qlfile file :ignore-lock ignore-lock)))
 
     (start-server all-sources)
@@ -241,7 +242,7 @@
           (*package* (find-package :asdf-user)))
       (with-package-functions :ql (bundle-systems)
         (asdf::collect-sub*directories-asd-files
-         (fad:pathname-directory-pathname file)
+         (uiop:pathname-directory-pathname file)
          :collect (lambda (asd)
                     (unless (or (pathname-in-directory-p asd qlhome)
                                 ;; KLUDGE: Ignore skeleton.asd of CL-Project
@@ -264,8 +265,7 @@
                 for (project-name . contents) = (freeze-source source)
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-    (when (fad:directory-exists-p *tmp-directory*)
-      (fad:delete-directory-and-files *tmp-directory*))))
+    (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
 
 (defgeneric install-project (object &rest args)
   (:method ((object symbol) &rest args)
@@ -283,12 +283,12 @@
              args)))
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
     (let* ((object (truename object))
-           (dir (fad:pathname-directory-pathname object)))
+           (dir (uiop:pathname-directory-pathname object)))
       (unless quicklisp-home
         (setf args
               (list* :quicklisp-home (merge-pathnames #P"quicklisp/" dir)
                      args)))
-      (if (fad:directory-pathname-p object)
+      (if (uiop:directory-pathname-p object)
           (apply #'install-qlfile (find-qlfile object) args)
           (apply #'install-qlfile object args)))))
 
@@ -308,11 +308,11 @@
              args)))
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
     (let* ((object (truename object))
-           (dir (fad:pathname-directory-pathname object)))
+           (dir (uiop:pathname-directory-pathname object)))
       (unless quicklisp-home
         (setf args
               (list* :quicklisp-home (merge-pathnames #P"quicklisp/" dir)
                      args)))
-      (if (fad:directory-pathname-p object)
+      (if (uiop:directory-pathname-p object)
           (apply #'update-qlfile (find-qlfile object) args)
           (apply #'update-qlfile object args)))))

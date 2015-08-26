@@ -6,10 +6,11 @@
   (:import-from :qlot.util
                 :find-qlfile
                 :with-package-functions)
-  (:import-from :fad
-                :list-directory
+  (:import-from :uiop
+                :directory-files
+                :subdirectories
                 :directory-pathname-p
-                :pathname-absolute-p)
+                :absolute-pathname-p)
   (:import-from :ironclad
                 :byte-array-to-hex-string
                 :digest-file
@@ -200,7 +201,7 @@
 (defgeneric (setf source-directory) (value source)
   (:method (value (source source-has-directory))
     (setf (slot-value source 'directory)
-          (if (fad:pathname-absolute-p value)
+          (if (uiop:absolute-pathname-p value)
               value
               (tmp-path (pathname (format nil "~(~A~)/repos/" (type-of source)))
                         value)))))
@@ -208,7 +209,7 @@
 (defgeneric (setf source-archive) (value source)
   (:method (value (source source-has-directory))
     (setf (slot-value source 'archive)
-          (if (fad:pathname-absolute-p value)
+          (if (uiop:absolute-pathname-p value)
               value
               (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source)))
                         value)))))
@@ -219,17 +220,14 @@
              (and (equal (pathname-type path) "asd")
                   ;; KLUDGE: Ignore skeleton.asd of CL-Project
                   (not (search "skeleton" (pathname-name path)))))
-           (collect-asd-files (path)
-             (cond
-               ((and (fad:directory-pathname-p path)
-                     (not (find (car (last (pathname-directory path)))
-                                asdf::*default-source-registry-exclusions*
-                                :test #'string=)))
-                (collect-asd-files-in-directory path))
-               ((asd-file-p path) (list path) )
-               (T (list))))
            (collect-asd-files-in-directory (dir)
-             (mapcan #'collect-asd-files (fad:list-directory dir))))
+             (unless (find (car (last (pathname-directory dir)))
+                           asdf::*default-source-registry-exclusions*
+                           :test #'string=)
+               (nconc
+                (remove-if-not #'asd-file-p
+                               (uiop:directory-files dir))
+                (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir))))))
     (collect-asd-files-in-directory (source-directory source))))
 
 (defparameter *dependencies* nil)

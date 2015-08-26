@@ -7,25 +7,26 @@
                 :parse-qlfile)
   (:import-from :qlot.tmp
                 :*tmp-directory*)
+  (:import-from :qlot.util
+                :generate-random-string)
   (:import-from :drakma
                 :http-request)
-  (:import-from :fad
+  (:import-from :uiop
                 :file-exists-p
-                :pathname-as-directory
-                :generate-random-string
-                :delete-directory-and-files))
+                :ensure-directory-pathname
+                :delete-directory-tree))
 (in-package :qlot-test.server)
 
 (plan 6)
 
 (let ((lock (asdf:system-relative-pathname :qlot #P"t/data/qlfile.lock")))
-  (when (fad:file-exists-p lock)
+  (when (uiop:file-exists-p lock)
     (delete-file lock)))
 
 #+thread-support
 (let ((qlfile (asdf:system-relative-pathname :qlot #P"t/data/qlfile"))
-      (*tmp-directory* (fad:pathname-as-directory
-                        (merge-pathnames (fad::generate-random-string)
+      (*tmp-directory* (uiop:ensure-directory-pathname
+                        (merge-pathnames (generate-random-string)
                                          (asdf:system-relative-pathname :qlot #P"t/tmp/qlot/")))))
   (ensure-directories-exist *tmp-directory*)
   (diag "starting a server..")
@@ -38,7 +39,7 @@
   (is (nth-value 1 (http-request (localhost "/datafly.txt"))) 200)
   (is (nth-value 1 (http-request (localhost "/log4cl.txt"))) 200)
 
-  (fad:delete-directory-and-files *tmp-directory*)
+  (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)
 
   (diag "stopping the server..")
   (stop-server))

@@ -1,9 +1,10 @@
 (in-package :cl-user)
 (defpackage qlot.archive
   (:use :cl)
-  (:import-from :fad
-                :pathname-parent-directory
-                :walk-directory)
+  (:import-from :uiop
+                :pathname-parent-directory-pathname
+                :directory-files
+                :subdirectories)
   (:import-from :archive
                 :create-tar-file
                 :open-archive
@@ -18,9 +19,8 @@
 (in-package :qlot.archive)
 
 (defun create-tarball (directory destination)
-  (let ((filelist '())
-        (ignore-len (length (pathname-directory (truename (fad:pathname-parent-directory directory)))))
-        (*default-pathname-defaults* (truename (fad:pathname-parent-directory directory)))
+  (let ((ignore-len (length (pathname-directory (truename (uiop:pathname-parent-directory-pathname directory)))))
+        (*default-pathname-defaults* (truename (uiop:pathname-parent-directory-pathname directory)))
         (tar-file (make-pathname
                    :directory (pathname-directory destination)
                    :name (pathname-name destination)))
@@ -36,12 +36,13 @@
              (find ".git"
                    (nthcdr ignore-len (pathname-directory path))
                    :test #'string=)))
-      (fad:walk-directory directory
-                          (lambda (file)
-                            (push (to-relative file) filelist))
-                          :test (complement #'git-dir-p)))
+      (archive::create-tar-file
+       tar-file
+       (mapcar #'to-relative
+               (remove-if #'git-dir-p
+                          (nconc (uiop:subdirectories directory)
+                                 (uiop:directory-files directory))))))
 
-    (archive::create-tar-file tar-file filelist)
     (salza2:gzip-file tar-file tar-gz-file)
     (delete-file tar-file)
     tar-gz-file))
