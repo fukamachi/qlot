@@ -8,10 +8,8 @@
                 :url)
   (:import-from :qlot.http
                 :safety-http-request)
-  (:import-from :jonathan
+  (:import-from :yason
                 :parse)
-  (:import-from :babel
-                :octets-to-string)
   (:export :source-github
            :source-github-repos
            :source-github-ref
@@ -62,13 +60,13 @@
 (defun retrieve-source-git-ref-from-github (source)
   (let ((github-access-token (uiop:getenv "GITHUB_ACCESS_TOKEN")))
     (labels ((retrieve-from-github (action)
-               (let ((json
-                       (apply #'safety-http-request
-                              (format nil "https://api.github.com/repos/~A/~A" (source-github-repos source) action)
-                              (if github-access-token
-                                  (list :basic-authorization (list github-access-token "x-oauth-basic"))
-                                  '()))))
-                 (jojo:parse (babel:octets-to-string json) :as :hash-table)))
+               (yason:parse
+                (apply #'safety-http-request
+                       (format nil "https://api.github.com/repos/~A/~A" (source-github-repos source) action)
+                       :want-stream t
+                       (if github-access-token
+                           (list :basic-authorization (list github-access-token "x-oauth-basic"))
+                           '()))))
              (find-ref (results name)
                (let ((result (find-if (lambda (result)
                                         (string= (gethash "name" result) name))

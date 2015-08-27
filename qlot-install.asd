@@ -14,8 +14,7 @@
                :salza2
                :gzip-stream
                :ironclad
-               :jonathan
-               :babel
+               :yason
                :alexandria
                :cl-ppcre
                :uiop
