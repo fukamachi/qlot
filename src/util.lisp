@@ -98,7 +98,7 @@ with the same key."
 
     (asdf:initialize-source-registry)
 
-    (prog1 (funcall fn)
+    (multiple-value-prog1 (funcall fn)
       ;; Make all systems that were actually loaded from the local quicklisp
       ;; visible through ASDF outside of the local environment.
       (merge-hash-tables asdf::*defined-systems* original-defined-systems))))
