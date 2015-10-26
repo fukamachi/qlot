@@ -106,7 +106,7 @@
             with str = (concatenate 'string project-name " ")
             for line = (read-line body nil nil)
             while line
-            when (string= (subseq line 0 len) str)
+            when (and (<= len (length line)) (string= (subseq line 0 len) str))
               do (return (ppcre:split "\\s+" line))
             finally
                (error "~S doesn't exist in quicklisp ~A."
@@ -121,7 +121,7 @@
             with str = (concatenate 'string project-name " ")
             for line = (read-line body nil nil)
             while line
-            when (string= (subseq line 0 len) str)
+            when (and (<= len (length line)) (string= (subseq line 0 len) str))
               collect (ppcre:split "\\s+" line)))))
 
 (defgeneric source-ql-version (source)
