@@ -1,0 +1,30 @@
+language: common-lisp
+sudo: false
+
+env:
+  global:
+    - PATH=~/.roswell/bin:$PATH
+    - ROSWELL_INSTALL_DIR=$HOME/.roswell
+  matrix:
+    - LISP=sbcl-bin
+    - LISP=ccl-bin
+
+install:
+  # Roswell
+  - curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh
+  # Libraries to use the latest version
+  - git clone https://github.com/froydnj/archive ~/lisp/archive
+  # prove
+  - ros install prove
+
+cache:
+  directories:
+    - $HOME/.roswell
+    - $HOME/.config/common-lisp
+
+before_script:
+  - ros --version
+  - ros config
+
+script:
+  - run-prove qlot-test.asd
