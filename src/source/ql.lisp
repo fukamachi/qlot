@@ -103,10 +103,10 @@
     (let* ((version (source-ql-version source))
            (body (retrieve-quicklisp-releases version)))
       (loop with len = (1+ (length project-name))
-            with str = (concatenate 'string project-name " ")
+            with project-name/sp = (concatenate 'string project-name " ")
             for line = (read-line body nil nil)
             while line
-            when (string= (subseq line 0 len) str)
+            when (starts-with-subseq project-name/sp line)
               do (return (ppcre:split "\\s+" line))
             finally
                (error "~S doesn't exist in quicklisp ~A."
@@ -118,10 +118,10 @@
     (let* ((version (source-ql-version source))
            (body (retrieve-quicklisp-systems version)))
       (loop with len = (1+ (length project-name))
-            with str = (concatenate 'string project-name " ")
+            with project-name/sp = (concatenate 'string project-name " ")
             for line = (read-line body nil nil)
             while line
-            when (string= (subseq line 0 len) str)
+            when (starts-with-subseq project-name/sp line)
               collect (ppcre:split "\\s+" line)))))
 
 (defgeneric source-ql-version (source)
