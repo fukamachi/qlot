@@ -32,8 +32,8 @@
 
 (plan 6)
 
-(ok (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))
-    "can install Quicklisp")
+(let ((res (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))))
+  (ok res "can install Quicklisp"))
 
 (uninstall-all-dists (merge-pathnames #P"quicklisp/" *tmp-directory*))
 
