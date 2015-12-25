@@ -74,14 +74,17 @@ If PATH isn't specified, this installs it to './quicklisp/'."
                             (search "skeleton" (pathname-name asd)))
                   (push asd systems)))
      :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))
-    (setf required-systems
-          (delete-if (lambda (system)
-                       (member system systems :key #'pathname-name :test #'string-equal))
-                     (delete-duplicates
-                      (mapcan #'all-required-systems
-                              (mapcan #'asdf::component-sideway-dependencies
-                                      (mapcar #'asdf:find-system (mapcar #'pathname-name systems))))
-                      :test #'string-equal)))
+    (when systems
+      (load (first systems))
+      (with-local-quicklisp (pathname-name (first systems))
+        (setf required-systems
+              (delete-if (lambda (system)
+                           (member system systems :key #'pathname-name :test #'string-equal))
+                         (delete-duplicates
+                          (mapcan #'all-required-systems
+                                  (mapcan #'asdf::component-sideway-dependencies
+                                          (mapcar #'asdf:find-system (mapcar #'pathname-name systems))))
+                          :test #'string-equal)))))
     (if required-systems
         (progn
           (format t "~&Bundle ~D ~:*system~[s~;~:;s~]:~%" (length required-systems))
