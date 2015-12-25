@@ -103,6 +103,9 @@ If PATH isn't specified, this installs it to './quicklisp/'."
             (with-package-functions :ql (bundle-systems)
               (bundle-systems required-systems
                               :to (merge-pathnames #P"bundle-libs/" project-dir))))
+          (with-open-file (out (merge-pathnames #P"bundle-libs/local-projects/ignore" project-dir)
+                               :direction :output
+                               :if-exists nil))
           (format t "~&Successfully bundled to '~A'.~%Load 'bundle-libs/bundle.lisp' to use it.~%"
                   (merge-pathnames #P"bundle-libs/" project-dir)))
         (format t "~&Nothing to bundle.~%"))))
