@@ -81,7 +81,9 @@ If PATH isn't specified, this installs it to './quicklisp/'."
               (delete-if (lambda (system)
                            (member system systems :key #'pathname-name :test #'string-equal))
                          (delete-duplicates
-                          (mapcan #'all-required-systems
+                          (mapcan (lambda (dep)
+                                    (cons (string-downcase dep)
+                                          (all-required-systems dep)))
                                   (mapcan #'asdf::component-sideway-dependencies
                                           (mapcar #'asdf:find-system (mapcar #'pathname-name systems))))
                           :test #'string-equal)))))
