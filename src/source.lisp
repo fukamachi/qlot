@@ -27,6 +27,7 @@
            :source-direct-dependencies
            :find-source-class
            :prepare
+           :update-available-p
            :project-name
            :version
            :source-project-name
@@ -127,6 +128,13 @@
   (if (eq (type-of source1) (type-of source2))
       (call-next-method)
       nil))
+
+(defgeneric update-available-p (source current-version)
+  (:method (source current-version)
+    (unless (slot-boundp source 'qlot.source::version)
+      (prepare source))
+
+    (not (string= current-version (source-version source)))))
 
 
 ;;

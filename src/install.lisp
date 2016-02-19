@@ -17,6 +17,7 @@
                 :source-direct-dependencies
                 :freeze-source
                 :prepare
+                :update-available-p
                 :url-path-for
                 :project.txt)
   (:import-from :qlot.http
@@ -156,16 +157,13 @@
     (and (find-dist (source-dist-name source))
          T)))
 
-(defun update-available-p (source)
+(defun source-update-available-p (source)
   (with-package-functions :ql-dist (find-dist version)
     (let ((dist (find-dist (source-dist-name source))))
       (unless dist
-        (return-from update-available-p nil))
+        (return-from source-update-available-p nil))
 
-      (unless (slot-boundp source 'qlot.source::version)
-        (prepare source))
-
-      (not (string= (version dist) (source-version source))))))
+      (update-available-p source (version dist)))))
 
 (defun install-source (source)
   (with-package-functions :ql-dist (install-dist)
@@ -206,7 +204,8 @@
         (cond
           ((not (already-installed-p source))
            (install-source source))
-          ((update-available-p source)
+          ((source-update-available-p source)
+           (prepare source)
            (if (string= (source-dist-name source) "quicklisp")
                (with-package-functions :ql-dist (uninstall dist)
                  (uninstall (dist "quicklisp"))
