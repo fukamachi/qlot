@@ -92,9 +92,10 @@
         (format nil "github-~A" (source-github-ref source))))
 
 (defmethod update-available-p ((source source-github) current-version)
+  (setf (source-github-ref source)
+        (retrieve-source-git-ref-from-github source))
   (setf (source-version source)
-        (format nil "github-~A"
-                (retrieve-source-git-ref-from-github source)))
+        (format nil "github-~A" (source-github-ref source)))
   (not (string= (source-version source) current-version)))
 
 (defmethod source-equal ((source1 source-github) (source2 source-github))
