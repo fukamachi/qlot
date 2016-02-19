@@ -102,8 +102,7 @@
   (with-slots (project-name) source
     (let* ((version (source-ql-version source))
            (body (retrieve-quicklisp-releases version)))
-      (loop with len = (1+ (length project-name))
-            with project-name/sp = (concatenate 'string project-name " ")
+      (loop with project-name/sp = (concatenate 'string project-name " ")
             for line = (read-line body nil nil)
             while line
             when (starts-with-subseq project-name/sp line)
@@ -117,8 +116,7 @@
   (with-slots (project-name) source
     (let* ((version (source-ql-version source))
            (body (retrieve-quicklisp-systems version)))
-      (loop with len = (1+ (length project-name))
-            with project-name/sp = (concatenate 'string project-name " ")
+      (loop with project-name/sp = (concatenate 'string project-name " ")
             for line = (read-line body nil nil)
             while line
             when (starts-with-subseq project-name/sp line)
