@@ -77,16 +77,30 @@ If PATH isn't specified, this installs it to './quicklisp/'."
     (when systems
       (load (first systems))
       (with-local-quicklisp (pathname-name (first systems))
-        (setf required-systems
-              (delete-if (lambda (system)
-                           (member system systems :key #'pathname-name :test #'string-equal))
-                         (delete-duplicates
-                          (mapcan (lambda (dep)
-                                    (cons (string-downcase dep)
-                                          (all-required-systems dep)))
-                                  (mapcan #'asdf::component-sideway-dependencies
-                                          (mapcar #'asdf:find-system (mapcar #'pathname-name systems))))
-                          :test #'string-equal)))))
+        (with-package-functions :ql-dist (find-system)
+          (labels ((system-dependencies (system-name)
+                   (let ((system (asdf:find-system system-name nil)))
+                     (cond
+                       ((or (null system)
+                            (not (equal (asdf:component-pathname system)
+                                        (uiop:pathname-directory-pathname (first systems)))))
+                        (cons
+                         system-name
+                         (all-required-systems system-name)))
+                       (t
+                        ;; Probably the user application's system.
+                        ;; Continuing looking for it's dependencies
+                        (mapcan #'system-dependencies
+                                (mapcar #'string-downcase
+                                        (asdf::component-sideway-dependencies system))))))))
+            (setf required-systems
+                  (delete-if (lambda (system)
+                               (or (member system systems :key #'pathname-name :test #'string-equal)
+                                   (not (find-system system))))
+                             (delete-duplicates
+                              (mapcan #'system-dependencies
+                               (mapcar #'pathname-name systems))
+                              :test #'string=)))))))
     (if required-systems
         (progn
           (format t "~&Bundle ~D ~:*system~[s~;~:;s~]:~%" (length required-systems))
