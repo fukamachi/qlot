@@ -260,6 +260,14 @@ git datafly https://github.com/fukamachi/datafly.git :tag v0.7.4
 git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae51de8b95a6b0cf4b
 ```
 
+#### Retrieving from private repository
+
+Qlot doesn't have authentication feature, however, retrieving from private repository can be done via git's SSH key authentication.
+
+```
+git myapp git@github.com:somewrite-adtech/myapp
+```
+
 ### github
 
 ```
@@ -276,7 +284,7 @@ github datafly fukamachi/datafly
 github datafly fukamachi/datafly :branch develop
 ```
 
-### Priorities of distributions
+## Priorities of distributions
 
 If multiple distributions provide the same library, lower one would take priority over higher ones.
 
