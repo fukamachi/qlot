@@ -20,8 +20,6 @@
                 :update-available-p
                 :url-path-for
                 :project.txt)
-  (:import-from :qlot.http
-                :download-file)
   (:import-from :qlot.shell
                 :safety-shell-command)
   (:import-from :qlot.util
@@ -61,8 +59,9 @@
                                                  (generate-random-string))
                                          *tmp-directory*)))
     (ensure-directories-exist *tmp-directory*)
-    (download-file "http://beta.quicklisp.org/quicklisp.lisp"
-                   quicklisp-file)
+    (dex:fetch "http://beta.quicklisp.org/quicklisp.lisp"
+               quicklisp-file
+               :if-exists :supersede)
 
     #+(or ccl sbcl allegro clisp cmu ecl)
     (let ((eval-option (or

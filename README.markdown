@@ -189,7 +189,7 @@ Eval the given form in the local quicklisp environment.
 
 ```common-lisp
 (qlot:with-local-quicklisp :myapp
-  (ql:quickload :drakma))
+  (ql:quickload :dexador))
 ```
 
 ## `qlfile` syntax

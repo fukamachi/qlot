@@ -6,8 +6,6 @@
                 :source-http
                 :source-http-url
                 :url)
-  (:import-from :qlot.http
-                :safety-http-request)
   (:import-from :yason
                 :parse)
   (:export :source-github
@@ -60,11 +58,11 @@
 (defun retrieve-from-github (repos action)
   (let ((github-access-token (uiop:getenv "GITHUB_ACCESS_TOKEN")))
     (yason:parse
-     (apply #'safety-http-request
+     (apply #'dex:get
             (format nil "https://api.github.com/repos/~A/~A" repos action)
             :want-stream t
             (if github-access-token
-                (list :basic-authorization (list github-access-token "x-oauth-basic"))
+                (list :basic-auth (cons github-access-token "x-oauth-basic"))
                 '())))))
 
 (defun retrieve-source-git-ref-from-github (source)

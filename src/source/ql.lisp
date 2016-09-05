@@ -2,8 +2,6 @@
 (defpackage qlot.source.ql
   (:use :cl
         :qlot.source)
-  (:import-from :qlot.http
-                :safety-http-request)
   (:import-from :qlot.util
                 :find-qlfile
                 :with-package-functions)
@@ -79,8 +77,8 @@
                 (slot-value source2 '%version))))
 
 (defcached ql-latest-version ()
-  (let ((stream (safety-http-request "http://beta.quicklisp.org/dist/quicklisp.txt"
-                                     :want-stream t)))
+  (let ((stream (dex:get "http://beta.quicklisp.org/dist/quicklisp.txt"
+                         :want-stream t)))
     (or
      (loop for line = (read-line stream nil nil)
            while line
@@ -89,14 +87,14 @@
      (error "Failed to get the latest version of Quicklisp."))))
 
 (defun retrieve-quicklisp-releases (version)
-  (safety-http-request (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt"
-                               version)
-                       :want-stream t))
+  (dex:get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt"
+                   version)
+           :want-stream t))
 
 (defun retrieve-quicklisp-systems (version)
-  (safety-http-request (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt"
-                               version)
-                       :want-stream t))
+  (dex:get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt"
+                   version)
+           :want-stream t))
 
 (defun source-ql-releases (source)
   (with-slots (project-name) source
