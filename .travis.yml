@@ -13,9 +13,9 @@ install:
   # Roswell
   - curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh
   # Libraries to use the latest version
-  - git clone https://github.com/froydnj/archive ~/lisp/archive
-  # prove
+  - ros install froydnj/archive
   - ros install prove
+  - ros install fukamachi/dexador
 
 cache:
   directories:

@@ -9,7 +9,7 @@
   :license "MIT"
   :depends-on (:clack
                :clack-handler-hunchentoot
-               :drakma
+               :dexador
                :archive
                :salza2
                :gzip-stream
@@ -25,16 +25,15 @@
   :components ((:module "src"
                 :components
                 ((:file "parser" :depends-on ("source" "dist-sources" "error" "util"))
-                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "http" "shell" "util"))
+                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "shell" "util"))
                  (:file "server" :depends-on ("source" "parser" "tmp"))
-                 (:file "http")
                  (:file "shell")
                  (:file "tmp" :depends-on ("util"))
                  (:file "archive")
                  (:file "source" :depends-on ("tmp" "util"))
                  (:module "dist-sources"
                   :pathname "source"
-                  :depends-on ("source" "http" "shell" "archive" "tmp" "util")
+                  :depends-on ("source" "shell" "archive" "tmp" "util")
                   :serial t
                   :components
                   ((:file "ql")

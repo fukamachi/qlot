@@ -9,8 +9,6 @@
                 :*tmp-directory*)
   (:import-from :qlot.util
                 :generate-random-string)
-  (:import-from :drakma
-                :http-request)
   (:import-from :uiop
                 :file-exists-p
                 :ensure-directory-pathname
@@ -32,12 +30,14 @@
   (diag "starting a server..")
   (start-server qlfile)
 
-  (is (nth-value 1 (http-request (localhost "/quicklisp.txt"))) 404)
-  (is (nth-value 1 (http-request (localhost "/clack.txt"))) 200)
-  (is (nth-value 1 (http-request (localhost "/shelly.txt"))) 200)
-  (is (nth-value 1 (http-request (localhost "/cl-dbi.txt"))) 200)
-  (is (nth-value 1 (http-request (localhost "/datafly.txt"))) 200)
-  (is (nth-value 1 (http-request (localhost "/log4cl.txt"))) 200)
+  (handler-case
+      (dex:get (localhost "/quicklisp.txt"))
+    (dex:http-request-not-found () (pass "/quicklisp.txt is 404")))
+  (is (nth-value 1 (dex:get (localhost "/clack.txt"))) 200)
+  (is (nth-value 1 (dex:get (localhost "/shelly.txt"))) 200)
+  (is (nth-value 1 (dex:get (localhost "/cl-dbi.txt"))) 200)
+  (is (nth-value 1 (dex:get (localhost "/datafly.txt"))) 200)
+  (is (nth-value 1 (dex:get (localhost "/log4cl.txt"))) 200)
 
   (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)
 
