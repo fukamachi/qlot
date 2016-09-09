@@ -25,6 +25,7 @@
     (with-output-to-string (stderr)
       (multiple-value-bind (output error code)
           (uiop:run-program (cons program args)
+                            :input :interactive
                             :output (make-broadcast-stream *standard-output*
                                                            stdout)
                             :error-output stderr
