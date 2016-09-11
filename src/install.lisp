@@ -266,7 +266,7 @@
     #+windows
     (safety-shell-command 
      "attrib" 
-     (list "-r" "-h" (uiop:subpathname *tmp-directory* "*.*") "/s" "/d"))
+     (list "-r" "-h" (format nil "~A*.*" (uiop:native-namestring *tmp-directory*)) "/s" "/d"))
     (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
 
 (defgeneric install-project (object &rest args)
