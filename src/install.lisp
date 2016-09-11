@@ -264,8 +264,8 @@
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
     #+windows
-    (safety-shell-command 
-     "attrib" 
+    (safety-shell-command
+     "attrib"
      (list "-r" "-h" (format nil "~A*.*" (uiop:native-namestring *tmp-directory*)) "/s" "/d"))
     (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
 
