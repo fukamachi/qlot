@@ -263,7 +263,7 @@
                 for (project-name . contents) = (freeze-source source)
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-    #+(and windows ccl)
+    #+windows
     (safety-shell-command 
      "attrib" 
      (list "-r" "-h" (uiop:subpathname *tmp-directory* "*.*") "/s" "/d"))
