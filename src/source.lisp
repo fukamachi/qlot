@@ -297,9 +297,16 @@
                   (gethash (asdf:component-name system) *dependencies*))
           (asdf:clear-system system))))))
 
+(defun normalize-pathname (path)
+  "Return the pathname PATH resolved to a normalized pathname in the filesystem.
+Does not resolve symlinks, but PATH must actually exist in the filesystem."
+  (when (wild-pathname-p path)
+    (error "Wild pathnames cannot be normalized."))
+  (first (uiop:directory* path)))
+
 (defmethod releases.txt ((source source-has-directory))
   (let* ((tarball-file (source-archive source))
-         (source-dir (source-directory source))
+         (source-dir (normalize-pathname (source-directory source)))
          (prefix (car (last (pathname-directory source-dir)))))
     (multiple-value-bind (size file-md5 content-sha1)
         (with-open-file (in tarball-file :element-type '(unsigned-byte 8))
