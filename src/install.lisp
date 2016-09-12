@@ -263,10 +263,10 @@
                 for (project-name . contents) = (freeze-source source)
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-    #+(and windows ccl)
-    (safety-shell-command 
-     "attrib" 
-     (list "-r" "-h" (uiop:subpathname *tmp-directory* "*.*") "/s" "/d"))
+    #+windows
+    (safety-shell-command
+     "attrib"
+     (list "-r" "-h" (format nil "~A*.*" (uiop:native-namestring *tmp-directory*)) "/s" "/d"))
     (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
 
 (defgeneric install-project (object &rest args)
