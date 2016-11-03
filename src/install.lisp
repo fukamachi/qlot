@@ -34,6 +34,8 @@
                 :ensure-directory-pathname
                 :absolute-pathname-p
                 :file-exists-p
+                :directory-files
+                :copy-file
                 :directory-exists-p
                 :directory-pathname-p
                 :pathname-directory-pathname
@@ -218,9 +220,27 @@
         (unless (typep source 'qlot.source.ql:source-ql-all)
           (let ((*standard-output* (make-broadcast-stream))
                 (*trace-output* (make-broadcast-stream)))
-            (with-package-functions :ql-dist (dist provided-releases ensure-installed)
-              (map nil #'ensure-installed
-                   (provided-releases (dist (source-dist-name source)))))))
+            (with-package-functions :ql-dist (dist provided-releases ensure-installed base-directory)
+              (let ((releases (provided-releases (dist (source-dist-name source)))))
+                (dolist (release releases)
+                  (ensure-installed release)
+
+                  ;; Install Roswell scripts.
+                  (let* ((ros-dir (merge-pathnames #P"roswell/" (base-directory release)))
+                         (bin-dir (merge-pathnames #P"bin/" qlhome))
+                         (scripts (uiop:directory-files ros-dir "*.*")))
+                    (when scripts
+                      (ensure-directories-exist bin-dir)
+                      (dolist (script scripts)
+                        (let ((to (make-pathname
+                                   :name (pathname-name script)
+                                   :defaults bin-dir
+                                   :type #+unix (if (equalp (pathname-type script) "ros")
+                                                    nil
+                                                    (pathname-type script))
+                                         #-unix (pathname-type script))))
+                          (uiop:copy-file script to)
+                          #+sbcl (sb-posix:chmod to #o700))))))))))
 
         (with-package-functions :ql-dist (dist (setf preference))
           (setf (preference (dist (source-dist-name source)))
