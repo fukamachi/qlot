@@ -30,6 +30,8 @@
                 :pathname-in-directory-p
                 :all-required-systems
                 :generate-random-string)
+  (:import-from :qlot.proxy
+                :get-proxy)
   (:import-from :uiop
                 :ensure-directory-pathname
                 :absolute-pathname-p
@@ -63,7 +65,8 @@
     (ensure-directories-exist *tmp-directory*)
     (dex:fetch "http://beta.quicklisp.org/quicklisp.lisp"
                quicklisp-file
-               :if-exists :supersede)
+               :if-exists :supersede
+               :proxy (get-proxy))
 
     #+(or ccl sbcl allegro clisp cmu ecl)
     (let ((eval-option (or
@@ -88,7 +91,7 @@
                                ,(prin1-to-string `(load ,quicklisp-file)))
 
                              `(,eval-option
-                               ,(format nil "(quicklisp-quickstart:install :path #P\"~A\")" path))
+                               ,(format nil "(quicklisp-quickstart:install :path #P\"~A\" ~@[:proxy \"~A\"~])" path (get-proxy)))
 
                              `(,eval-option
                                ,(prin1-to-string
@@ -107,7 +110,10 @@
       (asdf:clear-system :quicklisp)
       (load quicklisp-file)
       (with-package-functions :quicklisp-quickstart (install)
-        (install :path path))))
+        (let ((proxy (get-proxy)))
+          (if proxy
+            (install :path path :proxy proxy)
+            (install :path path))))))
   T)
 
 (defun uninstall-all-dists (qlhome)
