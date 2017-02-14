@@ -6,6 +6,8 @@
                 :tmp-path)
   (:import-from :qlot.archive
                 :extract-tarball)
+  (:import-from :qlot.proxy
+                :get-proxy)
   (:import-from :ironclad
                 :byte-array-to-hex-string
                 :digest-file)
@@ -47,7 +49,8 @@
          (format nil "~A.tar.gz" (source-project-name source))))
   (dex:fetch (source-http-url source)
              (source-archive source)
-             :if-exists :supersede)
+             :if-exists :supersede
+             :proxy (get-proxy))
   (setf (source-directory source)
         (extract-tarball (source-archive source)
                          (tmp-path #P"source-http/repos/")))

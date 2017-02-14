@@ -25,7 +25,7 @@
   :components ((:module "src"
                 :components
                 ((:file "parser" :depends-on ("source" "dist-sources" "error" "util"))
-                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "shell" "util"))
+                 (:file "install" :depends-on ("parser" "server" "tmp" "source" "shell" "util" "proxy"))
                  (:file "server" :depends-on ("source" "parser" "tmp"))
                  (:file "shell")
                  (:file "tmp" :depends-on ("util"))
@@ -33,7 +33,7 @@
                  (:file "source" :depends-on ("tmp" "util"))
                  (:module "dist-sources"
                   :pathname "source"
-                  :depends-on ("source" "shell" "archive" "tmp" "util")
+                  :depends-on ("source" "shell" "archive" "tmp" "util" "proxy")
                   :serial t
                   :components
                   ((:file "ql")
@@ -41,5 +41,6 @@
                    (:file "http")
                    (:file "github")))
                  (:file "error")
-                 (:file "util"))))
+                 (:file "util")
+                 (:file "proxy"))))
   :in-order-to ((test-op (test-op qlot-test))))

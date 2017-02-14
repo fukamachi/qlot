@@ -5,6 +5,8 @@
   (:import-from :qlot.util
                 :find-qlfile
                 :with-package-functions)
+  (:import-from :qlot.proxy
+                :get-proxy)
   (:import-from :function-cache
                 :defcached)
   (:import-from :alexandria
@@ -78,7 +80,8 @@
 
 (defcached ql-latest-version ()
   (let ((stream (dex:get "http://beta.quicklisp.org/dist/quicklisp.txt"
-                         :want-stream t)))
+                         :want-stream t
+                         :proxy (get-proxy))))
     (or
      (loop for line = (read-line stream nil nil)
            while line
@@ -89,12 +92,14 @@
 (defun retrieve-quicklisp-releases (version)
   (dex:get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt"
                    version)
-           :want-stream t))
+           :want-stream t
+           :proxy (get-proxy)))
 
 (defun retrieve-quicklisp-systems (version)
   (dex:get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt"
                    version)
-           :want-stream t))
+           :want-stream t
+           :proxy (get-proxy)))
 
 (defun source-ql-releases (source)
   (with-slots (project-name) source
