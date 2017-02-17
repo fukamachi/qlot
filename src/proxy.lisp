@@ -14,6 +14,7 @@
 (defun get-proxy ()
   *proxy*)
 
+#+quicklisp
 (progn
   ;; dummy for suppress style warning
   (defun orig-http-fetch ())
