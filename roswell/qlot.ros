@@ -4,26 +4,39 @@
 exec ros +Q -- $0 "$@"
 |#
 
+(ros:include "util")
+
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
-  (cond ((equal "install" $1)
-         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:install)")))
-        ((equal "update" $1)
-         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:update)")))
-        ((equal "bundle" $1)
-         (ros:exec '("ros" "-Q" "-s" "qlot" "-e" "(qlot:bundle)")))
-        ((equal "exec" $1)
-         (unless (ros:getenv "QUICKLISP_HOME")
-           (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
-         (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
-                         (merge-pathnames (ros:getenv "QUICKLISP_HOME")
-                                          (make-pathname :defaults *load-pathname* :name nil :type nil)))))
-           (unless (probe-file path)
-             (format t "Error: '~A' does not exist.~%" (ros:getenv "QUICKLISP_HOME"))
-             (ros:quit 1))
-           (unless (probe-file (merge-pathnames "setup.lisp" path))
-             (format t "Error: Invalid Quicklisp directory: '~A'~%" (ros:getenv "QUICKLISP_HOME"))
-             (ros:quit 1)))
-         (ros:exec argv))
-        (t (format t "Usage: ~A [install | update | bundle | exec shell-args..]~%" (file-namestring *load-pathname*))
-           (ros:quit 1))))
+  (let ((ros (ros.util:which "ros")))
+    (cond ((equal "install" $1)
+           (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:install)")))
+          ((equal "update" $1)
+           (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:update)")))
+          ((equal "bundle" $1)
+           (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:bundle)")))
+          ((equal "exec" $1)
+           (unless (ros:getenv "QUICKLISP_HOME")
+             (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
+           (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
+                           (merge-pathnames (ros:getenv "QUICKLISP_HOME")
+                                            (make-pathname :defaults *load-pathname* :name nil :type nil)))))
+             (unless (probe-file path)
+               (format *error-output*
+                       "~&Error: '~A' does not exist.~%"
+                       (ros:getenv "QUICKLISP_HOME"))
+               (ros:quit 1))
+             (unless (probe-file (merge-pathnames "setup.lisp" path))
+               (format *error-output*
+                       "~&Error: Invalid Quicklisp directory: '~A'~%"
+                       (ros:getenv "QUICKLISP_HOME"))
+               (ros:quit 1)))
+           (let ((command (ros.util:which (first argv))))
+             (unless command
+               (format *error-output* "~&Error: command not found: ~A~%" (first argv))
+               (ros:quit 1))
+             (apply #'ros:exec command (rest argv))))
+          (t (format *error-output*
+                     "~&Usage: ~A [install | update | bundle | exec shell-args..]~%"
+                     (file-namestring *load-pathname*))
+             (ros:quit 1)))))
