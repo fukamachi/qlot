@@ -16,6 +16,7 @@ exec ros +Q -- $0 "$@"
           ((equal "bundle" $1)
            (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:bundle)")))
           ((equal "exec" $1)
+           ;; Set QUICKLISP_HOME ./quicklisp/
            (unless (ros:getenv "QUICKLISP_HOME")
              (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
            (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
@@ -31,12 +32,21 @@ exec ros +Q -- $0 "$@"
                        "~&Error: Invalid Quicklisp directory: '~A'~%"
                        (ros:getenv "QUICKLISP_HOME"))
                (ros:quit 1)))
+
+           ;; Overwrite CL_SOURCE_REGISTRY to the current directory
            (ros:setenv "CL_SOURCE_REGISTRY" (namestring *default-pathname-defaults*))
+
+           ;; Add ~/.roswell/bin to $PATH
+           (ros:setenv "PATH"
+                       (format nil "~A:~A"
+                               (merge-pathnames "bin/" (ros.util:homedir))
+                               (ros:getenv "PATH")))
+
            (let ((command (ros.util:which (first argv))))
              (unless command
                (format *error-output* "~&Error: command not found: ~A~%" (first argv))
                (ros:quit 1))
-             (apply #'ros:exec command (rest argv))))
+             (ros:exec (cons command (rest argv)))))
           (t (format *error-output*
                      "~&Usage: ~A [install | update | bundle | exec shell-args..]~%"
                      (file-namestring *load-pathname*))
