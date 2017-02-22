@@ -31,6 +31,7 @@ exec ros +Q -- $0 "$@"
                        "~&Error: Invalid Quicklisp directory: '~A'~%"
                        (ros:getenv "QUICKLISP_HOME"))
                (ros:quit 1)))
+           (ros:setenv "CL_SOURCE_REGISTRY" (namestring *default-pathname-defaults*))
            (let ((command (ros.util:which (first argv))))
              (unless command
                (format *error-output* "~&Error: command not found: ~A~%" (first argv))
