@@ -8,7 +8,7 @@ exec ros +Q -- $0 "$@"
 
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
-  (let ((ros (ros.util:which "ros")))
+  (let ((ros (roswell.util:which "ros")))
     (cond ((equal "install" $1)
            (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:install)")))
           ((equal "update" $1)
@@ -39,10 +39,10 @@ exec ros +Q -- $0 "$@"
            ;; Add ~/.roswell/bin to $PATH
            (ros:setenv "PATH"
                        (format nil "~A:~A"
-                               (merge-pathnames "bin/" (ros.util:homedir))
+                               (merge-pathnames "bin/" (roswell.util:homedir))
                                (ros:getenv "PATH")))
 
-           (let ((command (ros.util:which (first argv))))
+           (let ((command (roswell.util:which (first argv))))
              (unless command
                (format *error-output* "~&Error: command not found: ~A~%" (first argv))
                (ros:quit 1))
