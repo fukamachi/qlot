@@ -6,9 +6,16 @@ exec ros +Q -- $0 "$@"
 
 (ros:include "util")
 
+(defpackage #:ros/script/qlot
+  (:use #:cl)
+  (:import-from #:roswell.util
+                #:which
+                #:setenv))
+(in-package #:ros/script/qlot)
+
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
-  (let ((ros (roswell.util:which "ros")))
+  (let ((ros (which "ros")))
     (cond ((equal "install" $1)
            (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:install)")))
           ((equal "update" $1)
@@ -18,7 +25,7 @@ exec ros +Q -- $0 "$@"
           ((equal "exec" $1)
            ;; Set QUICKLISP_HOME ./quicklisp/
            (unless (ros:getenv "QUICKLISP_HOME")
-             (ros:setenv "QUICKLISP_HOME" "quicklisp/"))
+             (setenv "QUICKLISP_HOME" "quicklisp/"))
            (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
                            (merge-pathnames (ros:getenv "QUICKLISP_HOME")
                                             (make-pathname :defaults *load-pathname* :name nil :type nil)))))
@@ -34,15 +41,15 @@ exec ros +Q -- $0 "$@"
                (ros:quit 1)))
 
            ;; Overwrite CL_SOURCE_REGISTRY to the current directory
-           (ros:setenv "CL_SOURCE_REGISTRY" (namestring *default-pathname-defaults*))
+           (setenv "CL_SOURCE_REGISTRY" (namestring *default-pathname-defaults*))
 
            ;; Add ~/.roswell/bin to $PATH
-           (ros:setenv "PATH"
-                       (format nil "~A:~A"
-                               (merge-pathnames "bin/" (roswell.util:homedir))
-                               (ros:getenv "PATH")))
+           (setenv "PATH"
+                   (format nil "~A:~A"
+                           (merge-pathnames "bin/" (roswell.util:homedir))
+                           (ros:getenv "PATH")))
 
-           (let ((command (roswell.util:which (first argv))))
+           (let ((command (which (first argv))))
              (unless command
                (format *error-output* "~&Error: command not found: ~A~%" (first argv))
                (ros:quit 1))
