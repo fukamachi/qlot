@@ -9,6 +9,7 @@
   :license "MIT"
   :depends-on (:clack
                :clack-handler-hunchentoot
+               #:bordeaux-threads
                :dexador
                :archive
                :salza2
