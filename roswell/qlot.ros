@@ -13,13 +13,32 @@ exec ros +Q -- $0 "$@"
                 #:setenv))
 (in-package #:ros/script/qlot)
 
+(defun print-error (format-control &rest format-arguments)
+  (fresh-line *error-output*)
+  (princ "Error: " *error-output*)
+  (apply #'format *error-output* format-control format-arguments)
+  (fresh-line *error-output*)
+  (ros:quit -1))
+
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
   (let ((ros (which "ros")))
     (cond ((equal "install" $1)
-           (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:install)")))
+           (when (and (first argv)
+                      (not (probe-file (first argv))))
+             (print-error "'~A' does not found." (first argv)))
+           (ros:exec `(,ros "-Q" "-s" "qlot" ,@(if argv
+                                                   (list "-e" (format nil "(qlot:install ~S)"
+                                                                      (probe-file (first argv))))
+                                                   (list "-e" "(qlot:install)")))))
           ((equal "update" $1)
-           (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:update)")))
+           (when (and (first argv)
+                      (not (probe-file (first argv))))
+             (print-error "'~A' does not found." (first argv)))
+           (ros:exec `(,ros "-Q" "-s" "qlot" ,@(if argv
+                                                   (list "-e" (format nil "(qlot:update ~S)"
+                                                                      (probe-file (first argv))))
+                                                   (list "-e" "(qlot:update)")))))
           ((equal "bundle" $1)
            (ros:exec `(,ros "-Q" "-s" "qlot" "-e" "(qlot:bundle)")))
           ((equal "exec" $1)
@@ -30,15 +49,11 @@ exec ros +Q -- $0 "$@"
                            (merge-pathnames (ros:getenv "QUICKLISP_HOME")
                                             (make-pathname :defaults *load-pathname* :name nil :type nil)))))
              (unless (probe-file path)
-               (format *error-output*
-                       "~&Error: '~A' does not exist.~%"
-                       (ros:getenv "QUICKLISP_HOME"))
-               (ros:quit 1))
+               (print-error "'~A' does not exist."
+                            (ros:getenv "QUICKLISP_HOME")))
              (unless (probe-file (merge-pathnames "setup.lisp" path))
-               (format *error-output*
-                       "~&Error: Invalid Quicklisp directory: '~A'~%"
-                       (ros:getenv "QUICKLISP_HOME"))
-               (ros:quit 1)))
+               (print-error "Invalid Quicklisp directory: '~A'"
+                            (ros:getenv "QUICKLISP_HOME"))))
 
            ;; Overwrite CL_SOURCE_REGISTRY to the current directory
            (setenv "CL_SOURCE_REGISTRY" (namestring *default-pathname-defaults*))
@@ -51,8 +66,7 @@ exec ros +Q -- $0 "$@"
 
            (let ((command (which (first argv))))
              (unless command
-               (format *error-output* "~&Error: command not found: ~A~%" (first argv))
-               (ros:quit 1))
+               (print-error "Command not found: ~A" (first argv)))
              (ros:exec (cons command (rest argv)))))
           (t (format *error-output*
                      "~&Usage: ~A [install | update | bundle | exec shell-args..]~%"
