@@ -15,12 +15,6 @@ install:
   # Libraries to use the latest version
   - ros install froydnj/archive
   - ros install prove
-  - ros install fukamachi/dexador
-
-cache:
-  directories:
-    - $HOME/.roswell
-    - $HOME/.config/common-lisp
 
 before_script:
   - ros --version
