@@ -122,40 +122,51 @@ with the same key."
           ,system
           (asdf:system-relative-pathname ,system #P"quicklisp/"))))))
 
+(defun sbcl-contrib-p (name)
+  (let ((name (princ-to-string name)))
+    (and (<= 3 (length name))
+         (string-equal name "sb-" :end1 3))))
+
 (defun all-required-systems (systems)
   (let ((systems (if (listp systems) systems (list systems))))
     (with-package-functions :ql (required-systems find-system)
-      (labels ((main (system-name)
-                 (unless (or (string-equal system-name "asdf")
-                             (sbcl-contrib-p system-name))
-                   (let* ((system (find-system system-name))
-                          (req (and system (required-systems system)))
-                          (req (remove :asdf req :test #'string-equal)))
-                     (if req
-                         (append req (mapcan #'main req))
-                         ()))))
-               (sbcl-contrib-p (name)
-                 (let ((name (princ-to-string name)))
-                   (and (<= 3 (length name))
-                        (string-equal name "sb-" :end1 3)))))
+      (flet ((main (system-name)
+               (unless (or (string-equal system-name "asdf")
+                           (sbcl-contrib-p system-name))
+                 (let* ((system (find-system system-name))
+                        (req (and system (required-systems system)))
+                        (req (remove :asdf req :test #'string-equal)))
+                   (if req
+                       (append req (mapcan #'main req))
+                       ())))))
         (delete-duplicates (mapcan #'main systems) :test #'string-equal)))))
 
 (defun ensure-installed-in-local-quicklisp (system qlhome)
-  (with-package-functions :ql-dist (find-system required-systems name ensure-installed)
-    (call-in-local-quicklisp
-     (lambda ()
-       (labels ((system-dependencies (system-name)
-                  (let ((system (find-system (string-downcase system-name))))
-                    (when system
-                      (cons system
-                            (mapcan #'system-dependencies (copy-list (required-systems system))))))))
-         (map nil #'ensure-installed
-              (delete-duplicates (mapcan #'system-dependencies
-                                         (copy-list (asdf::component-sideway-dependencies system)))
-                                 :key #'name
-                                 :test #'string=))))
-     system
-     qlhome)))
+  (let ((dependencies
+          (remove-if (lambda (component-name)
+                       (or (null component-name)
+                           (equal component-name "asdf")
+                           (sbcl-contrib-p component-name)))
+                     (mapcar (lambda (dependency-def)
+                               (if (consp dependency-def)
+                                   (and (eq (first dependency-def) :version)
+                                        (second dependency-def))
+                                   dependency-def))
+                             (asdf::component-sideway-dependencies system)))))
+    (with-package-functions :ql-dist (find-system required-systems name ensure-installed)
+      (call-in-local-quicklisp
+       (lambda ()
+         (labels ((system-dependencies (system-name)
+                    (let ((system (find-system (string-downcase system-name))))
+                      (when system
+                        (cons system
+                              (mapcan #'system-dependencies (copy-list (required-systems system))))))))
+           (map nil #'ensure-installed
+                (delete-duplicates (mapcan #'system-dependencies dependencies)
+                                   :key #'name
+                                   :test #'string=))))
+       system
+       qlhome))))
 
 (defun generate-random-string ()
   (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5))))

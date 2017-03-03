@@ -264,18 +264,17 @@
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream))
           (*package* (find-package :asdf-user)))
-      (with-package-functions :ql (bundle-systems)
-        (asdf::collect-sub*directories-asd-files
-         (uiop:pathname-directory-pathname file)
-         :collect (lambda (asd)
-                    (unless (or (pathname-in-directory-p asd qlhome)
-                                ;; KLUDGE: Ignore skeleton.asd of CL-Project
-                                (search "skeleton" (pathname-name asd)))
-                      (load asd)
-                      (ensure-installed-in-local-quicklisp
-                       (asdf:find-system (pathname-name asd))
-                       qlhome)))
-         :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))))
+      (asdf::collect-sub*directories-asd-files
+       (uiop:pathname-directory-pathname file)
+       :collect (lambda (asd)
+                  (unless (or (pathname-in-directory-p asd qlhome)
+                              ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                              (search "skeleton" (pathname-name asd)))
+                    (load asd)
+                    (ensure-installed-in-local-quicklisp
+                     (asdf:find-system (pathname-name asd))
+                     qlhome)))
+       :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*)))
     (stop-server)
 
     (with-quicklisp-home qlhome
