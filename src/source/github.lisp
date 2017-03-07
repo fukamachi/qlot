@@ -64,6 +64,7 @@
             (format nil "https://api.github.com/repos/~A/~A" repos action)
             :want-stream t
             :proxy (get-proxy)
+            :insecure t
             (if github-access-token
                 (list :basic-auth (cons github-access-token "x-oauth-basic"))
                 '())))))
