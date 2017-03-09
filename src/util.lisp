@@ -9,7 +9,8 @@
            :with-local-quicklisp
            :ensure-installed-in-local-quicklisp
            :all-required-systems
-           :generate-random-string))
+           :generate-random-string
+           :with-in-directory))
 (in-package :qlot.util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
@@ -170,3 +171,11 @@ with the same key."
 
 (defun generate-random-string ()
   (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5))))
+
+(defmacro with-in-directory (dir &body body)
+  (let ((cwd (gensym "CWD")))
+    `(let ((,cwd (uiop:getcwd)))
+       (uiop:chdir ,dir)
+       (unwind-protect
+            (progn ,@body)
+         (uiop:chdir ,cwd)))))

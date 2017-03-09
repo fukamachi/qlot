@@ -2,11 +2,11 @@
 (defpackage qlot.source.git
   (:use :cl
         :qlot.source)
-  (:import-from :qlot.tmp
-                :tmp-path)
   (:import-from :qlot.shell
                 :safety-shell-command
                 :shell-command-error)
+  (:import-from :qlot.util
+                :with-in-directory)
   (:import-from :uiop
                 :delete-directory-tree)
   (:export :source-git
@@ -49,17 +49,15 @@
   (setf (source-version source)
         (format nil "git-~A" (source-git-ref source)))
 
-  (let ((prefix (car (last (pathname-directory (source-directory source)))))
-        (cwd (uiop:getcwd)))
-    (uiop:chdir (source-directory source))
-    (setf (source-archive source)
-          (pathname
-           (format nil "~A.tar.gz" prefix)))
-    (safety-shell-command "git"
-                          `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
-                                      ,(source-git-ref source)
-                                      "-o" ,(source-archive source)))
-    (uiop:chdir cwd)))
+  (let ((prefix (car (last (pathname-directory (source-directory source))))))
+    (with-in-directory (source-directory source)
+      (setf (source-archive source)
+            (pathname
+             (format nil "~A.tar.gz" prefix)))
+      (safety-shell-command "git"
+                            `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
+                                        ,(source-git-ref source)
+                                        "-o" ,(source-archive source))))))
 
 (defmethod source-equal ((source1 source-git) (source2 source-git))
   (and (string= (source-project-name source1)
@@ -95,12 +93,10 @@
              (handler-case
                  (let ((*standard-output* (make-broadcast-stream)))
                    (ppcre:scan-to-strings "^\\S+"
-                                          (safety-shell-command "git"
-                                                                (list "--git-dir"
-                                                                      (format nil "~A.git"
-                                                                              (source-directory source))
-                                                                      "show-ref"
-                                                                      pattern))))
+                                          (with-in-directory (source-directory source)
+                                            (safety-shell-command "git"
+                                                                  (list "show-ref"
+                                                                        pattern)))))
                (shell-command-error ()
                  (error "No git references named '~A'." pattern))))
            (get-ref (source)
@@ -133,10 +129,7 @@
            (go git-cloning))))
     (when checkout-to
       (let ((*error-output* (make-broadcast-stream)))
-        (safety-shell-command "git"
-                              (list "--git-dir"
-                                    (format nil "~A.git" destination)
-                                    "--work-tree"
-                                    destination
-                                    "checkout"
-                                    checkout-to))))))
+        (with-in-directory destination
+          (safety-shell-command "git"
+                                (list "checkout"
+                                      checkout-to)))))))
