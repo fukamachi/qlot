@@ -114,9 +114,21 @@ If PATH isn't specified, this installs it to './quicklisp/'."
                        do (write-char #\Space))
           (fresh-line)
           (with-local-quicklisp (pathname-name (first systems))
-            (with-package-functions :ql (bundle-systems)
-              (bundle-systems required-systems
-                              :to (merge-pathnames #P"bundle-libs/" project-dir))))
+            (with-package-functions :ql-dist (enabled-dists
+                                              canonical-distinfo-url
+                                              (setf canonical-distinfo-url))
+              (let ((dists (enabled-dists)))
+                ;; KLUDGE: Quicklisp client 2017-03-06 requires CANONICAL-DISTINFO-URL for all enabled dists.
+                ;;   However, dists installed via Qlot doesn't have it and raises SLOT-UNBOUND error.
+                ;;   For the meanwhile, setting it NIL and using the dists in BUNDLE-SYSTEMS.
+                (dolist (dist dists)
+                  (unless (ignore-errors (canonical-distinfo-url dist))
+                    (setf (canonical-distinfo-url dist) nil)))
+                (progv (list (intern (string :*dist-enumeration-functions*) :ql-dist))
+                    (list `(,(lambda () dists)))
+                  (with-package-functions :ql (bundle-systems)
+                    (bundle-systems required-systems
+                                    :to (merge-pathnames #P"bundle-libs/" project-dir)))))))
           (with-open-file (out (merge-pathnames #P"bundle-libs/local-projects/ignore" project-dir)
                                :direction :output
                                :if-exists nil))
