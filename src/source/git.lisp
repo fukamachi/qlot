@@ -111,25 +111,33 @@
 
 (defun git-clone (source destination)
   (check-type source source-git)
-  (let ((checkout-to (or (source-git-ref source)
-                         (source-git-branch source)
-                         (source-git-tag source))))
+  (let ((checkout-to (or (source-git-branch source)
+                         (source-git-tag source)
+                         "master")))
     (tagbody git-cloning
        (restart-case
            (safety-shell-command "git"
-                                 (list "clone"
-                                       "--recursive"
-                                       "--config" "core.eol=lf"
-                                       "--config" "core.autocrlf=input"
-                                       (source-git-remote-url source)
-                                       destination))
+                                 (append `("clone"
+                                           "--branch" ,checkout-to)
+                                         (if (source-git-ref source)
+                                             '()
+                                             (list "--depth" "1"))
+                                         '("--recursive"
+                                           "--shallow-submodules"
+                                           "--config" "core.eol=lf"
+                                           "--config" "core.autocrlf=input")
+                                         (list (source-git-remote-url source)
+                                               destination)))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
            (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
-           (go git-cloning))))
-    (when checkout-to
-      (let ((*error-output* (make-broadcast-stream)))
-        (with-in-directory destination
-          (safety-shell-command "git"
-                                (list "checkout"
-                                      checkout-to)))))))
+           (go git-cloning)))))
+
+  (when (source-git-ref source)
+    (let ((*error-output* (make-broadcast-stream)))
+      (with-in-directory destination
+        (safety-shell-command "git"
+                              (list "checkout"
+                                    (source-git-ref source))))))
+
+  (values))
