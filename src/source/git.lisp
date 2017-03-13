@@ -123,7 +123,6 @@
                                              '()
                                              (list "--depth" "1"))
                                          '("--recursive"
-                                           "--shallow-submodules"
                                            "--config" "core.eol=lf"
                                            "--config" "core.autocrlf=input")
                                          (list (source-git-remote-url source)
