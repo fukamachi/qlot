@@ -24,7 +24,10 @@
            :accessor source-git-branch)
    (tag :initarg :tag
         :initform nil
-        :accessor source-git-tag)))
+        :accessor source-git-tag)
+
+   (git-cloned-p :initform nil
+                 :accessor git-cloned-p)))
 
 (defmethod make-source ((source (eql 'source-git)) &rest initargs)
   (destructuring-bind (project-name remote-url &rest args) initargs
@@ -43,21 +46,25 @@
          (format nil "~A~:[~;~:*-~A~]/"
                  (source-project-name source)
                  (source-git-identifier source))))
-  (git-clone source (source-directory source))
   (setf (source-git-ref source)
         (retrieve-source-git-ref source))
   (setf (source-version source)
-        (format nil "git-~A" (source-git-ref source)))
+        (format nil "git-~A" (source-git-ref source))))
 
-  (let ((prefix (car (last (pathname-directory (source-directory source))))))
-    (with-in-directory (source-directory source)
+(defmethod archive ((source source-git))
+  (unless (git-cloned-p source)
+    (git-clone source (source-directory source))
+    (let ((prefix (car (last (pathname-directory (source-directory source))))))
       (setf (source-archive source)
             (pathname
              (format nil "~A.tar.gz" prefix)))
-      (safety-shell-command "git"
-                            `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
-                                        ,(source-git-ref source)
-                                        "-o" ,(source-archive source))))))
+      (with-in-directory (source-directory source)
+        (safety-shell-command "git"
+                              `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
+                                          ,(source-git-ref source)
+                                          "-o" ,(source-archive source))))))
+
+  (source-archive source))
 
 (defmethod source-equal ((source1 source-git) (source2 source-git))
   (and (string= (source-project-name source1)
@@ -89,28 +96,27 @@
 
 (defun retrieve-source-git-ref (source)
   (check-type source source-git)
-  (labels ((show-ref (pattern)
-             (handler-case
-                 (let ((*standard-output* (make-broadcast-stream)))
-                   (ppcre:scan-to-strings "^\\S+"
-                                          (with-in-directory (source-directory source)
-                                            (safety-shell-command "git"
-                                                                  (list "show-ref"
-                                                                        pattern)))))
-               (shell-command-error ()
-                 (error "No git references named '~A'." pattern))))
-           (get-ref (source)
-             (cond
-               ((source-git-ref source))
-               ((source-git-branch source)
-                (show-ref (format nil "refs/heads/~A" (source-git-branch source))))
-               ((source-git-tag source)
-                (show-ref (format nil "refs/tags/~A" (source-git-tag source))))
-               (T (show-ref "HEAD")))))
-    (get-ref source)))
+  (flet ((show-ref (pattern)
+           (handler-case
+               (let ((*standard-output* (make-broadcast-stream)))
+                 (ppcre:scan-to-strings "^\\S+"
+                                        (safety-shell-command "git"
+                                                              (list "ls-remote"
+                                                                    (source-git-remote-url source)
+                                                                    pattern))))
+             (shell-command-error ()
+               (error "No git references named '~A'." pattern)))))
+    (or (source-git-ref source)
+        (show-ref (or (source-git-tag source)
+                      (source-git-branch source)
+                      "HEAD")))))
 
 (defun git-clone (source destination)
   (check-type source source-git)
+  (when (git-cloned-p source)
+    (return-from git-clone))
+  (setf (git-cloned-p source) t)
+
   (let ((checkout-to (or (source-git-branch source)
                          (source-git-tag source)
                          "master")))

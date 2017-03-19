@@ -79,7 +79,8 @@
                           (make-route source action))))
                 (funcall (make-route source 'project.txt)))))
       (lambda (env)
-        (let ((fn (gethash (getf env :path-info) route)))
+        (let ((fn (gethash (getf env :path-info) route))
+              (*tmp-directory* tmp-directory))
           (if fn
               (funcall fn)
               '(404 (:content-type "text/plain") ("Not Found"))))))))
