@@ -1,21 +1,21 @@
-(in-package :cl-user)
-(defpackage qlot.source.github
-  (:use :cl
-        :qlot.source)
-  (:import-from :qlot.source.http
-                :source-http
-                :source-http-url
-                :url)
-  (:import-from :qlot.proxy
-                :get-proxy)
-  (:import-from :yason
-                :parse)
-  (:export :source-github
-           :source-github-repos
-           :source-github-ref
-           :source-github-branch
-           :source-github-tag))
-(in-package :qlot.source.github)
+(defpackage #:qlot/source/github
+  (:use #:cl
+        #:qlot/source)
+  (:import-from #:qlot/source/http
+                #:source-http
+                #:source-http-url
+                #:url)
+  (:import-from #:qlot/proxy
+                #:get-proxy)
+  (:import-from #:dexador)
+  (:import-from #:yason
+                #:parse)
+  (:export #:source-github
+           #:source-github-repos
+           #:source-github-ref
+           #:source-github-branch
+           #:source-github-tag))
+(in-package #:qlot/source/github)
 
 (defclass source-github (source-http)
   ((repos :initarg :repos

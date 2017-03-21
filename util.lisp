@@ -1,19 +1,18 @@
-(in-package :cl-user)
-(defpackage qlot.util
-  (:use :cl)
-  (:export :with-quicklisp-home
-           :with-package-functions
-           :pathname-in-directory-p
-           :find-qlfile
-           :call-in-local-quicklisp
-           :with-local-quicklisp
-           :ensure-installed-in-local-quicklisp
-           :all-required-systems
-           :generate-random-string
-           :with-in-directory
-           :quit-with-stacktraces
-           :project-systems))
-(in-package :qlot.util)
+(defpackage #:qlot/util
+  (:use #:cl)
+  (:export #:with-quicklisp-home
+           #:with-package-functions
+           #:pathname-in-directory-p
+           #:find-qlfile
+           #:call-in-local-quicklisp
+           #:with-local-quicklisp
+           #:ensure-installed-in-local-quicklisp
+           #:all-required-systems
+           #:generate-random-string
+           #:with-in-directory
+           #:quit-with-stacktraces
+           #:project-systems))
+(in-package #:qlot/util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
   `(flet ((main () ,@body))
@@ -76,7 +75,7 @@ with the same key."
     (if (probe-file (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
         ;; The given `qlhome' is the project root.
         (setf qlhome (merge-pathnames #P"quicklisp/" qlhome))
-        (error "~S is not a quicklisp directory.")))
+        (error "~S is not a quicklisp directory." qlhome)))
 
   (let* (#+quicklisp
          (ql:*quicklisp-home* qlhome)

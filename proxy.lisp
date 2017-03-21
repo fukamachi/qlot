@@ -1,10 +1,11 @@
-(in-package :cl-user)
-(defpackage qlot.proxy
-  (:use :cl)
-  (:import-from :uiop
-                :getenvp)
-  (:export :get-proxy))
-(in-package :qlot.proxy)
+(defpackage #:qlot/proxy
+  (:use #:cl)
+  (:import-from #:cl-ppcre
+                #:scan)
+  (:import-from #:uiop
+                #:getenvp)
+  (:export #:get-proxy))
+(in-package #:qlot/proxy)
 
 (defvar *proxy*
   (let ((proxy (or (getenvp "http_proxy")

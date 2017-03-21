@@ -1,53 +1,53 @@
 (in-package :cl-user)
-(defpackage qlot.install
-  (:use :cl
-        :iterate)
-  (:import-from :qlot.parser
-                :prepare-qlfile)
-  (:import-from :qlot.server
-                :localhost
-                :start-server
-                :stop-server)
-  (:import-from :qlot.tmp
-                :*tmp-directory*)
-  (:import-from :qlot.source
-                :source-project-name
-                :source-dist-name
-                :source-version
-                :source-direct-dependencies
-                :freeze-source
-                :prepare
-                :update-available-p
-                :url-path-for
-                :project.txt)
-  (:import-from :qlot.shell
-                :safety-shell-command)
-  (:import-from :qlot.util
-                :find-qlfile
-                :with-quicklisp-home
-                :with-local-quicklisp
-                :with-package-functions
-                :ensure-installed-in-local-quicklisp
-                :pathname-in-directory-p
-                :all-required-systems
-                :generate-random-string
-                #+nil :project-systems)
-  (:import-from :qlot.proxy
-                :get-proxy)
-  (:import-from :uiop
-                :ensure-directory-pathname
-                :absolute-pathname-p
-                :file-exists-p
-                :directory-files
-                :copy-file
-                :directory-exists-p
-                :directory-pathname-p
-                :pathname-directory-pathname
-                :delete-directory-tree)
-  (:export :install-quicklisp
-           :install-qlfile
-           :install-project))
-(in-package :qlot.install)
+(defpackage qlot/install
+  (:use #:cl
+        #:iterate)
+  (:import-from #:qlot/parser
+                #:prepare-qlfile)
+  (:import-from #:qlot/server
+                #:localhost
+                #:start-server
+                #:stop-server)
+  (:import-from #:qlot/tmp
+                #:*tmp-directory*)
+  (:import-from #:qlot/source
+                #:source-project-name
+                #:source-dist-name
+                #:source-version
+                #:source-direct-dependencies
+                #:freeze-source
+                #:prepare
+                #:update-available-p
+                #:url-path-for
+                #:project.txt)
+  (:import-from #:qlot/source/ql)
+  (:import-from #:qlot/shell
+                #:safety-shell-command)
+  (:import-from #:qlot/util
+                #:find-qlfile
+                #:with-quicklisp-home
+                #:with-local-quicklisp
+                #:with-package-functions
+                #:ensure-installed-in-local-quicklisp
+                #:pathname-in-directory-p
+                #:all-required-systems
+                #:generate-random-string)
+  (:import-from #:qlot/proxy
+                #:get-proxy)
+  (:import-from #:uiop
+                #:ensure-directory-pathname
+                #:absolute-pathname-p
+                #:file-exists-p
+                #:directory-files
+                #:copy-file
+                #:directory-exists-p
+                #:directory-pathname-p
+                #:pathname-directory-pathname
+                #:delete-directory-tree)
+  (:export #:install-quicklisp
+           #:install-qlfile
+           #:install-project))
+(in-package #:qlot/install)
 
 (defvar *current-lisp-path*
   (or
@@ -178,7 +178,7 @@
   (with-package-functions :ql-dist (install-dist)
     (format t "~&Installing dist ~S~:[~; version ~:*~S~].~%"
             (source-dist-name source)
-            (and (slot-boundp source 'qlot.source::version)
+            (and (slot-boundp source 'qlot/source::version)
                  (source-version source)))
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
@@ -225,7 +225,7 @@
                      (source-version source))))
 
         ;; Install all releases.
-        (unless (typep source 'qlot.source.ql:source-ql-all)
+        (unless (typep source 'qlot/source/ql:source-ql-all)
           (let ((*standard-output* (make-broadcast-stream))
                 (*trace-output* (make-broadcast-stream)))
             (with-package-functions :ql-dist (dist provided-releases ensure-installed base-directory)

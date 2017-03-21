@@ -1,19 +1,19 @@
-(in-package :cl-user)
-(defpackage qlot.source.ql
-  (:use :cl
-        :qlot.source)
-  (:import-from :qlot.util
-                :find-qlfile
-                :with-package-functions)
-  (:import-from :qlot.proxy
-                :get-proxy)
-  (:import-from :function-cache
-                :defcached)
-  (:import-from :alexandria
-                :starts-with-subseq)
-  (:export :source-ql
-           :source-ql-all))
-(in-package :qlot.source.ql)
+(defpackage #:qlot/source/ql
+  (:use #:cl
+        #:qlot/source)
+  (:import-from #:qlot/util
+                #:find-qlfile
+                #:with-package-functions)
+  (:import-from #:qlot/proxy
+                #:get-proxy)
+  (:import-from #:dexador)
+  (:import-from #:function-cache
+                #:defcached)
+  (:import-from #:alexandria
+                #:starts-with-subseq)
+  (:export #:source-ql
+           #:source-ql-all))
+(in-package #:qlot/source/ql)
 
 (defclass source-ql (source)
   ((%version :initarg :%version)))

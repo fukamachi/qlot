@@ -1,17 +1,16 @@
-(in-package :cl-user)
-(defpackage qlot.source.git
-  (:use :cl
-        :qlot.source)
-  (:import-from :qlot.shell
-                :safety-shell-command
-                :shell-command-error)
-  (:import-from :qlot.util
-                :with-in-directory)
-  (:import-from :uiop
-                :delete-directory-tree)
-  (:export :source-git
-           :retry-git-clone))
-(in-package :qlot.source.git)
+(defpackage #:qlot/source/git
+  (:use #:cl
+        #:qlot/source)
+  (:import-from #:qlot/shell
+                #:safety-shell-command
+                #:shell-command-error)
+  (:import-from #:qlot/util
+                #:with-in-directory)
+  (:import-from #:uiop
+                #:delete-directory-tree)
+  (:export #:source-git
+           #:retry-git-clone))
+(in-package #:qlot/source/git)
 
 (defclass source-git (source-has-directory)
   ((remote-url :initarg :remote-url

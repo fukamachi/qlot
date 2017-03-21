@@ -1,59 +1,67 @@
-(in-package :cl-user)
-(defpackage qlot.source
-  (:use :cl)
-  (:import-from :qlot.tmp
-                :tmp-path)
-  (:import-from :qlot.util
-                :find-qlfile
-                :with-package-functions)
-  (:import-from :uiop
-                :directory-files
-                :subdirectories
-                :directory-pathname-p
-                :absolute-pathname-p)
-  (:import-from :ironclad
-                :byte-array-to-hex-string
-                :digest-file
-                :digest-sequence)
-  (:import-from :alexandria
-                :copy-stream
-                :when-let)
-  (:export :*dist-base-url*
-           :source
-           :make-source
-           :freeze-source
-           :freeze-source-slots
-           :defrost-source
-           :source-direct-dependencies
-           :find-source-class
-           :prepare
-           :update-available-p
-           :project-name
-           :version
-           :source-project-name
-           :source-version
-           :source-dist-name
-           :source-prepared
-           :source-defrost-args
-           :source-equal
-           :project.txt
-           :distinfo.txt
-           :releases.txt
-           :systems.txt
-           :archive
-           :url-path-for
-           :url-for
+(defpackage #:qlot/source
+  (:use #:cl)
+  (:import-from #:qlot/tmp
+                #:tmp-path)
+  (:import-from #:qlot/util
+                #:find-qlfile
+                #:with-package-functions)
+  (:import-from #:uiop
+                #:directory-files
+                #:subdirectories
+                #:directory-pathname-p
+                #:absolute-pathname-p)
+  (:import-from #:ironclad
+                #:byte-array-to-hex-string
+                #:digest-file
+                #:digest-sequence)
+  (:import-from #:alexandria
+                #:copy-stream
+                #:when-let)
+  (:export #:*dist-base-url*
+           #:source
+           #:make-source
+           #:freeze-source
+           #:freeze-source-slots
+           #:defrost-source
+           #:source-direct-dependencies
+           #:find-source-class
+           #:prepare
+           #:update-available-p
+           #:project-name
+           #:version
+           #:source-project-name
+           #:source-version
+           #:source-dist-name
+           #:source-prepared
+           #:source-defrost-args
+           #:source-equal
+           #:project.txt
+           #:distinfo.txt
+           #:releases.txt
+           #:systems.txt
+           #:archive
+           #:url-path-for
+           #:url-for
 
-           :source-has-directory
-           :source-directory
-           :source-archive))
-(in-package :qlot.source)
+           #:source-has-directory
+           #:source-directory
+           #:source-archive))
+(in-package #:qlot/source)
 
 (defvar *dist-base-url* nil)
 
-(defun find-source-class (class-name)
-  (intern (format nil "~A-~:@(~A~)" #.(string :source) class-name)
-          (format nil "~A.~:@(~A~)" #.(string :qlot.source) class-name)))
+(defun find-source-class (class-identifier)
+  (let* ((package-name (format nil "~A/~A"
+                               (string :qlot/source) class-name))
+         (system-name (string-downcase package-name))
+         (package (or (find-package package-name)
+                      (progn
+                        #+quicklisp (ql:quickload system-name :silent t)
+                        #-quicklisp (asdf:load-system system-name)
+                        (find-package package-name)))))
+    (when package
+      (intern (format nil "~A-~:@(~A~)" :source class-name)
+              package))))
 
 (defclass source ()
   ((project-name :initarg :project-name
@@ -131,7 +139,7 @@
 
 (defgeneric update-available-p (source current-version)
   (:method (source current-version)
-    (unless (slot-boundp source 'qlot.source::version)
+    (unless (slot-boundp source 'qlot/source::version)
       (prepare source))
 
     (not (string= current-version (source-version source)))))

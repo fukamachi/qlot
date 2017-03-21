@@ -1,22 +1,21 @@
-(in-package :cl-user)
-(defpackage qlot.archive
-  (:use :cl)
-  (:import-from :uiop
-                :pathname-parent-directory-pathname
-                :directory-files
-                :subdirectories)
-  (:import-from :archive
-                :create-tar-file
-                :open-archive
-                :read-entry-from-archive
-                :extract-files-from-archive)
-  (:import-from :salza2
-                :gzip-file)
-  (:import-from :gzip-stream
-                :with-open-gzip-file)
-  (:export :create-tarball
-           :extract-tarball))
-(in-package :qlot.archive)
+(defpackage #:qlot/archive
+  (:use #:cl)
+  (:import-from #:uiop
+                #:pathname-parent-directory-pathname
+                #:directory-files
+                #:subdirectories)
+  (:import-from #:archive
+                #:create-tar-file
+                #:open-archive
+                #:read-entry-from-archive
+                #:extract-files-from-archive)
+  (:import-from #:salza2
+                #:gzip-file)
+  (:import-from #:gzip-stream
+                #:with-open-gzip-file)
+  (:export #:create-tarball
+           #:extract-tarball))
+(in-package #:qlot/archive)
 
 (defun create-tarball (directory destination)
   (let ((ignore-len (length (pathname-directory (truename (uiop:pathname-parent-directory-pathname directory)))))

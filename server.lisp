@@ -1,29 +1,28 @@
-(in-package :cl-user)
-(defpackage qlot.server
-  (:use :cl)
-  (:import-from :qlot.source
-                :*dist-base-url*
-                :prepare
-                :source-prepared
-                :url-path-for
-                :project.txt
-                :distinfo.txt
-                :releases.txt
-                :systems.txt
-                :archive)
-  (:import-from :qlot.parser
-                :prepare-qlfile)
-  (:import-from :qlot.tmp
-                :*tmp-directory*)
-  (:import-from :clack
-                :clackup
-                :stop)
-  (:import-from :alexandria
-                :when-let)
-  (:export :localhost
-           :start-server
-           :stop-server))
-(in-package :qlot.server)
+(defpackage #:qlot/server
+  (:use #:cl)
+  (:import-from #:qlot/source
+                #:*dist-base-url*
+                #:prepare
+                #:source-prepared
+                #:url-path-for
+                #:project.txt
+                #:distinfo.txt
+                #:releases.txt
+                #:systems.txt
+                #:archive)
+  (:import-from #:qlot/parser
+                #:prepare-qlfile)
+  (:import-from #:qlot/tmp
+                #:*tmp-directory*)
+  (:import-from #:clack
+                #:clackup
+                #:stop)
+  (:import-from #:alexandria
+                #:when-let)
+  (:export #:localhost
+           #:start-server
+           #:stop-server))
+(in-package #:qlot/server)
 
 (defvar *handler* nil)
 

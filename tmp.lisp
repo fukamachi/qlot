@@ -1,11 +1,10 @@
-(in-package :cl-user)
-(defpackage qlot.tmp
-  (:use :cl)
-  (:import-from :qlot.util
-                :generate-random-string)
-  (:export :*tmp-directory*
-           :tmp-path))
-(in-package :qlot.tmp)
+(defpackage #:qlot/tmp
+  (:use #:cl)
+  (:import-from #:qlot/util
+                #:generate-random-string)
+  (:export #:*tmp-directory*
+           #:tmp-path))
+(in-package #:qlot/tmp)
 
 (defvar *tmp-directory*
   (merge-pathnames (format nil "qlot-~A/" (generate-random-string))

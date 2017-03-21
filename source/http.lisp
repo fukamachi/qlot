@@ -1,23 +1,23 @@
-(in-package :cl-user)
-(defpackage qlot.source.http
-  (:use :cl
-        :qlot.source)
-  (:import-from :qlot.tmp
-                :tmp-path)
-  (:import-from :qlot.archive
-                :extract-tarball)
-  (:import-from :qlot.proxy
-                :get-proxy)
-  (:import-from :ironclad
-                :byte-array-to-hex-string
-                :digest-file)
-  (:import-from :function-cache
-                :defcached)
-  (:import-from :alexandria
-                :copy-stream)
-  (:export :source-http
-           :source-http-url))
-(in-package :qlot.source.http)
+(defpackage #:qlot/source/http
+  (:use #:cl
+        #:qlot/source)
+  (:import-from #:qlot/tmp
+                #:tmp-path)
+  (:import-from #:qlot/archive
+                #:extract-tarball)
+  (:import-from #:qlot/proxy
+                #:get-proxy)
+  (:import-from #:ironclad
+                #:byte-array-to-hex-string
+                #:digest-file)
+  (:import-from #:dexador)
+  (:import-from #:function-cache
+                #:defcached)
+  (:import-from #:alexandria
+                #:copy-stream)
+  (:export #:source-http
+           #:source-http-url))
+(in-package #:qlot/source/http)
 
 (defclass source-http (source-has-directory)
   ((url :initarg :url

@@ -1,28 +1,27 @@
-(in-package :cl-user)
-(defpackage qlot.parser
-  (:use :cl
-        :iterate)
-  (:import-from :qlot.source
-                :make-source
-                :find-source-class
-                :defrost-source
-                :source-project-name
-                :source-version
-                :source-dist-name
-                :source-defrost-args
-                :source-equal)
-  (:import-from :qlot.source.ql
-                :source-ql)
-  (:import-from :qlot.error
-                :qlot-qlfile-error)
-  (:import-from :uiop
-                :file-exists-p)
-  (:import-from :alexandria
-                :delete-from-plist)
-  (:export :parse-qlfile
-           :parse-qlfile-lock
-           :prepare-qlfile))
-(in-package :qlot.parser)
+(defpackage #:qlot/parser
+  (:use #:cl
+        #:iterate)
+  (:import-from #:qlot/source
+                #:make-source
+                #:find-source-class
+                #:defrost-source
+                #:source-project-name
+                #:source-version
+                #:source-dist-name
+                #:source-defrost-args
+                #:source-equal)
+  (:import-from #:qlot/source/ql
+                #:source-ql)
+  (:import-from #:qlot/error
+                #:qlot-qlfile-error)
+  (:import-from #:uiop
+                #:file-exists-p)
+  (:import-from #:alexandria
+                #:delete-from-plist)
+  (:export #:parse-qlfile
+           #:parse-qlfile-lock
+           #:prepare-qlfile))
+(in-package #:qlot/parser)
 
 (defun parse-qlfile-line (line)
   (labels ((trim-comment (line)

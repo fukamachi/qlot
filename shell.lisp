@@ -1,9 +1,8 @@
-(in-package :cl-user)
-(defpackage qlot.shell
-  (:use :cl)
-  (:export :safety-shell-command
-           :shell-command-error))
-(in-package :qlot.shell)
+(defpackage #:qlot/shell
+  (:use #:cl)
+  (:export #:safety-shell-command
+           #:shell-command-error))
+(in-package #:qlot/shell)
 
 (define-condition shell-command-error (simple-error)
   ((command :type cons

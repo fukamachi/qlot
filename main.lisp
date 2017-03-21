@@ -1,19 +1,19 @@
-(in-package :cl-user)
-(defpackage qlot
-  (:use :cl)
-  (:import-from :qlot.util
-                :with-package-functions
-                :with-local-quicklisp
-                :pathname-in-directory-p
-                :all-required-systems
-                :project-systems)
-  (:export :install
-           :update
-           :install-quicklisp
-           :quickload
-           :bundle
-           :with-local-quicklisp))
-(in-package :qlot)
+(defpackage #:qlot
+  (:nicknames #:qlot/main)
+  (:use #:cl)
+  (:import-from #:qlot/util
+                #:with-package-functions
+                #:with-local-quicklisp
+                #:pathname-in-directory-p
+                #:all-required-systems
+                #:project-systems)
+  (:export #:install
+           #:update
+           #:install-quicklisp
+           #:quickload
+           #:bundle
+           #:with-local-quicklisp))
+(in-package #:qlot)
 
 (defun ensure-qlot-install ()
   (unless (find-package :qlot.install)
@@ -52,10 +52,10 @@ If PATH isn't specified, this installs it to './quicklisp/'."
   (declare (ignore verbose prompt explain))
   (unless (consp systems)
     (setf systems (list systems)))
-  (let ((root (asdf:system-source-directory system-name)))
-    (with-package-functions :ql (quickload)
-      (loop for system-name in systems
-            do (with-local-quicklisp (root :central-registry (list root))
+  (with-package-functions :ql (quickload)
+    (loop for system-name in systems
+          do (let ((root (asdf:system-source-directory system-name)))
+               (with-local-quicklisp (root :central-registry (list root))
                  (apply #'quickload system-name args)))))
   systems)
 
