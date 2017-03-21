@@ -5,7 +5,8 @@
                 :with-package-functions
                 :with-local-quicklisp
                 :pathname-in-directory-p
-                :all-required-systems)
+                :all-required-systems
+                :project-systems)
   (:export :install
            :update
            :install-quicklisp
@@ -51,56 +52,53 @@ If PATH isn't specified, this installs it to './quicklisp/'."
   (declare (ignore verbose prompt explain))
   (unless (consp systems)
     (setf systems (list systems)))
-  (with-package-functions :ql (quickload)
-    (loop for system-name in systems
-          do (with-local-quicklisp system-name
-               (apply #'quickload system-name args))))
+  (let ((root (asdf:system-source-directory system-name)))
+    (with-package-functions :ql (quickload)
+      (loop for system-name in systems
+            do (with-local-quicklisp (root :central-registry (list root))
+                 (apply #'quickload system-name args)))))
   systems)
 
-(defun bundle (&optional (project-dir *default-pathname-defaults*))
-  (typecase project-dir
-    ((or symbol string)
-     (setf project-dir
-           (asdf:system-source-directory (asdf:find-system project-dir)))))
-  (let ((qlhome (merge-pathnames #P"quicklisp/" project-dir))
-        systems required-systems)
-    (unless (probe-file qlhome)
-      (error "~S is not ready to qlot:bundle. Try qlot:install first." project-dir))
-    (asdf::collect-sub*directories-asd-files
-     project-dir
-     :collect (lambda (asd)
-                (unless (or (pathname-in-directory-p asd qlhome)
-                            ;; KLUDGE: Ignore skeleton.asd of CL-Project
-                            (search "skeleton" (pathname-name asd)))
-                  (push asd systems)))
-     :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*))
+(defun systems-dependencies (systems qlhome)
+  (let (required-systems)
     (when systems
       (load (first systems))
-      (with-local-quicklisp (pathname-name (first systems))
+      (with-local-quicklisp (qlhome :systems systems)
         (with-package-functions :ql-dist (find-system)
           (labels ((system-dependencies (system-name)
-                   (let ((system (asdf:find-system system-name nil)))
-                     (cond
-                       ((or (null system)
-                            (not (equal (asdf:component-pathname system)
-                                        (uiop:pathname-directory-pathname (first systems)))))
-                        (cons
-                         system-name
-                         (all-required-systems system-name)))
-                       (t
-                        ;; Probably the user application's system.
-                        ;; Continuing looking for it's dependencies
-                        (mapcan #'system-dependencies
-                                (mapcar #'string-downcase
-                                        (asdf::component-sideway-dependencies system))))))))
+                     (let ((system (asdf:find-system system-name nil)))
+                       (cond
+                         ((or (null system)
+                              (not (equal (asdf:component-pathname system)
+                                          (uiop:pathname-directory-pathname (first systems)))))
+                          (cons
+                           system-name
+                           (all-required-systems system-name)))
+                         (t
+                          ;; Probably the user application's system.
+                          ;; Continuing looking for it's dependencies
+                          (mapcan #'system-dependencies
+                                  (mapcar #'string-downcase
+                                          (asdf::component-sideway-dependencies system))))))))
             (setf required-systems
                   (delete-if (lambda (system)
                                (or (member system systems :key #'pathname-name :test #'string-equal)
                                    (not (find-system system))))
-                             (delete-duplicates
-                              (mapcan #'system-dependencies
-                               (mapcar #'pathname-name systems))
-                              :test #'string=)))))))
+                             (mapcan #'system-dependencies
+                                     (mapcar #'pathname-name systems)))))))
+      (delete-duplicates
+       (append
+        (with-local-quicklisp (qlhome :systems systems)
+          (with-package-functions :ql-dist (name provided-systems enabled-dists)
+            (mapcar (lambda (x)
+                      (first (sort (mapcar #'name (provided-systems x)) #'string<)))
+                    (remove "quicklisp" (enabled-dists) :key #'name :test #'equal))))
+        required-systems)
+       :test #'string=))))
+
+(defun bundle (&optional (project-dir *default-pathname-defaults*))
+  (let* ((systems (project-systems project-dir))
+         (required-systems (systems-dependencies systems project-dir)))
     (if required-systems
         (progn
           (format t "~&Bundle ~D ~:*system~[s~;~:;s~]:~%" (length required-systems))
@@ -113,7 +111,7 @@ If PATH isn't specified, this installs it to './quicklisp/'."
                 else if rest
                        do (write-char #\Space))
           (fresh-line)
-          (with-local-quicklisp (pathname-name (first systems))
+          (with-local-quicklisp (project-dir)
             (with-package-functions :ql-dist (enabled-dists
                                               canonical-distinfo-url
                                               (setf canonical-distinfo-url))

@@ -25,11 +25,13 @@
   (:import-from :qlot.util
                 :find-qlfile
                 :with-quicklisp-home
+                :with-local-quicklisp
                 :with-package-functions
                 :ensure-installed-in-local-quicklisp
                 :pathname-in-directory-p
                 :all-required-systems
-                :generate-random-string)
+                :generate-random-string
+                #+nil :project-systems)
   (:import-from :qlot.proxy
                 :get-proxy)
   (:import-from :uiop
@@ -261,20 +263,17 @@
               (format t "~&Removing dist ~S.~%" (name dist))
               (uninstall dist))))))
 
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream))
-          (*package* (find-package :asdf-user)))
-      (asdf::collect-sub*directories-asd-files
-       (uiop:pathname-directory-pathname file)
-       :collect (lambda (asd)
-                  (unless (or (pathname-in-directory-p asd qlhome)
-                              ;; KLUDGE: Ignore skeleton.asd of CL-Project
-                              (search "skeleton" (pathname-name asd)))
-                    (load asd)
-                    (ensure-installed-in-local-quicklisp
-                     (asdf:find-system (pathname-name asd))
-                     qlhome)))
-       :exclude (cons "bundle-libs" asdf::*default-source-registry-exclusions*)))
+    ;; Quickload project systems.
+    ;; NOTE: Commenting out because I'm not sure this is really required.
+    ;;   All non-Quicklisp dists' releases should be installed above.
+    #+nil
+    (let ((systems (project-systems (uiop:pathname-directory-pathname file))))
+      (with-package-functions :ql-dist (ensure-installed find-system)
+        (with-package-functions :ql (quickload)
+          (with-local-quicklisp (qlhome :systems systems)
+            (dolist (asd systems)
+              (quickload (pathname-name asd)))))))
+
     (stop-server)
 
     (with-quicklisp-home qlhome

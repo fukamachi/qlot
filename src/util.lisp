@@ -11,7 +11,8 @@
            :all-required-systems
            :generate-random-string
            :with-in-directory
-           :quit-with-stacktraces))
+           :quit-with-stacktraces
+           :project-systems))
 (in-package :qlot.util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
@@ -66,16 +67,22 @@ with the same key."
            (setf (gethash value to-table) key)))
     (maphash #'add-to-original from-table)))
 
-(defun call-in-local-quicklisp (fn system qlhome)
+(defun call-in-local-quicklisp (fn qlhome &key systems (central-registry '()))
   (unless #+clisp (ext:probe-directory qlhome)
           #-clisp (probe-file qlhome)
     (error "Directory ~S does not exist." qlhome))
+
+  (unless (probe-file (merge-pathnames #P"setup.lisp" qlhome))
+    (if (probe-file (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
+        ;; The given `qlhome' is the project root.
+        (setf qlhome (merge-pathnames #P"quicklisp/" qlhome))
+        (error "~S is not a quicklisp directory.")))
 
   (let* (#+quicklisp
          (ql:*quicklisp-home* qlhome)
          #+quicklisp
          (ql:*local-project-directories* (list (merge-pathnames #P"local-projects/" qlhome)))
-         (asdf:*central-registry* (list (asdf:system-source-directory system)))
+         (asdf:*central-registry* central-registry)
          (asdf::*source-registry* (make-hash-table :test 'equal))
          (asdf::*default-source-registries*
           '(asdf::environment-source-registry
@@ -100,29 +107,21 @@ with the same key."
 
     (asdf:initialize-source-registry)
 
+    (dolist (system systems)
+      (setf (gethash (pathname-name system) asdf::*source-registry*) system))
+
     (multiple-value-prog1 (funcall fn)
       ;; Make all systems that were actually loaded from the local quicklisp
       ;; visible through ASDF outside of the local environment.
       (merge-hash-tables asdf::*defined-systems* original-defined-systems))))
 
-(defmacro with-local-quicklisp (system &body body)
-  (let ((qlot-dir (gensym "QLOT-DIR"))
-        (system-dir (gensym "SYSTEM-DIR"))
-        (register-directory (gensym "REGISTER-DIRECTORY")))
-    `(let ((,qlot-dir (asdf:system-source-directory :qlot))
-           (,system-dir (asdf:system-source-directory ,system)))
-       (flet ((,register-directory (directory)
-                (map nil
-                     (lambda (asd)
-                       (setf (gethash (pathname-name asd) asdf::*source-registry*) asd))
-                     (asdf::directory-asd-files directory))))
-         (call-in-local-quicklisp
-          (lambda ()
-            (,register-directory ,system-dir)
-            (,register-directory ,qlot-dir)
-            ,@body)
-          ,system
-          (asdf:system-relative-pathname ,system #P"quicklisp/"))))))
+(defmacro with-local-quicklisp ((qlhome &key systems central-registry) &body body)
+  `(call-in-local-quicklisp
+    (lambda () ,@body)
+    ,qlhome
+    :systems ,systems
+    :central-registry (append ,central-registry
+                              (list (asdf:system-source-directory :qlot)))))
 
 (defun sbcl-contrib-p (name)
   (let ((name (princ-to-string name)))
@@ -143,33 +142,6 @@ with the same key."
                          ())))))
         (delete-duplicates (mapcan #'main systems) :test #'string-equal)))))
 
-(defun ensure-installed-in-local-quicklisp (system qlhome)
-  (let ((dependencies
-          (remove-if (lambda (component-name)
-                       (or (null component-name)
-                           (equal component-name "asdf")
-                           (sbcl-contrib-p component-name)))
-                     (mapcar (lambda (dependency-def)
-                               (if (consp dependency-def)
-                                   (and (eq (first dependency-def) :version)
-                                        (second dependency-def))
-                                   dependency-def))
-                             (asdf::component-sideway-dependencies system)))))
-    (with-package-functions :ql-dist (find-system required-systems name ensure-installed)
-      (call-in-local-quicklisp
-       (lambda ()
-         (labels ((system-dependencies (system-name)
-                    (let ((system (find-system (string-downcase system-name))))
-                      (when system
-                        (cons system
-                              (mapcan #'system-dependencies (copy-list (required-systems system))))))))
-           (map nil #'ensure-installed
-                (delete-duplicates (mapcan #'system-dependencies dependencies)
-                                   :key #'name
-                                   :test #'string=))))
-       system
-       qlhome))))
-
 (defun generate-random-string ()
   (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5))))
 
@@ -187,9 +159,9 @@ with the same key."
                         (lambda (e)
                           #+quicklisp (ql:quickload :dissect :silent t)
                           #-quicklisp (asdf:load-system :dissect)
-                          (format *error-output* "~&2Error: ~A~2%" e)
+                          (format *error-output* "~2&Error: ~A~2%" e)
                           (with-package-functions :dissect (stack present-object)
-                            (loop repeat 5
+                            (loop repeat 15
                                   for stack in (stack)
                                   do (format *error-output*
                                              "~&    ~A~%"
@@ -197,3 +169,17 @@ with the same key."
                                                (present-object stack s))))))))
          ,@body)
      (error () (uiop:quit -1 nil))))
+
+(defun project-systems (project-dir)
+  (let ((qlhome (merge-pathnames #P"quicklisp/" project-dir))
+        systems)
+    (asdf::collect-sub*directories-asd-files
+     project-dir
+     :collect (lambda (asd)
+                (unless (or (pathname-in-directory-p asd qlhome)
+                            ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                            (search "skeleton" (pathname-name asd)))
+                  (push asd systems)))
+     :exclude (append (list "bundle-libs" "quicklisp")
+                      asdf::*default-source-registry-exclusions*))
+    systems))
