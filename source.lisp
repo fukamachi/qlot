@@ -14,9 +14,6 @@
                 #:byte-array-to-hex-string
                 #:digest-file
                 #:digest-sequence)
-  (:import-from #:alexandria
-                #:copy-stream
-                #:when-let)
   (:export #:*dist-base-url*
            #:source
            #:make-source
@@ -50,9 +47,9 @@
 
 (defvar *dist-base-url* nil)
 
-(defun find-source-class (class-identifier)
-  (let* ((package-name (format nil "~A/~A"
-                               (string :qlot/source) class-name))
+(defun find-source-class (class-name)
+  (let* ((package-name (format nil "~A/~:@(~A~)"
+                               :qlot/source class-name))
          (system-name (string-downcase package-name))
          (package (or (find-package package-name)
                       (progn
@@ -210,9 +207,10 @@
   (ensure-directories-exist (tmp-path (pathname (format nil "~(~A~)/archive/" (type-of source))))))
 
 (defmethod source-direct-dependencies ((source source-has-directory))
-  (when-let (qlfile (find-qlfile (source-directory source) :errorp nil))
-    (with-package-functions :qlot.parser (parse-qlfile)
-      (parse-qlfile qlfile))))
+  (let ((qlfile (find-qlfile (source-directory source) :errorp nil)))
+    (when qlfile
+      (with-package-functions :qlot.parser (parse-qlfile)
+        (parse-qlfile qlfile)))))
 
 (defgeneric (setf source-directory) (value source)
   (:method (value (source source-has-directory))

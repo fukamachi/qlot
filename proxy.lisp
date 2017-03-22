@@ -1,7 +1,5 @@
 (defpackage #:qlot/proxy
   (:use #:cl)
-  (:import-from #:cl-ppcre
-                #:scan)
   (:import-from #:uiop
                 #:getenvp)
   (:export #:get-proxy))
@@ -25,7 +23,7 @@
   (setf (fdefinition (find-symbol (string :http-fetch) :ql-http))
         (lambda (url &rest rest)
           (let ((ql:*proxy-url*
-                  (if (ppcre:scan "^http://127\\.0\\.0\\.1" url)
-                    nil
-                    ql:*proxy-url*)))
+                  (if (eql (search "http://127.0.0.1" url) 0)
+                      nil
+                      ql:*proxy-url*)))
             (apply #'orig-http-fetch url rest)))))

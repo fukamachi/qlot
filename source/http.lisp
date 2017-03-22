@@ -1,4 +1,5 @@
 (defpackage #:qlot/source/http
+  (:nicknames #:qlot.source.http)
   (:use #:cl
         #:qlot/source)
   (:import-from #:qlot/tmp

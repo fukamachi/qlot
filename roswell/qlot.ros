@@ -23,7 +23,7 @@ exec ros +Q -- $0 "$@"
 (defun exec-ros-eval (command)
   (let ((ros (which "ros"))
         (safe-command
-          (format nil "(qlot.util:quit-with-stacktraces ~A)"
+          (format nil "(qlot/util:quit-with-stacktraces ~A)"
                   command)))
     (ros:exec `(,ros "-Q" "-s" "qlot" "-e" ,safe-command))))
 

@@ -1,4 +1,5 @@
 (defpackage #:qlot/source/github
+  (:nicknames #:qlot.source.github)
   (:use #:cl
         #:qlot/source)
   (:import-from #:qlot/source/http

@@ -17,6 +17,7 @@
   (:import-from #:clack
                 #:clackup
                 #:stop)
+  (:import-from #:usocket)
   (:import-from #:alexandria
                 #:when-let)
   (:export #:localhost
@@ -92,9 +93,8 @@
     (let ((port (random-port)))
       (prog1
           (setf *handler*
-                (let ((*standard-output* (make-broadcast-stream))
-                      (app (make-app sources)))
-                  (clackup app :port port)))
+                (let ((app (make-app sources)))
+                  (clackup app :port port :silent t)))
         (setf *qlot-port* port)
         (sleep 0.5))))
   (:method ((qlfile pathname))
