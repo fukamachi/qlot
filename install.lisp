@@ -235,8 +235,9 @@
              (ensure-server-started ()
                (unless server-started-p
                  (with-quicklisp-home *system-quicklisp-home*
-                   #+quicklisp (ql:quickload :qlot/server :silent t)
-                   #-quicklisp (asdf:load-system :qlot/server)
+                   (unless (find-package :qlot/server)
+                     #+quicklisp (ql:quickload :qlot/server :silent t)
+                     #-quicklisp (asdf:load-system :qlot/server))
                    (uiop:symbol-call :qlot/server :start-server all-sources)))))
         (loop for source in all-sources
               for preference from (get-universal-time)
