@@ -82,6 +82,7 @@
                 source)))))
 
 (defun prepare-qlfile (file &key ignore-lock)
+  (format t "~&Reading '~A'..." file)
   (let ((default-ql-source (make-source 'source-ql :all :latest))
         (lock-file (and (not ignore-lock)
                         (uiop:file-exists-p
