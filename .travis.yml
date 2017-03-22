@@ -11,9 +11,11 @@ env:
 
 install:
   # Roswell
-  - curl -L https://raw.githubusercontent.com/snmsts/roswell/release/scripts/install-for-ci.sh | sh
+  - curl -L https://raw.githubusercontent.com/roswell/roswell/release/scripts/install-for-ci.sh | sh
   # Libraries to use the latest version
   - ros install froydnj/archive
+  - ros install fukamachi/dexador
+  - ros install cl-plus-ssl/cl-plus-ssl
   - ros install prove
 
 before_script:
