@@ -234,7 +234,7 @@
                                  #+sbcl (sb-posix:chmod to #o700)))))))))))
              (ensure-server-started ()
                (unless server-started-p
-                 (with-quicklisp-home system-qlhome
+                 (with-local-quicklisp (system-qlhome)
                    #+quicklisp (ql:quickload :qlot/server :silent t)
                    #-quicklisp (asdf:load-system :qlot/server)
                    (uiop:symbol-call :qlot/server :start-server all-sources)))))
