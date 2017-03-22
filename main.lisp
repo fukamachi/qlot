@@ -60,7 +60,6 @@ If PATH isn't specified, this installs it to './quicklisp/'."
 (defun systems-dependencies (systems qlhome)
   (let (required-systems)
     (when systems
-      (load (first systems))
       (with-local-quicklisp (qlhome :systems systems)
         (with-package-functions :ql-dist (find-system)
           (labels ((system-dependencies (system-name)
