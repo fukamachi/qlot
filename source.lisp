@@ -264,7 +264,7 @@
               (weakly-depends-on (getf (cddr form) :weakly-depends-on)))
           #+quicklisp
           (when defsystem-depends-on
-            (ql:quickload defsystem-depends-on))
+            (ql:quickload defsystem-depends-on :silent t))
           (setf (gethash (string-downcase (cadr form)) *dependencies*)
                 (remove-duplicates
                  (mapcar #'normalize
