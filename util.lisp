@@ -10,7 +10,6 @@
            #:all-required-systems
            #:generate-random-string
            #:with-in-directory
-           #:quit-with-stacktraces
            #:project-systems))
 (in-package #:qlot/util)
 
@@ -151,23 +150,6 @@ with the same key."
        (unwind-protect
             (progn ,@body)
          (uiop:chdir ,cwd)))))
-
-(defmacro quit-with-stacktraces (&rest body)
-  `(handler-case
-       (handler-bind ((error
-                        (lambda (e)
-                          #+quicklisp (ql:quickload :dissect :silent t)
-                          #-quicklisp (asdf:load-system :dissect)
-                          (format *error-output* "~2&Error: ~A~2%" e)
-                          (with-package-functions :dissect (stack present-object)
-                            (loop repeat 15
-                                  for stack in (stack)
-                                  do (format *error-output*
-                                             "~&    ~A~%"
-                                             (with-output-to-string (s)
-                                               (present-object stack s))))))))
-         ,@body)
-     (error () (uiop:quit -1 nil))))
 
 (defun project-systems (project-dir)
   (let ((qlhome (merge-pathnames #P"quicklisp/" project-dir))

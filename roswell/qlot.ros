@@ -13,6 +13,10 @@ exec ros +Q -- $0 "$@"
                 #:setenv))
 (in-package #:ros/script/qlot)
 
+(unless (find-package :uiop)
+  (ros:quicklisp)
+  (funcall (find-symbol #.(string :quickload) :ql) :uiop :silent t))
+
 (defun print-error (format-control &rest format-arguments)
   (fresh-line *error-output*)
   (princ "Error: " *error-output*)
@@ -20,33 +24,30 @@ exec ros +Q -- $0 "$@"
   (fresh-line *error-output*)
   (ros:quit -1))
 
-(defun exec-ros-eval (command)
-  (let ((ros (which "ros"))
-        (safe-command
-          (format nil "(qlot/util:quit-with-stacktraces ~A)"
-                  command)))
-    (ros:exec `(,ros "-Q" "-s" "qlot" "-e" ,safe-command))))
-
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
   (cond ((equal "install" $1)
          (when (and (first argv)
                     (not (probe-file (first argv))))
            (print-error "'~A' does not found." (first argv)))
-         (exec-ros-eval (if argv
-                            (format nil "(qlot:install ~S)"
-                                    (probe-file (first argv)))
-                            "(qlot:install)")))
+         (ros:quicklisp)
+         (uiop:symbol-call :ql :quickload :qlot :silent t)
+         (if argv
+             (uiop:symbol-call :qlot :install (probe-file (first argv)))
+             (uiop:symbol-call :qlot :install)))
         ((equal "update" $1)
          (when (and (first argv)
                     (not (probe-file (first argv))))
            (print-error "'~A' does not found." (first argv)))
-         (exec-ros-eval (if argv
-                            (format nil "(qlot:update ~S)"
-                                    (probe-file (first argv)))
-                            "(qlot:update)")))
+         (ros:quicklisp)
+         (uiop:symbol-call :ql :quickload :qlot :silent t)
+         (if argv
+             (uiop:symbol-call :qlot :update (probe-file (first argv)))
+             (uiop:symbol-call :qlot :update)))
         ((equal "bundle" $1)
-         (exec-ros-eval "(qlot:bundle)"))
+         (ros:quicklisp)
+         (uiop:symbol-call :ql :quickload :qlot :silent t)
+         (uiop:symbol-call :qlot :bundle))
         ((equal "exec" $1)
          ;; Set QUICKLISP_HOME ./quicklisp/
          (unless (ros:getenv "QUICKLISP_HOME")
