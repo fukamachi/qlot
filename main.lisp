@@ -17,7 +17,6 @@
 
 (defun ensure-qlot-install ()
   (unless (find-package :qlot/install)
-    (format t "~&Initializing... This may take awhile...~%")
     #+quicklisp (ql:quickload :qlot/install :silent t)
     #-quicklisp (asdf:load-system :qlot/install)))
 
