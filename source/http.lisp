@@ -8,9 +8,8 @@
                 #:extract-tarball)
   (:import-from #:qlot/proxy
                 #:get-proxy)
-  (:import-from #:ironclad
-                #:byte-array-to-hex-string
-                #:digest-file)
+  (:import-from #:qlot/util
+                #:with-package-functions)
   (:import-from #:dexador)
   (:import-from #:function-cache
                 #:defcached)
@@ -75,5 +74,6 @@
               (source-http-archive-md5 source2))))
 
 (defcached archive-md5 (source)
-  (ironclad:byte-array-to-hex-string
-   (ironclad:digest-file :md5 (source-archive source))))
+  (with-package-functions :ironclad (byte-array-to-hex-string digest-file)
+    (byte-array-to-hex-string
+     (digest-file :md5 (source-archive source)))))
