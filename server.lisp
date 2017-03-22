@@ -15,7 +15,7 @@
   (:import-from #:qlot/tmp
                 #:*tmp-directory*)
   (:import-from #:qlot/util
-                #:with-quicklisp-home)
+                #:with-local-quicklisp)
   (:import-from #:clack
                 #:clackup
                 #:stop)
@@ -82,7 +82,7 @@
                 (funcall (make-route source 'project.txt)))))
       (let ((qlhome #+quicklisp ql:*quicklisp-home*))
         (lambda (env)
-          (with-quicklisp-home qlhome
+          (with-local-quicklisp (qlhome)
             (let ((fn (gethash (getf env :path-info) route))
                   (*tmp-directory* tmp-directory))
               (if fn
