@@ -1,4 +1,4 @@
-# qlot
+# Qlot
 
 [![Build Status](https://travis-ci.org/fukamachi/qlot.svg?branch=master)](https://travis-ci.org/fukamachi/qlot)
 
@@ -15,15 +15,18 @@ github datafly fukamachi/datafly :branch v0.7.x
 ql log4cl 2014-03-17
 ```
 
-```common-lisp
-;; Installing libraries project-locally.
-(qlot:install :myapp)
+```
+$ cd /path/to/myapp
 
-;; Loading a project with its project-local quicklisp.
-(qlot:quickload :myapp)
+# Installing libraries project-locally.
+$ qlot install
 
-;; Updating depending libraries of a project.
-(qlot:update :myapp)
+# Updating depending libraries of a project.
+$ qlot update
+
+# Execute a command with a project-local Quicklisp
+$ qlot exec ros -S . run
+$ qlot exec clackup app.lisp
 ```
 
 ## What qlot is trying to solve
@@ -42,23 +45,15 @@ This is what qlot is trying to solve.
 
 ## Installation
 
-### via Quicklisp
-
-As [qlot is going to be included](https://github.com/quicklisp/quicklisp-projects/issues/716) in Quicklisp dist in August 2014, you can install it through Quicklisp.
-
-```common-lisp
-(ql:quickload :qlot)
-```
-
 ### via Roswell
 
-It also can be installed with [Roswell](https://github.com/snmsts/roswell).
+It also can be installed with [Roswell](https://github.com/roswell/roswell).
 
 ```
 $ ros install qlot
 
-# Install from a local copy
-$ ros -l qlot.asd install qlot
+# Install the latest version from GitHub
+$ ros install fukamachi/qlot
 ```
 
 It's almost the same as using Quicklisp, except it also introduces a shell command "qlot".
@@ -82,8 +77,8 @@ See [qlfile syntax](#qlfile-syntax) section to know how to write it.
 
 You can install libraries into the project directory via:
 
-```common-lisp
-(qlot:install :myapp)
+```
+$ qlot install
 ```
 
 It creates `quicklisp/` directory in the project directory and a file `qlfile.lock`.
@@ -98,45 +93,22 @@ $ git add qlfile qlfile.lock
 $ git commit -m 'Start using qlot.'
 ```
 
-### Loading your application
-
-To load your qlot-ready application, use `qlot:quickload` instead of `ql:quickload`.
-
-```common-lisp
-(qlot:quickload :myapp)
-```
-
-### Executing forms with project-local Quicklisp
-
-Although `qlot:quickload` loads a project with its project-local Quicklisp, the Quicklisp path will be restored to the default one after that.
-
-This could cause significant problem if your application loads other libraries during run-time.
-
-For example, [Clack](http://clacklisp.org/) loads a server handler when executing `clackup` and, the important part is, it loads with the system default Quicklisp, not the project-local one.
-
-To prevent the mess, wrap all code which would load other libraries in run-time with `qlot:with-local-quicklisp`.
-
-```common-lisp
-(qlot:with-local-quicklisp (:myapp)
-  (clack:clackup *app* :server :wookie))
-```
-
 ### Updating the project-local quicklisp
 
 You can update the content of `quicklisp/` directory via:
 
-```common-lisp
-(qlot:update :myapp)
+```
+$ qlot update
 ```
 
 It will also overwrite `qlfile.lock`.
 
 ### Bundling libraries
 
-You can bundle all depending libraries by `qlot:bundle` into `bundle-libs/`.
+You can bundle all depending libraries into `bundle-libs/` via:
 
 ```common-lisp
-(qlot:bundle :myapp)
+$ qlot bundle
 ```
 
 ```
@@ -148,48 +120,27 @@ $ git commit -m 'Bundle dependencies.'
 
 ### install
 
-`qlot:install` will install Quicklisp and libraries that declared in `qlfile` project-locally. `qlfile.lock` will be used with precedence if it exists.
+`qlot install` will install Quicklisp and libraries that declared in `qlfile` project-locally. `qlfile.lock` will be used with precedence if it exists.
 
-```common-lisp
-(qlot:install :myapp)
-(qlot:install #P"/path/to/myapp/")
-(qlot:install #P"/path/to/myapp/my-qlfile")
+```
+$ qlot install
+$ qlot install /path/to/myapp/qlfile
 ```
 
 ### update
 
-`qlot:update` will update the project-local `quicklisp/` directory using `qlfile`.
+`qlot update` will update the project-local `quicklisp/` directory using `qlfile`.
 
-```common-lisp
-(qlot:update :myapp)
-(qlot:update #P"/path/to/myapp/")
-(qlot:update #P"/path/to/myapp/my-qlfile")
+```
+$ qlot update
 ```
 
 ### bundle
 
-`qlot:bundle` will bundle dependencies into `bundle-libs/` by using `ql:bundle-systems`.
+`qlot bundle` will bundle dependencies into `bundle-libs/` by using `ql:bundle-systems`.
 
 ```common-lisp
-(qlot:bundle :myapp)
-(qlot:bundle #P"/path/to/myapp/")
-```
-
-### quickload
-
-`qlot:quickload` is similar to `ql:quickload` except it uses its project-local `quicklisp/` directory.
-
-```common-lisp
-(qlot:quickload :myapp)
-```
-
-### with-local-quicklisp
-
-Eval the given form in the local quicklisp environment.
-
-```common-lisp
-(qlot:with-local-quicklisp (:myapp)
-  (ql:quickload :dexador))
+$ qlot bundle
 ```
 
 ## `qlfile` syntax
