@@ -38,7 +38,8 @@
                 #:directory-exists-p
                 #:directory-pathname-p
                 #:pathname-directory-pathname
-                #:delete-directory-tree)
+                #:delete-directory-tree
+                #:symbol-call)
   (:export #:install-quicklisp
            #:install-qlfile
            #:install-project))
@@ -200,7 +201,9 @@
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
   (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
                                                                           (merge-pathnames #P"tmp/qlot/" qlhome))))
-        (all-sources (prepare-qlfile file :ignore-lock ignore-lock)))
+        (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
+        (system-qlhome #+quicklisp ql:*quicklisp-home*)
+        (server-started-p nil))
 
     (with-quicklisp-home qlhome
       (flet ((install-all-releases (source)
@@ -228,30 +231,28 @@
                                                            (pathname-type script))
                                           #-unix (pathname-type script))))
                                  (uiop:copy-file script to)
-                                 #+sbcl (sb-posix:chmod to #o700))))))))))))
+                                 #+sbcl (sb-posix:chmod to #o700)))))))))))
+             (ensure-server-started ()
+               (unless server-started-p
+                 (with-quicklisp-home system-qlhome
+                   #+quicklisp (ql:quickload :qlot/server :silent t)
+                   #-quicklisp (asdf:load-system :qlot/server)
+                   (uiop:symbol-call :qlot/server :start-server all-sources)))))
         (dolist (source all-sources)
           (cond
             ((not (already-installed-p source))
-             #+quicklisp (ql:quickload :qlot/server :silent t)
-             #-quicklisp (asdf:load-system :qlot/server)
-             (with-package-functions :qlot/server (start-server stop-server)
-               (start-server all-sources)
-               (install-source source)
-               (install-all-releases source)
-               (stop-server)))
+             (ensure-server-started)
+             (install-source source)
+             (install-all-releases source))
             ((source-update-available-p source)
-             #+quicklisp (ql:quickload :qlot/server :silent t)
-             #-quicklisp (asdf:load-system :qlot/server)
-             (with-package-functions :qlot/server (start-server stop-server)
-               (start-server all-sources)
-               (prepare source)
-               (if (string= (source-dist-name source) "quicklisp")
-                   (with-package-functions :ql-dist (uninstall dist)
-                     (uninstall (dist "quicklisp"))
-                     (install-source source))
-                   (update-source source))
-               (install-all-releases source)
-               (stop-server)))
+             (prepare source)
+             (ensure-server-started)
+             (if (string= (source-dist-name source) "quicklisp")
+                 (with-package-functions :ql-dist (uninstall dist)
+                   (uninstall (dist "quicklisp"))
+                   (install-source source))
+                 (update-source source))
+             (install-all-releases source))
             (t (format t "~&Already have dist ~S version ~S.~%"
                        (source-dist-name source)
                        (source-version source))))
@@ -267,6 +268,9 @@
             (unless (gethash (name dist) sources-map)
               (format t "~&Removing dist ~S.~%" (name dist))
               (uninstall dist))))))
+
+    (when server-started-p
+      (uiop:symbol-call :qlot/server :stop-server))
 
     ;; Quickload project systems.
     ;; NOTE: Commenting out because I'm not sure this is really required.

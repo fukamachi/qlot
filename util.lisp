@@ -14,8 +14,9 @@
 (in-package #:qlot/util)
 
 (defmacro with-quicklisp-home (qlhome &body body)
-  `(flet ((main () ,@body))
-     (eval `(let ((,(intern #.(string :*quicklisp-home*) :ql) ,,qlhome)) (funcall ,#'main)))))
+  `(progv (list (intern #.(string :*quicklisp-home*) :ql))
+       (list ,qlhome)
+     ,@body))
 
 (defmacro with-package-functions (package-designator functions &body body)
   (let ((args (gensym "ARGS")))

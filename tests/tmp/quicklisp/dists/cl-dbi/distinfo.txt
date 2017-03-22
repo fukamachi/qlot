@@ -1,0 +1,5 @@
+name: cl-dbi
+version: git-54928984e5756e92ba298aae51de8b95a6b0cf4b
+distinfo-subscription-url: http://127.0.0.1:50496/cl-dbi.txt
+release-index-url: http://127.0.0.1:50496/cl-dbi/git-54928984e5756e92ba298aae51de8b95a6b0cf4b/releases.txt
+system-index-url: http://127.0.0.1:50496/cl-dbi/git-54928984e5756e92ba298aae51de8b95a6b0cf4b/systems.txt

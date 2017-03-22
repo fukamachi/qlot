@@ -1,0 +1,62 @@
+language: common-lisp
+
+# Wookie handler fails with memory corruption when using Travis CI's new container-based architecture.
+sudo: required
+
+env:
+  global:
+    - PATH=~/.roswell/bin:~/nginx/sbin:$PATH
+    - LD_LIBRARY_PATH=$HOME/libuv/lib:$LD_LIBRARY_PATH
+    - C_INCLUDE_PATH=$HOME/libuv/include:$C_INCLUDE_PATH
+    - ROSWELL_BRANCH=release
+    - ROSWELL_INSTALL_DIR=$HOME/.roswell
+    - COVERAGE_EXCLUDE=t:v1-compat
+  matrix:
+    - LISP=sbcl-bin COVERALLS=true
+    - LISP=ccl-bin
+    - LISP=abcl
+    - LISP=ecl
+    - LISP=clisp
+
+addons:
+  apt:
+    packages:
+      - libfcgi-dev
+
+install:
+  # Install Roswell
+  - curl -L https://raw.githubusercontent.com/snmsts/roswell/$ROSWELL_BRANCH/scripts/install-for-ci.sh | sh
+  - ros asdf install
+  - ros -e '(ql:update-all-dists :prompt nil)'
+  # libuv for Wookie
+  - if ! [ -f "$HOME/libuv/include/uv.h" ]; then
+      curl -L https://github.com/libuv/libuv/archive/v1.6.1.tar.gz | tar xzf -;
+      (cd libuv-1.6.1 && ./autogen.sh && ./configure --prefix=$HOME/libuv && make && make install);
+    fi
+  # nginx
+  - if ! [ -f "$HOME/nginx/sbin/nginx" ]; then
+      curl -L http://nginx.org/download/nginx-1.8.0.tar.gz | tar xzf -;
+      (cd nginx-1.8.0 && ./configure --prefix=$HOME/nginx && make && make install);
+    fi
+  - ros install prove
+  - ros install fukamachi/circular-streams
+  - ros install fukamachi/dexador
+
+cache:
+  directories:
+    - $HOME/.roswell
+    - $HOME/libuv
+    - $HOME/nginx
+    - $HOME/.config/common-lisp
+
+before_script:
+  - nginx -c "$TRAVIS_BUILD_DIR/t/nginx.conf" -p "$HOME/nginx"
+  - ros --version
+  - ros config
+
+script:
+  - if [ "$LISP" = "sbcl-bin" ]; then
+      run-prove t-*.asd;
+    else
+      run-prove t-clack-handler-hunchentoot.asd;
+    fi

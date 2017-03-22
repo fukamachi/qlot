@@ -12,14 +12,19 @@
   :author "Eitaro Fukamachi"
   :license "MIT"
   :depends-on (:qlot
-               :qlot-install
+               :qlot/install
+               :qlot/source/git
+               :qlot/source/github
+               :qlot/source/ql
+               :qlot/source/http
+               :qlot/server
                :uiop
                :prove)
-  :components ((:module "t"
+  :components ((:module "tests"
                 :components
                 ((:test-file "parser")
                  (:test-file "server")
-                 (:test-file "qlot"))))
+                 (:test-file "main"))))
 
   :defsystem-depends-on (:prove-asdf)
   :perform (test-op :after (op c)

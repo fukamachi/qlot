@@ -1,0 +1,5 @@
+name: clack
+version: git-07a710af6d3a6311cf1fec7f36a1ce26c3783673
+distinfo-subscription-url: http://127.0.0.1:50522/clack.txt
+release-index-url: http://127.0.0.1:50522/clack/git-07a710af6d3a6311cf1fec7f36a1ce26c3783673/releases.txt
+system-index-url: http://127.0.0.1:50522/clack/git-07a710af6d3a6311cf1fec7f36a1ce26c3783673/systems.txt

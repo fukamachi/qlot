@@ -1,0 +1,3 @@
+# project system-file system-name [dependency1..dependencyN]
+shelly shelly-test shelly-test shelly cl-test-more
+shelly shelly shelly cl-annot cl-ppcre cl-fad bordeaux-threads

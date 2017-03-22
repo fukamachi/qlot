@@ -4,6 +4,6 @@
            #:qlot-qlfile-error))
 (in-package #:qlot/error)
 
-(define-condition qlot-error (error) ())
+(define-condition qlot-error (simple-error) ())
 
 (define-condition qlot-qlfile-error (qlot-error) ())

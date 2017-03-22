@@ -1,0 +1,442 @@
+#!/bin/sh -
+
+BASENAME=$(basename $0)
+[ "$BASENAME" != "shly" ] && DOWNLOADED=1;
+
+## Loading configurations
+
+retrieve_config_from_perl() {
+    line=$(grep -m 1 "$1" "$2")
+    if [ -n "$line" ]; then
+        val=$(echo "$line" | sed -e "s/^[ ]*$1 => \"\{0,1\}\([^\"]*\)\"\{0,1\},\{0,1\}$/\1/")
+        if [ "$line" != "$val" ]; then
+            echo $val
+        fi
+    fi
+}
+
+if [ -n "$CIM_HOME" ]; then
+    if [ -z "$LISP_IMPL" ]; then
+        : ${CIM_ID:="$$"}
+        if [ -s "$CIM_HOME/config/current.$CIM_ID" ]; then
+            . "$CIM_HOME/config/current.$CIM_ID"
+            export LISP_IMPL
+        elif [ -s "$CIM_HOME/config/default" ]; then
+            . "$CIM_HOME/config/default"
+            export LISP_IMPL
+        else
+            echo "Error: Failed to load a configuration file of CIM. Check the setting of CIM." 1>&2
+            exit 1
+        fi
+    fi
+fi
+if [ -n "$SHELLY_HOME" ] && [ -f "$SHELLY_HOME/config" ]; then
+    file_header=$(head -1 "$SHELLY_HOME/config")
+    if [ "$file_header" = "# -*- mode: perl -*-" ]; then
+        SHELLY_LISP_IMPL=$(retrieve_config_from_perl "default_lisp" "$SHELLY_HOME/config")
+        SHELLY_LISP_BINARY=$(retrieve_config_from_perl "binary_path" "$SHELLY_HOME/config.$SHELLY_LISP_IMPL")
+        SHELLY_VERSION=$(retrieve_config_from_perl "version" "$SHELLY_HOME/config")
+        QUICKLISP_HOME=$(retrieve_config_from_perl "quicklisp_home" "$SHELLY_HOME/config")
+    else
+        . "$SHELLY_HOME/config"
+    fi
+    export SHELLY_VERSION
+    export QUICKLISP_HOME
+fi
+
+## Setting LISP_IMPL & LISP_BINARY
+
+if [ -n "$CIM_HOME" ]; then
+    LISP_BINARY="$CIM_HOME/bin/"$(echo $LISP_IMPL | sed -e 's/-system$//')
+elif [ -n "$SHELLY_LISP_IMPL" ] && [ -n "$SHELLY_LISP_BINARY" ]; then
+    LISP_IMPL=$SHELLY_LISP_IMPL
+    LISP_BINARY=$SHELLY_LISP_BINARY
+elif [ -n "$LISP_IMPL" ]; then
+    [ -z "$LISP_BINARY" ] && LISP_BINARY=$(which $LISP_IMPL)
+else
+    echo "Shelly is not configured. Trying to detect installed Lisps..."
+    n=0
+    candidate=
+    add_candidate() {
+        n=$((n+1))
+        binary=$(which $1)
+        candidate=$(printf -- "$candidate\n [%d]  %s\t%s" $n $1 $binary)
+        eval lisp_impl_option$n="$1"
+    }
+
+    if which sbcl >/dev/null 2>&1; then
+        add_candidate "sbcl"
+    fi
+    if which ccl >/dev/null 2>&1; then
+        add_candidate "ccl"
+    fi
+    if which alisp >/dev/null 2>&1; then
+        add_candidate "alisp"
+    fi
+    if which clisp >/dev/null 2>&1; then
+        add_candidate "clisp"
+    fi
+    if which abcl >/dev/null 2>&1; then
+        add_candidate "abcl"
+    fi
+    if which ecl >/dev/null 2>&1; then
+        add_candidate "ecl"
+    fi
+
+    if [ "$n" = 0 ]; then
+        echo "No Lisp implementations were detected. Exit." 1>&2
+        exit 1
+    fi
+
+    cat <<EOF
+$candidate
+
+$n implementations were detected.
+
+EOF
+
+    while true; do
+        read -p "Which Lisp do you want to use? [1] " chose || exit 1
+        [ -z "$chose" ] && chose=1
+        LISP_IMPL=$(eval echo "\$lisp_impl_option$chose")
+        [ -n "$LISP_IMPL" ] && break
+    done
+
+    LISP_BINARY=$(which $LISP_IMPL)
+fi
+
+if [ -z "$LISP_BINARY" ]; then
+    echo "Error: Lisp implementation '$LISP_IMPL' is not found." 1>&2
+    exit 1
+elif [ ! -f "$LISP_BINARY" ]; then
+    echo "Error: Lisp executable '$LISP_BINARY' is not found." 1>&2
+    exit 1
+fi
+
+export LISP_IMPL
+
+## Setting implementation specific variables
+
+case "$LISP_IMPL" in
+    sbcl*)
+        core_option="--core"
+        eval_option="--eval"
+        impl_cmd=$(printf -- "--noinform\n--non-interactive")
+        noinit_cmd=$(printf -- "--no-sysinit\n--no-userinit")
+        if [ -z "$CIM_HOME" ] || [ "$LISP_IMPL" = "sbcl-system" ]; then
+            sbcl_base=$(expr "$LISP_BINARY" : '\(.*\)/bin/sbcl')
+            SBCL_HOME="${sbcl_base}/lib/sbcl"
+        else
+            SBCL_HOME="$CIM_HOME/impls/$LISP_IMPL/lib/sbcl"
+        fi
+        export SBCL_HOME
+        ;;
+    ccl*)
+        core_option="-I"
+        eval_option="--eval"
+        impl_cmd=$(printf -- "--quiet\n--batch")
+        noinit_cmd=$(printf -- "--no-init")
+        ;;
+    alisp*)
+        core_option="-I"
+        eval_option="-e"
+        impl_cmd='-batch'
+        noinit_cmd="-qq"
+        ;;
+    clisp*)
+        core_option="-M"
+        eval_option="-x"
+        impl_cmd=$(printf -- "--quiet\n--silent\n-on-error\nexit")
+        noinit_cmd="-norc"
+        ;;
+    ecl*)
+        eval_option="-eval"
+        impl_cmd="-q"
+        noinit_cmd="-norc"
+        ;;
+    abcl*)
+        eval_option="--eval"
+        impl_cmd=$(printf -- "--noinform\n--batch")
+        noinit_cmd=$(printf -- "--noinit\n--nosystem")
+        ;;
+    *)
+        echo "Unknown lisp implementation $LISP_IMPL. Exit." >&2
+        exit 1
+        ;;
+esac
+
+: ${SHELLY_HOME:="$HOME/.shelly"}
+export SHELLY_HOME
+
+dumped_core_path() {
+    core_path="dumped-cores/$LISP_IMPL.core"
+    if [ -f "$core_path" ]; then
+        echo "$core_path"
+    else
+        echo "$SHELLY_HOME/$core_path"
+    fi
+}
+
+#====================
+# Options
+#====================
+
+init_cmd=
+option_cmd=
+main_cmd=
+
+add_option() {
+    option_cmd=$(printf -- "$option_cmd\n$1\n$2")
+}
+
+add_eval_option() {
+    add_option "$eval_option" "$1"
+}
+
+add_load_path() {
+    add_eval_option "(shelly.util::add-load-path (list #P\"$1\"))"
+}
+
+load_library() {
+    add_eval_option "(shelly.util::load-systems (list :$1))"
+}
+
+run_shelly_command() {
+    list=
+    for a in "$@"; do
+        list="$list \""$(echo $a | sed -e 's/"/\\\\"/g')"\""
+    done
+    main_cmd=$(printf -- "%s\n$eval_option\n(shelly.core::interpret (list$list) :verbose $verbose)" "$main_cmd")
+}
+
+load_quicklisp() {
+    if [ -n "$QUICKLISP_HOME" ]; then
+        init_cmd=$(printf -- "$init_cmd\n$eval_option\n(let ((*load-verbose* nil)) (load \"${QUICKLISP_HOME}setup.lisp\"))")
+    fi
+}
+
+load_shelly() {
+    if [ -z "$SHELLY_PATH" ]; then
+        shelly_path="$SHELLY_HOME/shelly/"
+    else
+        shelly_path="$SHELLY_PATH"
+    fi
+
+    init_cmd=$(printf -- "$init_cmd\n$eval_option\n(require (quote asdf))")
+    load_quicklisp
+    if [ -d "$shelly_path" ]; then
+        init_cmd=$(printf -- "$init_cmd\n$eval_option\n(push (asdf::truenamize \"$shelly_path\") asdf:*central-registry*)")
+    fi
+    init_cmd=$(printf -- "$init_cmd\n$eval_option\n(let ((*standard-output* (make-broadcast-stream)) #+allegro(*readtable* (copy-readtable))) #+quicklisp (ql:quickload :shelly) #-quicklisp (error \"Quicklisp is not installed.\"))")
+    init_cmd=$(printf -- "$init_cmd\n$eval_option\n(shelly.util::shadowing-use-package :shelly)")
+}
+
+load_core() {
+    if [ -z "$core_option" ]; then
+        echo "Although $LISP_IMPL doesn't support loading Lisp core, trying to load." 1>&1
+        exit 1
+    fi
+    impl_cmd=$(printf -- "$core_option\n$1\n$impl_cmd")
+}
+
+
+#====================
+# Main
+#====================
+
+verbose="nil"
+
+if [ "$DOWNLOADED" = 1 ]; then
+    action="install"
+    run_shelly_command "install"
+fi
+
+for ARG; do
+    case "$ARG" in
+        --help|-h|help)
+            action="shelly::help"
+            if [ $# = 1 ]; then
+                help=1
+                run_shelly_command "shelly::help"
+                shift
+            else
+                run_shelly_command "shelly::help" "\\\"$2\\\""
+                shift 2
+            fi
+            break
+            ;;
+        -I)
+            add_load_path "$2"
+            shift 2
+            ;;
+        -I*)
+            add_load_path $(echo $1 | sed -e 's/\-I//')
+            shift
+            ;;
+        --load|-L)
+            load_library "$2"
+            shift 2
+            ;;
+        -L*)
+            load_library $(echo $1 | sed -e 's/\-L//')
+            shift
+            ;;
+        --version|-V)
+            echo "Shelly ver $SHELLY_VERSION"
+            exit
+            ;;
+        --verbose)
+            verbose="t"
+            shift
+            ;;
+        --debug)
+            debug=1
+            shift
+            ;;
+        --file|-f)
+            shlyfile="$2"
+            shift 2
+            ;;
+        -f*)
+            shlyfile=$(echo $1 | sed -e 's/\-f//')
+            shift
+            ;;
+        --*|-*)
+            if [ "$1" != "-" ]; then
+                echo "Unknown option '$1'."
+                exit 1
+            fi
+            ;;
+        *)
+            action="$1"
+            run_shelly_command "$@"
+            break
+            ;;
+    esac
+done
+
+if [ -z "$action" ]; then
+    help=1
+    action="shelly::help"
+    run_shelly_command "shelly::help"
+fi
+
+case "$action" in
+    install)
+        load_shelly
+        ;;
+    dump-core)
+        load_shelly
+        ;;
+    *)
+        dumped_core_path=$(dumped_core_path)
+        if [ -z "$SHELLY_PATH" ] && [ "$core_option" ] && [ -f "$dumped_core_path" ]; then
+            load_core "$dumped_core_path"
+        else
+            if [ -z "$SHELLY_PATH" ]; then
+                case "$LISP_IMPL" in
+                    sbcl*|clisp*|ccl*|alisp*)
+                        echo "Warning: Core image wasn't found for $LISP_IMPL. It is probably slow, isn't it? Try \"shly dump-core\"." 1>&2
+                        ;;
+                esac
+            fi
+
+            load_shelly
+        fi
+
+        add_eval_option "(shelly.util::load-global-shlyfile)"
+        if [ -z "$shlyfile" ]; then
+            add_eval_option "(shelly.util::load-local-shlyfile)"
+        else
+            add_eval_option "(shelly.util::load-local-shlyfile #P\"$shlyfile\")"
+        fi
+        ;;
+esac
+
+main_cmd=$(printf -- "%s\n$eval_option\n(shelly.util::terminate)" "$main_cmd")
+
+if [ -n "$QUICKLISP_HOME" ]; then
+    cmd=$(printf -- "$impl_cmd\n$noinit_cmd$init_cmd$option_cmd%s" "$main_cmd")
+else
+    cmd=$(printf -- "$impl_cmd$init_cmd$option_cmd%s" "$main_cmd")
+fi
+
+IFS='
+'
+if [ "$debug" = 1 ]; then
+    cmd_for_debug=$(echo "$cmd" | tr '\n' ' ')
+    echo "$LISP_BINARY $cmd_for_debug"
+fi
+if [ "$help" = 1 ]; then
+    cat <<EOF
+Usage:
+    $ shly [options] [atom...]
+
+Options:
+    -h, --help
+        Show this help.
+
+    -I [directory]
+        Specify asdf:*central-registry* directory (several -I's allowed).
+
+    -L, --load [library]
+        Specify a library to be loaded before executing the expression
+        (several -L's allowed).
+
+    -V, --version
+        Print the version of Shelly and exit.
+
+    --verbose
+        Print some informations.
+
+    --debug
+        This flag is for Shelly developers.
+
+EOF
+fi
+
+if [ "$action" = "install" ]; then
+    "$LISP_BINARY" $cmd || exit 1
+    if [ -f "$SHELLY_HOME/shelly/init.csh" ] && expr "$SHELL" : '.*csh' >/dev/null 2>&1; then
+        rc="set SHELLY_HOME $SHELLY_HOME
+if (-r '$SHELLY_HOME/init.csh' ) then
+    source '$SHELLY_HOME/init.csh'
+fi"
+        case "$SHELL" in
+            */csh)  rcfile="$HOME/.cshrc";;
+            */tcsh) rcfile="$HOME/.tcshrc";;
+            *) ;;
+        esac
+    elif [ -f "$SHELLY_HOME/shelly/init.sh" ] && expr "$SHELL" : '.*sh' >/dev/null 2>&1; then
+        rc="SHELLY_HOME=$SHELLY_HOME; [ -s \"\$SHELLY_HOME/shelly/init.sh\" ] && . \"\$SHELLY_HOME/shelly/init.sh\""
+        case "$SHELL" in
+            */bash) rcfile="$HOME/.bashrc" ;;
+            */zsh)  rcfile="$HOME/.zshrc" ;;
+            */sh)   rcfile="$HOME/.profile" ;;
+            *) ;;
+        esac
+    fi
+
+    if [ -n "$rcfile" ] && [ -e "$rcfile" ]; then
+        if grep -F "$rc" "$rcfile" > /dev/null 2>&1; then
+            cat <<EOF
+
+Your shell has already configured in $rcfile. Enjoy!
+EOF
+        else
+            cat <<EOF
+
+Adding the following settings into your $rcfile:
+
+    $rc
+
+EOF
+            echo "$rc" >> "$rcfile"
+            cat <<EOF
+The configuration successed. Please reload your $rcfile. Enjoy!
+EOF
+        fi
+    fi
+else
+    exec "$LISP_BINARY" $cmd
+fi

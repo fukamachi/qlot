@@ -1,0 +1,5 @@
+name: shelly
+version: git-43f40827ca6633a139739043f4a7afe1403da718
+distinfo-subscription-url: http://127.0.0.1:50309/shelly.txt
+release-index-url: http://127.0.0.1:50309/shelly/git-43f40827ca6633a139739043f4a7afe1403da718/releases.txt
+system-index-url: http://127.0.0.1:50309/shelly/git-43f40827ca6633a139739043f4a7afe1403da718/systems.txt

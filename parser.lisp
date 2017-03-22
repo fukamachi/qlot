@@ -37,7 +37,12 @@
     (destructuring-bind (source-type &rest args)
         (split-sequence #\Space line :remove-empty-subseqs t)
       (apply #'make-source
-             (find-source-class source-type)
+             (handler-case
+                 (find-source-class source-type)
+               (error (e)
+                 (error 'qlot-qlfile-error
+                        :format-control "~A"
+                        :format-arguments (list e))))
              (mapcar (lambda (arg)
                        (if (char= (aref arg 0) #\:)
                            (intern (string-upcase (subseq arg 1)) :keyword)
@@ -82,7 +87,7 @@
                 source)))))
 
 (defun prepare-qlfile (file &key ignore-lock)
-  (format t "~&Reading '~A'..." file)
+  (format t "~&Reading '~A'...~%" file)
   (let ((default-ql-source (make-source 'source-ql :all :latest))
         (lock-file (and (not ignore-lock)
                         (uiop:file-exists-p

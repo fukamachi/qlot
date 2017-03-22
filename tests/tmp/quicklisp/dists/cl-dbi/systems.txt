@@ -1,0 +1,6 @@
+# project system-file system-name [dependency1..dependencyN]
+cl-dbi dbd-mysql dbd-mysql dbi cl-mysql cl-syntax cl-syntax-annot
+cl-dbi dbd-postgres dbd-postgres dbi cl-postgres cl-syntax cl-syntax-annot
+cl-dbi dbd-sqlite3 dbd-sqlite3 dbi sqlite cl-syntax cl-syntax-annot uiop
+cl-dbi dbi-test dbi-test dbi cl-test-more closer-mop cl-syntax cl-syntax-annot trivial-types
+cl-dbi dbi dbi cl-syntax cl-syntax-annot split-sequence closer-mop
