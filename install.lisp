@@ -1,7 +1,6 @@
 (in-package :cl-user)
 (defpackage qlot/install
-  (:use #:cl
-        #:iterate)
+  (:use #:cl)
   (:import-from #:qlot/parser
                 #:prepare-qlfile)
   (:import-from #:qlot/tmp
@@ -230,9 +229,7 @@
                                           #-unix (pathname-type script))))
                                  (uiop:copy-file script to)
                                  #+sbcl (sb-posix:chmod to #o700))))))))))))
-        (iter (for source in all-sources)
-          (for time from (get-universal-time))
-
+        (dolist (source all-sources)
           (cond
             ((not (already-installed-p source))
              #+quicklisp (ql:quickload :qlot/server :silent t)
@@ -255,19 +252,18 @@
                    (update-source source))
                (install-all-releases source)
                (stop-server)))
-            (T (format t "~&Already have dist ~S version ~S.~%"
+            (t (format t "~&Already have dist ~S version ~S.~%"
                        (source-dist-name source)
                        (source-version source))))
-
           (with-package-functions :ql-dist (dist (setf preference))
             (setf (preference (dist (source-dist-name source)))
-                  time))))
+                  (get-universal-time)))))
 
       (with-package-functions :ql-dist (uninstall name all-dists)
         (let ((sources-map (make-hash-table :test 'equal)))
-          (iter (for source in all-sources)
+          (dolist (source all-sources)
             (setf (gethash (source-dist-name source) sources-map) t))
-          (iter (for dist in (all-dists))
+          (dolist (dist (all-dists))
             (unless (gethash (name dist) sources-map)
               (format t "~&Removing dist ~S.~%" (name dist))
               (uninstall dist))))))
