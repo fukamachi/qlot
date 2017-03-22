@@ -117,7 +117,7 @@ For example, [Clack](http://clacklisp.org/) loads a server handler when executin
 To prevent the mess, wrap all code which would load other libraries in run-time with `qlot:with-local-quicklisp`.
 
 ```common-lisp
-(qlot:with-local-quicklisp (#P"/path/to/myapp/")
+(qlot:with-local-quicklisp (:myapp)
   (clack:clackup *app* :server :wookie))
 ```
 
@@ -188,7 +188,7 @@ $ git commit -m 'Bundle dependencies.'
 Eval the given form in the local quicklisp environment.
 
 ```common-lisp
-(qlot:with-local-quicklisp :myapp
+(qlot:with-local-quicklisp (:myapp)
   (ql:quickload :dexador))
 ```
 

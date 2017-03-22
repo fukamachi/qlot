@@ -53,9 +53,8 @@ If PATH isn't specified, this installs it to './quicklisp/'."
     (setf systems (list systems)))
   (with-package-functions :ql (quickload)
     (loop for system-name in systems
-          do (let ((root (asdf:system-source-directory system-name)))
-               (with-local-quicklisp (root :central-registry (list root))
-                 (apply #'quickload system-name args)))))
+          do (with-local-quicklisp (system-name)
+               (apply #'quickload system-name args))))
   systems)
 
 (defun systems-dependencies (systems qlhome)

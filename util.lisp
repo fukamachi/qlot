@@ -115,12 +115,25 @@ with the same key."
       (merge-hash-tables asdf::*defined-systems* original-defined-systems))))
 
 (defmacro with-local-quicklisp ((qlhome &key systems central-registry) &body body)
-  `(call-in-local-quicklisp
-    (lambda () ,@body)
-    ,qlhome
-    :systems ,systems
-    :central-registry (append ,central-registry
-                              (list (asdf:system-source-directory :qlot)))))
+  (let ((g-qlhome (gensym "QLHOME"))
+        (g-systems (gensym "SYSTEMS"))
+        (g-system-file (gensym "SYSTEM-FILE")))
+    `(let* ((,g-qlhome ,qlhome)
+            (,g-systems ,systems)
+            (,g-system-file (and (keywordp ,g-qlhome)
+                                 (asdf:system-source-file ,g-qlhome))))
+       (when ,g-system-file
+         (push ,g-system-file ,g-systems)
+         (setf ,g-qlhome
+               (make-pathname :name nil
+                              :type nil
+                              :directory (pathname-directory ,g-system-file))))
+       (call-in-local-quicklisp
+        (lambda () ,@body)
+        ,g-qlhome
+        :systems ,g-systems
+        :central-registry (append ,central-registry
+                                  (list (asdf:system-source-directory :qlot)))))))
 
 (defun sbcl-contrib-p (name)
   (let ((name (princ-to-string name)))
