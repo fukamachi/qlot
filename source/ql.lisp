@@ -8,10 +8,10 @@
   (:import-from #:qlot/proxy
                 #:get-proxy)
   (:import-from #:dexador)
-  (:import-from #:function-cache
-                #:defcached)
   (:import-from #:alexandria
                 #:starts-with-subseq)
+  (:import-from #:split-sequence
+                #:split-sequence)
   (:export #:source-ql
            #:source-ql-all))
 (in-package #:qlot/source/ql)
@@ -79,7 +79,7 @@
        (string= (slot-value source1 '%version)
                 (slot-value source2 '%version))))
 
-(defcached ql-latest-version ()
+(defun ql-latest-version ()
   (let ((stream (dex:get "http://beta.quicklisp.org/dist/quicklisp.txt"
                          :want-stream t
                          :proxy (get-proxy))))
@@ -110,7 +110,7 @@
             for line = (read-line body nil nil)
             while line
             when (starts-with-subseq project-name/sp line)
-              do (return (ppcre:split "\\s+" line))
+              do (return (split-sequence #\Space line :remove-empty-subseqs t))
             finally
                (error "~S doesn't exist in quicklisp ~A."
                       project-name
@@ -124,7 +124,7 @@
             for line = (read-line body nil nil)
             while line
             when (starts-with-subseq project-name/sp line)
-              collect (ppcre:split "\\s+" line)))))
+              collect (split-sequence #\Space line :remove-empty-subseqs t)))))
 
 (defgeneric source-ql-version (source)
   (:method ((source source-ql))

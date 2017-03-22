@@ -11,10 +11,6 @@
   (:import-from #:qlot/util
                 #:with-package-functions)
   (:import-from #:dexador)
-  (:import-from #:function-cache
-                #:defcached)
-  (:import-from #:alexandria
-                #:copy-stream)
   (:export #:source-http
            #:source-http-url))
 (in-package #:qlot/source/http)
@@ -73,7 +69,7 @@
        (equal (source-http-archive-md5 source1)
               (source-http-archive-md5 source2))))
 
-(defcached archive-md5 (source)
+(defun archive-md5 (source)
   (with-package-functions :ironclad (byte-array-to-hex-string digest-file)
     (byte-array-to-hex-string
      (digest-file :md5 (source-archive source)))))
