@@ -16,7 +16,6 @@
                 #:update-available-p
                 #:url-path-for
                 #:project.txt)
-  (:import-from #:qlot/source/ql)
   (:import-from #:qlot/shell
                 #:safety-shell-command)
   (:import-from #:qlot/util
@@ -206,7 +205,8 @@
 
     (with-quicklisp-home qlhome
       (flet ((install-all-releases (source)
-               (unless (typep source 'qlot/source/ql:source-ql-all)
+               (unless (equal (symbol-name (type-of source))
+                              (string :source-ql-all))
                  (let ((*standard-output* (make-broadcast-stream))
                        (*trace-output* (make-broadcast-stream)))
                    (with-package-functions :ql-dist (dist provided-releases ensure-installed base-directory)
