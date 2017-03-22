@@ -1,6 +1,7 @@
 (defpackage #:qlot/util
   (:use #:cl)
-  (:export #:with-quicklisp-home
+  (:export #:*system-quicklisp-home*
+           #:with-quicklisp-home
            #:with-package-functions
            #:pathname-in-directory-p
            #:find-qlfile
@@ -12,6 +13,9 @@
            #:with-in-directory
            #:project-systems))
 (in-package #:qlot/util)
+
+(defvar *system-quicklisp-home*
+  #+quicklisp ql:*quicklisp-home*)
 
 (defmacro with-quicklisp-home (qlhome &body body)
   `(progv (list (intern #.(string :*quicklisp-home*) :ql))

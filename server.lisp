@@ -15,7 +15,8 @@
   (:import-from #:qlot/tmp
                 #:*tmp-directory*)
   (:import-from #:qlot/util
-                #:with-local-quicklisp)
+                #:*system-quicklisp-home*
+                #:with-quicklisp-home)
   (:import-from #:clack
                 #:clackup
                 #:stop)
@@ -80,14 +81,13 @@
                     (setf (gethash path route)
                           (make-route source action))))
                 (funcall (make-route source 'project.txt)))))
-      (let ((qlhome #+quicklisp ql:*quicklisp-home*))
-        (lambda (env)
-          (with-local-quicklisp (qlhome)
-            (let ((fn (gethash (getf env :path-info) route))
-                  (*tmp-directory* tmp-directory))
-              (if fn
-                  (funcall fn)
-                  '(404 (:content-type "text/plain") ("Not Found"))))))))))
+      (lambda (env)
+        (with-quicklisp-home *system-quicklisp-home*
+          (let ((fn (gethash (getf env :path-info) route))
+                (*tmp-directory* tmp-directory))
+            (if fn
+                (funcall fn)
+                '(404 (:content-type "text/plain") ("Not Found")))))))))
 
 (defgeneric start-server (sources)
   (:method ((sources list))

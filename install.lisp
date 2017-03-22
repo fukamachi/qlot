@@ -18,6 +18,7 @@
   (:import-from #:qlot/shell
                 #:safety-shell-command)
   (:import-from #:qlot/util
+                #:*system-quicklisp-home*
                 #:find-qlfile
                 #:with-quicklisp-home
                 #:with-local-quicklisp
@@ -202,7 +203,6 @@
   (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
                                                                           (merge-pathnames #P"tmp/qlot/" qlhome))))
         (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
-        (system-qlhome #+quicklisp ql:*quicklisp-home*)
         (server-started-p nil))
 
     (with-quicklisp-home qlhome
@@ -234,7 +234,7 @@
                                  #+sbcl (sb-posix:chmod to #o700)))))))))))
              (ensure-server-started ()
                (unless server-started-p
-                 (with-local-quicklisp (system-qlhome)
+                 (with-quicklisp-home *system-quicklisp-home*
                    #+quicklisp (ql:quickload :qlot/server :silent t)
                    #-quicklisp (asdf:load-system :qlot/server)
                    (uiop:symbol-call :qlot/server :start-server all-sources)))))
