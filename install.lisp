@@ -298,7 +298,6 @@
                             "-r" "-h"
                             (format nil "~A*.*" (uiop:native-namestring *tmp-directory*))
                             "/s" "/d")
-                      :output *standard-output*
                       :error-output *error-output*
                       :ignore-error-status t)
     (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
