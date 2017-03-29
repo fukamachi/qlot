@@ -15,6 +15,8 @@
                 #:update-available-p
                 #:url-path-for
                 #:project.txt)
+  (:import-from #:qlot/shell
+                #:safety-shell-command)
   (:import-from #:qlot/util
                 #:*system-quicklisp-home*
                 #:find-qlfile
