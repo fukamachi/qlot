@@ -15,8 +15,6 @@
                 #:update-available-p
                 #:url-path-for
                 #:project.txt)
-  (:import-from #:qlot/shell
-                #:safety-shell-command)
   (:import-from #:qlot/util
                 #:*system-quicklisp-home*
                 #:find-qlfile
@@ -296,9 +294,13 @@
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
     #+windows
-    (safety-shell-command
-     "attrib"
-     (list "-r" "-h" (format nil "~A*.*" (uiop:native-namestring *tmp-directory*)) "/s" "/d"))
+    (uiop:run-program (list "attrib"
+                            "-r" "-h"
+                            (format nil "~A*.*" (uiop:native-namestring *tmp-directory*))
+                            "/s" "/d")
+                      :output *standard-output*
+                      :error-output *error-output*
+                      :ignore-error-status t)
     (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
 
 (defgeneric install-project (object &rest args)
