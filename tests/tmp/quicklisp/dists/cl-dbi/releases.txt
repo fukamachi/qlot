@@ -1,2 +1,0 @@
-# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
-cl-dbi http://127.0.0.1:50496/archive/cl-dbi/git-54928984e5756e92ba298aae51de8b95a6b0cf4b/cl-dbi-ref-54928984e5756e92ba298aae51de8b95a6b0cf4b.tar.gz 10689 8957659a2674769bf5f68acc9413fe91 68d19433180fac947c50876dfb2f96f35fd886df cl-dbi-ref-54928984e5756e92ba298aae51de8b95a6b0cf4b dbd-mysql.asd dbd-postgres.asd dbd-sqlite3.asd dbi-test.asd dbi.asd

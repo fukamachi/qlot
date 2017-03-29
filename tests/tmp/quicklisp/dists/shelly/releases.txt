@@ -1,2 +1,0 @@
-# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]
-shelly http://127.0.0.1:50309/archive/shelly/git-43f40827ca6633a139739043f4a7afe1403da718/shelly-branch-v0.7.x.tar.gz 14975 3b46754c64c1b82a6de4ff6ef19f0206 cc551bbefe87fbf34bd76a83280b64e1bbea9fb6 shelly-branch-v0.7.x shelly-test.asd shelly.asd
