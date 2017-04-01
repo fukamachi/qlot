@@ -63,7 +63,14 @@
             collect source)))
 
 (defun parse-qlfile-lock (file)
-  (loop for (project-name . args) in (uiop:read-file-forms file)
+  (loop for (project-name . args) in (handler-case (uiop:read-file-forms file)
+                                       (package-error (e)
+                                         (let ((system-name
+                                                 (string-downcase
+                                                  (substitute #\/ #\. (package-error-package e)))))
+                                           #+quicklisp (ql:quickload system-name :silent t)
+                                           #-quicklisp (asdf:load-system system-name)
+                                           (uiop:read-file-forms file))))
         for source = (apply #'make-instance (getf args :class) (getf args :initargs))
         do (setf (source-defrost-args source)
                  (delete-from-plist args :class :initargs))
