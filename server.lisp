@@ -18,10 +18,13 @@
                 #:*system-quicklisp-home*
                 #:with-quicklisp-home)
   (:import-from #:alexandria
-                #:when-let)
+                #:when-let
+                #:once-only
+                #:with-gensyms)
+  (:import-from #:uiop
+                #:copy-file)
   (:export #:localhost
-           #:start-server
-           #:stop-server))
+           #:with-qlot-server))
 (in-package #:qlot/server)
 
 (defvar *handler* nil)
@@ -33,7 +36,6 @@
     (return-from localhost path))
   (format nil "qlot://localhost~A" path))
 
-#+quicklisp
 (defun qlot-fetch (url file &key (follow-redirects t) quietly (maximum-redirects 10))
   "Request URL and write the body of the response to FILE."
   (declare (ignorable follow-redirects quietly maximum-redirects))
@@ -41,11 +43,12 @@
     (when (= (first result) 200)
       (typecase (third result)
         (list
-         (with-open-file (o file :direction :output :if-exists :supersede)
-           (format o "~A" (car (third result)))))
+         (with-open-file (out file :direction :output :if-exists :supersede :if-does-not-exist :create)
+           (dolist (chunk (third result))
+             (princ chunk out))))
         (pathname
          (uiop:copy-file (third result) file)))))
-  (values (make-instance 'ql-http::header :status 200)
+  (values (make-instance (intern (string '#:header) '#:ql-http) :status 200)
           (probe-file file)))
 
 (defun make-app (sources)
@@ -82,16 +85,14 @@
                 (funcall fn)
                 '(404 (:content-type "text/plain") ("Not Found")))))))))
 
-(defgeneric start-server (sources)
-  (:method ((sources list))
-    #+quicklisp
-    (let ((x "qlot"))
-      (setf ql-http:*fetch-scheme-functions*
-            (acons x 'qlot-fetch
-                   (remove x ql-http:*fetch-scheme-functions* :key 'first :test 'equal))))
-    (setf *handler* (make-app sources)))
-  (:method ((qlfile pathname))
-    (start-server (prepare-qlfile qlfile))))
-
-(defun stop-server ()
-  (setf *handler* nil))
+(defmacro with-qlot-server (sources &body body)
+  (once-only (sources)
+    (with-gensyms (fetch-scheme-functions)
+      `(let ((,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http))
+             (*handler* (make-app (if (pathnamep ,sources)
+                                      (prepare-qlfile ,sources)
+                                      ,sources))))
+         (progv (list ,fetch-scheme-functions)
+             (list (cons '("qlot" . qlot-fetch)
+                         (symbol-value ,fetch-scheme-functions)))
+           ,@body)))))

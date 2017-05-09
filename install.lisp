@@ -1,6 +1,9 @@
 (in-package :cl-user)
 (defpackage qlot/install
   (:use #:cl)
+  (:import-from #:qlot/server
+                #:with-qlot-server
+                #:localhost)
   (:import-from #:qlot/parser
                 #:prepare-qlfile)
   (:import-from #:qlot/tmp
@@ -39,8 +42,7 @@
                 #:directory-exists-p
                 #:directory-pathname-p
                 #:pathname-directory-pathname
-                #:delete-directory-tree
-                #:symbol-call)
+                #:delete-directory-tree)
   (:export #:install-quicklisp
            #:install-qlfile
            #:install-project))
@@ -179,17 +181,11 @@
                  (source-version source)))
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
-      (with-package-functions :qlot/server (localhost)
-        (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil)))))
+      (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))
 
 (defun update-source (source)
   (with-package-functions :ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
     (let ((dist (find-dist (source-dist-name source))))
-      (setf (distinfo-subscription-url dist)
-            (with-package-functions :qlot/server (localhost)
-              (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
-                                   (distinfo-subscription-url dist)
-                                   (localhost))))
       (let ((new-dist (available-update dist)))
         (format t "~&Updating dist ~S version ~S -> ~S.~%"
                 (name dist)
@@ -202,76 +198,64 @@
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
   (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
                                                                           (merge-pathnames #P"tmp/qlot/" qlhome))))
-        (all-sources (prepare-qlfile file :ignore-lock ignore-lock))
-        (server-started-p nil))
+        (all-sources (prepare-qlfile file :ignore-lock ignore-lock)))
 
     (with-quicklisp-home qlhome
-      (flet ((install-all-releases (source)
-               (unless (equal (symbol-name (type-of source))
-                              (string :source-ql-all))
-                 (let ((*standard-output* (make-broadcast-stream))
-                       (*trace-output* (make-broadcast-stream)))
-                   (with-package-functions :ql-dist (dist provided-releases ensure-installed base-directory)
-                     (let ((releases (provided-releases (dist (source-dist-name source)))))
-                       (dolist (release releases)
-                         (ensure-installed release)
+      (with-qlot-server all-sources
+        (flet ((install-all-releases (source)
+                 (unless (equal (symbol-name (type-of source))
+                                (string :source-ql-all))
+                   (let ((*standard-output* (make-broadcast-stream))
+                         (*trace-output* (make-broadcast-stream)))
+                     (with-package-functions :ql-dist (dist provided-releases ensure-installed base-directory)
+                       (let ((releases (provided-releases (dist (source-dist-name source)))))
+                         (dolist (release releases)
+                           (ensure-installed release)
 
-                         ;; Install Roswell scripts.
-                         (let* ((ros-dir (merge-pathnames #P"roswell/" (base-directory release)))
-                                (bin-dir (merge-pathnames #P"bin/" qlhome))
-                                (scripts (uiop:directory-files ros-dir "*.*")))
-                           (when scripts
-                             (ensure-directories-exist bin-dir)
-                             (dolist (script scripts)
-                               (let ((to (make-pathname
-                                          :name (pathname-name script)
-                                          :defaults bin-dir
-                                          :type #+unix (if (equalp (pathname-type script) "ros")
-                                                           nil
-                                                           (pathname-type script))
-                                          #-unix (pathname-type script))))
-                                 (uiop:copy-file script to)
-                                 #+sbcl (sb-posix:chmod to #o700)))))))))))
-             (ensure-server-started ()
-               (unless server-started-p
-                 (with-quicklisp-home *system-quicklisp-home*
-                   (unless (find-package :qlot/server)
-                     #+quicklisp (ql:quickload :qlot/server :silent t)
-                     #-quicklisp (asdf:load-system :qlot/server))
-                   (uiop:symbol-call :qlot/server :start-server all-sources)))))
-        (loop for source in all-sources
-              for preference from (get-universal-time)
-              do (cond
-                   ((not (already-installed-p source))
-                    (ensure-server-started)
-                    (install-source source)
-                    (install-all-releases source))
-                   ((source-update-available-p source)
-                    (prepare source)
-                    (ensure-server-started)
-                    (if (string= (source-dist-name source) "quicklisp")
-                        (with-package-functions :ql-dist (uninstall dist)
-                          (uninstall (dist "quicklisp"))
-                          (install-source source))
-                        (update-source source))
-                    (install-all-releases source))
-                   (t (format t "~&Already have dist ~S version ~S.~%"
-                              (source-dist-name source)
-                              (source-version source))))
-                 (with-package-functions :ql-dist (dist (setf preference))
-                   (setf (preference (dist (source-dist-name source))) preference))))
+                           ;; Install Roswell scripts.
+                           (let* ((ros-dir (merge-pathnames #P"roswell/" (base-directory release)))
+                                  (bin-dir (merge-pathnames #P"bin/" qlhome))
+                                  (scripts (uiop:directory-files ros-dir "*.*")))
+                             (when scripts
+                               (ensure-directories-exist bin-dir)
+                               (dolist (script scripts)
+                                 (let ((to (make-pathname
+                                            :name (pathname-name script)
+                                            :defaults bin-dir
+                                            :type #+unix (if (equalp (pathname-type script) "ros")
+                                                             nil
+                                                             (pathname-type script))
+                                                  #-unix (pathname-type script))))
+                                   (uiop:copy-file script to)
+                                   #+sbcl (sb-posix:chmod to #o700))))))))))))
+          (loop for source in all-sources
+                for preference from (get-universal-time)
+                do (cond
+                     ((not (already-installed-p source))
+                      (install-source source)
+                      (install-all-releases source))
+                     ((source-update-available-p source)
+                      (prepare source)
+                      (if (string= (source-dist-name source) "quicklisp")
+                          (with-package-functions :ql-dist (uninstall dist)
+                            (uninstall (dist "quicklisp"))
+                            (install-source source))
+                          (update-source source))
+                      (install-all-releases source))
+                     (t (format t "~&Already have dist ~S version ~S.~%"
+                                (source-dist-name source)
+                                (source-version source))))
+                   (with-package-functions :ql-dist (dist (setf preference))
+                     (setf (preference (dist (source-dist-name source))) preference))))
 
-      (with-package-functions :ql-dist (uninstall name all-dists)
-        (let ((sources-map (make-hash-table :test 'equal)))
-          (dolist (source all-sources)
-            (setf (gethash (source-dist-name source) sources-map) t))
-          (dolist (dist (all-dists))
-            (unless (gethash (name dist) sources-map)
-              (format t "~&Removing dist ~S.~%" (name dist))
-              (uninstall dist))))))
-
-    (when server-started-p
-      (uiop:symbol-call :qlot/server :stop-server))
+        (with-package-functions :ql-dist (uninstall name all-dists)
+          (let ((sources-map (make-hash-table :test 'equal)))
+            (dolist (source all-sources)
+              (setf (gethash (source-dist-name source) sources-map) t))
+            (dolist (dist (all-dists))
+              (unless (gethash (name dist) sources-map)
+                (format t "~&Removing dist ~S.~%" (name dist))
+                (uninstall dist)))))))
 
     ;; Quickload project systems.
     ;; NOTE: Commenting out because I'm not sure this is really required.
