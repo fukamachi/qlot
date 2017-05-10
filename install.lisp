@@ -32,7 +32,6 @@
                 #:generate-random-string)
   (:import-from #:qlot/proxy
                 #:get-proxy)
-  (:import-from #:bordeaux-threads)
   (:import-from #:uiop
                 #:ensure-directory-pathname
                 #:absolute-pathname-p
@@ -289,10 +288,6 @@
     (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)))
 
 (defgeneric install-project (object &rest args)
-  #-thread-support
-  (:method :before ((object t) &rest args)
-    (declare (ignore args))
-    (error "Multithread support is required to 'qlot install'."))
   (:method ((object symbol) &rest args)
     (apply #'install-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
@@ -318,10 +313,6 @@
           (apply #'install-qlfile object args)))))
 
 (defgeneric update-project (object &rest args)
-  #-thread-support
-  (:method :before ((object t) &rest args)
-    (declare (ignore args))
-    (error "Multithread support is required to 'qlot update'."))
   (:method ((object symbol) &rest args)
     (apply #'update-project (asdf:find-system object) args))
   (:method ((object string) &rest args)
