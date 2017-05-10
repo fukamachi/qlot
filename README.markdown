@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/fukamachi/qlot.svg?branch=master)](https://travis-ci.org/fukamachi/qlot)
 
-Qlot is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
+**Qlot** (pronounced `kyü-'lät`, like culotte) is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
 
 <strong><span style="color:red">Warning</span>: This software is still ALPHA quality. The APIs will be likely to change.</strong>
 
@@ -29,7 +29,7 @@ $ qlot exec ros -S . run
 $ qlot exec clackup app.lisp
 ```
 
-## What qlot is trying to solve
+## What Qlot is trying to solve
 
 We have Quicklisp, the central library registry. It made installation of libraries damn easy.
 
@@ -41,7 +41,7 @@ However, what only you can specify is the month of distribution. Which means you
 
 2) *They are difficult to fix the version or to update them.* If your project need to work on other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
 
-This is what qlot is trying to solve.
+This is what Qlot is trying to solve.
 
 ## Installation
 
@@ -90,7 +90,7 @@ Make sure you add `qlfile` and `qlfile.lock` to your version controlled reposito
 ```
 $ echo quicklisp/ >> .gitignore
 $ git add qlfile qlfile.lock
-$ git commit -m 'Start using qlot.'
+$ git commit -m 'Start using Qlot.'
 ```
 
 ### Updating the project-local quicklisp
@@ -213,7 +213,7 @@ git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae
 
 #### Retrieving from private repository
 
-Qlot doesn't have authentication feature, however, retrieving from private repository can be done via git's SSH key authentication.
+Qlot doesn't authenticate itself, but retrieving from private repository can be done via git's SSH key authentication. Which means, if the current user can `git clone`, Qlot also would be possible to do it.
 
 ```
 git myapp git@github.com:somewrite-adtech/myapp
