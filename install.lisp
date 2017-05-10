@@ -63,10 +63,10 @@
                                                  (generate-random-string))
                                          *tmp-directory*)))
     (ensure-directories-exist *tmp-directory*)
-    (dex:fetch "http://beta.quicklisp.org/quicklisp.lisp"
-               quicklisp-file
-               :if-exists :supersede
-               :proxy (get-proxy))
+    (progv (list (intern #.(string :*proxy-url*) :ql-http))
+        (list (get-proxy))
+      (with-package-functions :ql-http (http-fetch)
+        (http-fetch "http://beta.quicklisp.org/quicklisp.lisp" quicklisp-file)))
 
     #+(or ccl sbcl allegro clisp cmu ecl)
     (let ((eval-option (or

@@ -5,9 +5,8 @@
   (:import-from #:qlot/util
                 #:find-qlfile
                 #:with-package-functions)
-  (:import-from #:qlot/proxy
-                #:get-proxy)
-  (:import-from #:dexador)
+  (:import-from #:qlot/http
+                #:http-get)
   (:import-from #:alexandria
                 #:starts-with-subseq)
   (:import-from #:split-sequence
@@ -80,35 +79,27 @@
                 (slot-value source2 '%version))))
 
 (defun ql-latest-version ()
-  (let ((stream (dex:get "http://beta.quicklisp.org/dist/quicklisp.txt"
-                         :want-stream t
-                         :proxy (get-proxy))))
+  (let ((quicklisp.txt (http-get "http://beta.quicklisp.org/dist/quicklisp.txt")))
     (or
-     (loop for line = (read-line stream nil nil)
-           while line
+     (loop for line in (split-sequence #\Newline quicklisp.txt)
            when (starts-with-subseq "version: " line)
              do (return (subseq line 9)))
      (error "Failed to get the latest version of Quicklisp."))))
 
 (defun retrieve-quicklisp-releases (version)
-  (dex:get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt"
-                   version)
-           :want-stream t
-           :proxy (get-proxy)))
+  (http-get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt"
+                    version)))
 
 (defun retrieve-quicklisp-systems (version)
-  (dex:get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt"
-                   version)
-           :want-stream t
-           :proxy (get-proxy)))
+  (http-get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt"
+                    version)))
 
 (defun source-ql-releases (source)
   (with-slots (project-name) source
     (let* ((version (source-ql-version source))
-           (body (retrieve-quicklisp-releases version)))
+           (releases.txt (retrieve-quicklisp-releases version)))
       (loop with project-name/sp = (concatenate 'string project-name " ")
-            for line = (read-line body nil nil)
-            while line
+            for line in (split-sequence #\Newline releases.txt)
             when (starts-with-subseq project-name/sp line)
               do (return (split-sequence #\Space line :remove-empty-subseqs t))
             finally
@@ -119,10 +110,9 @@
 (defun source-ql-systems (source)
   (with-slots (project-name) source
     (let* ((version (source-ql-version source))
-           (body (retrieve-quicklisp-systems version)))
+           (systems.txt (retrieve-quicklisp-systems version)))
       (loop with project-name/sp = (concatenate 'string project-name " ")
-            for line = (read-line body nil nil)
-            while line
+            for line in (split-sequence #\Newline systems.txt)
             when (starts-with-subseq project-name/sp line)
               collect (split-sequence #\Space line :remove-empty-subseqs t)))))
 
