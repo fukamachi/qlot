@@ -239,6 +239,30 @@ github datafly fukamachi/datafly :branch develop
 
 If multiple distributions provide the same library, lower one would take priority over higher ones.
 
+## Working with SLIME
+
+[SLIME](https://github.com/slime/slime) is the most popular development environment in Common Lisp. However, its REPL always loads the global Quicklisp, not the project-local one.
+
+Here's quick steps to start project-local REPL with SLIME:
+
+1. Add the following function to `init.el`.
+
+```emacs-lisp
+(defun slime-qlot-exec (directory)
+  (interactive (list (read-directory-name "Project directory: ")))
+  (slime-start :program "qlot"
+               :program-args '("exec" "ros" "-S" "." "run")
+               :directory directory
+               :name 'qlot
+               :env (list (concat "PATH="
+                                  (mapconcat 'identity exec-path ":"))
+                          (concat "QUICKLISP_HOME="
+                                  directory "quicklisp/"))))
+```
+
+2. Relaunch the Emacs.
+3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
+
 ## Author
 
 * Eitaro Fukamachi (e.arrows@gmail.com)
