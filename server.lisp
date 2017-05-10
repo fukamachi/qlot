@@ -17,43 +17,39 @@
   (:import-from #:qlot/util
                 #:*system-quicklisp-home*
                 #:with-quicklisp-home)
-  (:import-from #:clack
-                #:clackup
-                #:stop)
-  (:import-from #:usocket)
   (:import-from #:alexandria
-                #:when-let)
+                #:when-let
+                #:once-only
+                #:with-gensyms)
+  (:import-from #:uiop
+                #:copy-file)
   (:export #:localhost
-           #:start-server
-           #:stop-server))
+           #:with-qlot-server))
 (in-package #:qlot/server)
 
 (defvar *handler* nil)
-
-(defvar *qlot-port* nil)
 
 (defun localhost (&optional (path ""))
   ;; Use PATH If PATH is an URL, not an URL path.
   (when (and (< 0 (length path))
              (not (char= (aref path 0) #\/)))
     (return-from localhost path))
+  (format nil "qlot://localhost~A" path))
 
-  (unless *qlot-port*
-    (error "~S is not set." '*qlot-port*))
-  (format nil "http://127.0.0.1:~D~A"
-          *qlot-port*
-          path))
-
-(defun port-available-p (port)
-  (handler-case (let ((socket (usocket:socket-listen "127.0.0.1" port :reuse-address t)))
-                  (usocket:socket-close socket))
-    (usocket:address-in-use-error (e) (declare (ignore e)) nil)))
-
-(defun random-port ()
-  "Return a port number not in use from 50000 to 60000."
-  (loop for port from (+ 50000 (random 1000)) upto 60000
-        if (port-available-p port)
-          return port))
+(defun qlot-fetch (url file &key (follow-redirects t) quietly (maximum-redirects 10))
+  "Request URL and write the body of the response to FILE."
+  (declare (ignorable follow-redirects quietly maximum-redirects))
+  (let ((result (funcall *handler* `(:path-info ,url))))
+    (when (= (first result) 200)
+      (typecase (third result)
+        (list
+         (with-open-file (out file :direction :output :if-exists :supersede :if-does-not-exist :create)
+           (dolist (chunk (third result))
+             (princ chunk out))))
+        (pathname
+         (uiop:copy-file (third result) file)))))
+  (values (make-instance (intern (string '#:header) '#:ql-http) :status 200)
+          (probe-file file)))
 
 (defun make-app (sources)
   (flet ((make-route (source action)
@@ -72,13 +68,13 @@
     (let ((route (make-hash-table :test 'equal))
           (tmp-directory *tmp-directory*))
       (dolist (source sources)
-        (setf (gethash (url-path-for source 'project.txt) route)
+        (setf (gethash (localhost (url-path-for source 'project.txt)) route)
               (lambda ()
                 (let ((*tmp-directory* tmp-directory))
                   (prepare source))
                 (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
                   (when-let (path (url-path-for source action))
-                    (setf (gethash path route)
+                    (setf (gethash (localhost path) route)
                           (make-route source action))))
                 (funcall (make-route source 'project.txt)))))
       (lambda (env)
@@ -89,23 +85,14 @@
                 (funcall fn)
                 '(404 (:content-type "text/plain") ("Not Found")))))))))
 
-(defgeneric start-server (sources)
-  (:method ((sources list))
-    (when *handler*
-      (stop-server))
-
-    (let ((port (random-port)))
-      (prog1
-          (setf *handler*
-                (let ((app (make-app sources)))
-                  (clackup app :port port :silent t)))
-        (setf *qlot-port* port)
-        (sleep 0.5))))
-  (:method ((qlfile pathname))
-    (start-server (prepare-qlfile qlfile))))
-
-(defun stop-server ()
-  (when *handler*
-    (stop *handler*)
-    (setf *handler* nil
-          *qlot-port* nil)))
+(defmacro with-qlot-server (sources &body body)
+  (once-only (sources)
+    (with-gensyms (fetch-scheme-functions)
+      `(let ((,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http))
+             (*handler* (make-app (if (pathnamep ,sources)
+                                      (prepare-qlfile ,sources)
+                                      ,sources))))
+         (progv (list ,fetch-scheme-functions)
+             (list (cons '("qlot" . qlot-fetch)
+                         (symbol-value ,fetch-scheme-functions)))
+           ,@body)))))

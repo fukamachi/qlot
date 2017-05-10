@@ -23,7 +23,6 @@
   :components ((:module "tests"
                 :components
                 ((:test-file "parser")
-                 (:test-file "server")
                  (:test-file "main"))))
 
   :defsystem-depends-on (:prove-asdf)
