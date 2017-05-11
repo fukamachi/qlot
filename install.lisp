@@ -185,6 +185,10 @@
 (defun update-source (source)
   (with-package-functions :ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
     (let ((dist (find-dist (source-dist-name source))))
+      (setf (distinfo-subscription-url dist)
+            (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
+                                 (distinfo-subscription-url dist)
+                                 (localhost)))
       (let ((new-dist (available-update dist)))
         (format t "~&Updating dist ~S version ~S -> ~S.~%"
                 (name dist)
