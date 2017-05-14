@@ -42,6 +42,8 @@
                 #:directory-pathname-p
                 #:pathname-directory-pathname
                 #:delete-directory-tree)
+  #+sbcl
+  (:import-from #:sb-posix)
   (:export #:install-quicklisp
            #:install-qlfile
            #:install-project))
