@@ -67,7 +67,7 @@
       (dolist (relative '("" "quicklisp/" "local-init/"))
         (dolist (file (uiop:directory-files (merge-pathnames "*.*" (merge-pathnames relative from))))
           (uiop:copy-file file (make-pathname
-                                :defaults (merge-pathnames relative path)
+                                :defaults (ensure-directories-exist (merge-pathnames relative path))
                                 :name (pathname-name file)
                                 :type (pathname-type file)))))
       (let ((*standard-output* (make-broadcast-stream))
