@@ -257,7 +257,7 @@ Here's quick steps to start project-local REPL with SLIME:
                :env (list (concat "PATH="
                                   (mapconcat 'identity exec-path ":"))
                           (concat "QUICKLISP_HOME="
-                                  directory "quicklisp/"))))
+                                  (file-name-as-directory directory) "quicklisp/"))))
 ```
 
 2. Relaunch the Emacs.
