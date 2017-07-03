@@ -131,7 +131,7 @@ with the same key."
          (setf ,g-qlhome
                (make-pathname :name nil
                               :type nil
-                              :directory (pathname-directory ,g-system-file))))
+                              :defaults ,g-system-file)))
        (call-in-local-quicklisp
         (lambda () ,@body)
         ,g-qlhome
