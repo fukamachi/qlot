@@ -58,64 +58,74 @@
    #+cmu (car ext:*command-line-strings*)
    #+ecl (car (si:command-args))))
 
-(defun install-quicklisp (&optional (path (merge-pathnames #P"quicklisp/" *default-pathname-defaults*)))
+(defvar *install-quicklisp-from* (or #+ros.init (roswell:opt "quicklisp")))
+
+(defun install-quicklisp (&optional (path (merge-pathnames #P"quicklisp/" *default-pathname-defaults*))
+                            (from *install-quicklisp-from*))
   (format t "~&Installing Quicklisp to ~A ...~%" path)
-  (let ((*standard-output* (make-broadcast-stream))
-        (quicklisp-file (merge-pathnames (format nil "quicklisp-~A.lisp"
-                                                 (generate-random-string))
-                                         *tmp-directory*)))
-    (ensure-directories-exist *tmp-directory*)
-    (progv (list (intern #.(string :*proxy-url*) :ql-http))
-        (list (get-proxy))
-      (with-package-functions :ql-http (http-fetch)
-        (http-fetch "http://beta.quicklisp.org/quicklisp.lisp" quicklisp-file)))
+  (if from
+      (dolist (relative '("" "quicklisp/" "local-init/"))
+        (dolist (file (uiop:directory-files (merge-pathnames "*.*" (merge-pathnames relative from))))
+          (uiop:copy-file file (make-pathname
+                                :defaults (ensure-directories-exist (merge-pathnames relative path))
+                                :name (pathname-name file)
+                                :type (pathname-type file)))))
+      (let ((*standard-output* (make-broadcast-stream))
+            (quicklisp-file (merge-pathnames (format nil "quicklisp-~A.lisp"
+                                                     (generate-random-string))
+                                             *tmp-directory*)))
+        (ensure-directories-exist *tmp-directory*)
+        (progv (list (intern #.(string :*proxy-url*) :ql-http))
+            (list (get-proxy))
+          (with-package-functions :ql-http (http-fetch)
+            (http-fetch "http://beta.quicklisp.org/quicklisp.lisp" quicklisp-file)))
 
-    #+(or ccl sbcl allegro clisp cmu ecl)
-    (let ((eval-option (or
-                        #+ccl "--eval"
-                        #+sbcl "--eval"
-                        #+allegro "-e"
-                        #+clisp "-x"
-                        #+cmu "-eval"
-                        #+ecl "-eval")))
-      (safety-shell-command *current-lisp-path*
+        #+(or ccl sbcl allegro clisp cmu ecl)
+        (let ((eval-option (or
+                            #+ccl "--eval"
+                            #+sbcl "--eval"
+                            #+allegro "-e"
+                            #+clisp "-x"
+                            #+cmu "-eval"
+                            #+ecl "-eval")))
+          (safety-shell-command *current-lisp-path*
 
-                            (append
+                                (append
 
-                             #+ccl '("--no-init" "--quiet" "--batch")
-                             #+sbcl '("--noinform" "--no-sysinit" "--no-userinit" "--non-interactive")
-                             #+allegro '("--qq")
-                             #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
-                             #+cmu '("-noinit")
-                             #+ecl '("-norc")
+                                 #+ccl '("--no-init" "--quiet" "--batch")
+                                 #+sbcl '("--noinform" "--no-sysinit" "--no-userinit" "--non-interactive")
+                                 #+allegro '("--qq")
+                                 #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
+                                 #+cmu '("-noinit")
+                                 #+ecl '("-norc")
 
-                             `(,eval-option
-                               ,(prin1-to-string `(load ,quicklisp-file)))
+                                 `(,eval-option
+                                   ,(prin1-to-string `(load ,quicklisp-file)))
 
-                             `(,eval-option
-                               ,(format nil "(quicklisp-quickstart:install :path #P\"~A\" ~@[:proxy \"~A\"~])" path (get-proxy)))
+                                 `(,eval-option
+                                   ,(format nil "(quicklisp-quickstart:install :path #P\"~A\" ~@[:proxy \"~A\"~])" path (get-proxy)))
 
-                             `(,eval-option
-                               ,(prin1-to-string
-                                 (quote
-                                  #+ccl (ccl:quit)
-                                  #+sbcl (sb-ext:exit)
-                                  #+allegro (excl:exit :quiet t)
-                                  #+clisp (ext:quit)
-                                  #+cmucl (unix:unix-exit)
-                                  #+ecl (ext:quit)
-                                  #-(or ccl sbcl allegro clisp cmucl ecl) (cl-user::quit)))))))
-    #-(or ccl sbcl allegro clisp cmu ecl)
-    (progn
-      (when (find-package :ql)
-        (delete-package :ql))
-      (asdf:clear-system :quicklisp)
-      (load quicklisp-file)
-      (with-package-functions :quicklisp-quickstart (install)
-        (let ((proxy (get-proxy)))
-          (if proxy
-            (install :path path :proxy proxy)
-            (install :path path))))))
+                                 `(,eval-option
+                                   ,(prin1-to-string
+                                     (quote
+                                      #+ccl (ccl:quit)
+                                      #+sbcl (sb-ext:exit)
+                                      #+allegro (excl:exit :quiet t)
+                                      #+clisp (ext:quit)
+                                      #+cmucl (unix:unix-exit)
+                                      #+ecl (ext:quit)
+                                      #-(or ccl sbcl allegro clisp cmucl ecl) (cl-user::quit)))))))
+        #-(or ccl sbcl allegro clisp cmu ecl)
+        (progn
+          (when (find-package :ql)
+            (delete-package :ql))
+          (asdf:clear-system :quicklisp)
+          (load quicklisp-file)
+          (with-package-functions :quicklisp-quickstart (install)
+            (let ((proxy (get-proxy)))
+              (if proxy
+                  (install :path path :proxy proxy)
+                  (install :path path)))))))
   T)
 
 (defun uninstall-all-dists (qlhome)
