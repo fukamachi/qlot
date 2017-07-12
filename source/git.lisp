@@ -123,16 +123,14 @@
     (tagbody git-cloning
        (restart-case
            (safety-shell-command "git"
-                                 (append `("clone"
-                                           "--branch" ,checkout-to)
-                                         (if (source-git-ref source)
-                                             '()
-                                             (list "--depth" "1"))
-                                         '("--recursive"
-                                           "--config" "core.eol=lf"
-                                           "--config" "core.autocrlf=input")
-                                         (list (source-git-remote-url source)
-                                               destination)))
+                                 `("clone"
+                                   "--branch" ,checkout-to
+                                   "--depth" "1"
+                                   "--recursive"
+                                   "--config" "core.eol=lf"
+                                   "--config" "core.autocrlf=input"
+                                   ,(source-git-remote-url source)
+                                   ,destination))
          (retry-git-clone ()
            :report "Retry to git clone the repository."
            (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
@@ -141,6 +139,7 @@
   (when (source-git-ref source)
     (let ((*error-output* (make-broadcast-stream)))
       (with-in-directory destination
+        (safety-shell-command "git" '("fetch" "--unshallow"))
         (safety-shell-command "git"
                               (list "checkout"
                                     (source-git-ref source))))))
