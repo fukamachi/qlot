@@ -1,6 +1,7 @@
 (defpackage #:qlot/util
   (:use #:cl)
   (:export #:*system-quicklisp-home*
+           #:*qlfilename*
            #:with-quicklisp-home
            #:with-package-functions
            #:pathname-in-directory-p
@@ -16,6 +17,7 @@
 
 (defvar *system-quicklisp-home*
   #+quicklisp ql:*quicklisp-home*)
+(defvar *qlfilename* "qlfile")
 
 (defmacro with-quicklisp-home (qlhome &body body)
   `(progv (list (intern #.(string :*quicklisp-home*) :ql))
@@ -47,14 +49,15 @@
           finally
              (return t))))
 
-(defun find-qlfile (directory &key (errorp t) use-lock)
+(defun find-qlfile (directory &key (errorp t) use-lock (filename *qlfilename*))
   (check-type directory pathname)
   (unless #+clisp (ext:probe-directory directory)
           #-clisp (probe-file directory)
     (error "~S does not exist." directory))
-  (let ((qlfile (merge-pathnames (if use-lock
-                                     "qlfile.lock"
-                                     "qlfile")
+  (let ((qlfile (merge-pathnames (format nil "~A~A" filename
+                                         (if use-lock
+                                             ".lock"
+                                             ""))
                                  directory)))
     (unless (probe-file qlfile)
       (when errorp
