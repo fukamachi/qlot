@@ -1,7 +1,7 @@
 (defpackage #:qlot/tests/parser
   (:use #:cl
         #:qlot/parser
-        #:prove)
+        #:rove)
   (:import-from #:qlot/source
                 #:source-project-name
                 #:prepare)
@@ -21,55 +21,46 @@
 (defun test-qlfile (name)
   (merge-pathnames name (asdf:system-relative-pathname :qlot #P"tests/data/")))
 
-(plan 17)
+(deftest parse-qlfile-line-test
+  (let ((source (parse-qlfile-line "ql log4cl 2014-03-17")))
+    (ok (typep source 'source-ql))
+    (ok (equal (source-project-name source) "log4cl"))
+    (ok (equal (source-ql-version source) "2014-03-17")))
 
-(diag "parse-qlfile-line")
+  (let ((source (parse-qlfile-line "ql :all 2014-12-17")))
+    (ok (typep source 'source-ql-all))
+    (ok (equal (source-project-name source) "quicklisp"))
+    (prepare source)
+    (ok (equal (source-ql-version source) "2014-12-17")))
 
-(let ((source (parse-qlfile-line "ql log4cl 2014-03-17")))
-  (is-type source 'source-ql)
-  (is (source-project-name source) "log4cl")
-  (is (source-ql-version source) "2014-03-17"))
-
-(let ((source (parse-qlfile-line "ql :all 2014-12-17")))
-  (is-type source 'source-ql-all)
-  (is (source-project-name source) "quicklisp")
-  (prepare source)
-  (is (source-ql-version source) "2014-12-17"))
-
-(is-error (parse-qlfile-line "source")
-          'qlot-qlfile-error
-          "invalid source")
-(is (parse-qlfile-line "# This is a comment.")
-    nil
-    "# comment")
-(is (parse-qlfile-line " # This is a comment.")
-    nil
-    " # comment")
-(is (parse-qlfile-line "; This is a comment.")
-    nil
-    "; comment")
-(is (parse-qlfile-line " ; This is a comment.")
-    nil
-    " ; comment")
-(is (parse-qlfile-line ";; This is a comment.")
-    nil
-    ";; comment")
-(is (parse-qlfile-line " ;; This is a comment.")
-    nil
-    " ;; comment")
-(is-type (parse-qlfile-line "git myapp http://myapp.com/\\#/myapp.git")
-         'source-git
-         "can escape a sharp")
-
-(let ((parsed (parse-qlfile (test-qlfile #P"qlfile"))))
-  (is (length parsed) 5))
-
-(is-error (parse-qlfile (test-qlfile #P"qlfile.error"))
+  (ok (signals
+          (parse-qlfile-line "source")
           'qlot-qlfile-error)
+      "invalid source")
+  (ok (equal (parse-qlfile-line "# This is a comment.") nil)
+      "# comment")
+  (ok (equal (parse-qlfile-line " # This is a comment.") nil)
+      " # comment")
+  (ok (equal (parse-qlfile-line "; This is a comment.") nil)
+      "; comment")
+  (ok (equal (parse-qlfile-line " ; This is a comment.") nil)
+      " ; comment")
+  (ok (equal (parse-qlfile-line ";; This is a comment.") nil)
+      ";; comment")
+  (ok (equal (parse-qlfile-line " ;; This is a comment.") nil)
+      " ;; comment")
+  (ok (typep (parse-qlfile-line "git myapp http://myapp.com/\\#/myapp.git")
+             'source-git)
+      "can escape a sharp"))
 
-;; https://github.com/fukamachi/qlot/issues/18
-(subtest "CRLF"
-  (let ((parsed (parse-qlfile (test-qlfile #P"qlfile-crlf"))))
-    (is (length parsed) 5)))
+(deftest parse-qlfile-test
+  (let ((parsed (parse-qlfile (test-qlfile #P"qlfile"))))
+    (ok (equal (length parsed) 5)))
 
-(finalize)
+  (ok (signals (parse-qlfile (test-qlfile #P"qlfile.error"))
+          'qlot-qlfile-error))
+
+  ;; https://github.com/fukamachi/qlot/issues/18
+  (testing "CRLF"
+    (let ((parsed (parse-qlfile (test-qlfile #P"qlfile-crlf"))))
+      (ok (equal (length parsed) 5)))))

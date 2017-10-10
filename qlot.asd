@@ -1,8 +1,15 @@
-#-asdf3.1 (error "Qlot requires ASDF 3.1")
-(asdf:defsystem qlot
+(defsystem "qlot"
   :class :package-inferred-system
   :version "0.3.0"
   :author "Eitaro Fukamachi"
   :license "MIT"
+  :description "A project-local library installer"
   :depends-on ("qlot/main")
-  :in-order-to ((test-op (test-op qlot-test))))
+  :in-order-to ((test-op (test-op "qlot/tests"))))
+
+(defsystem "qlot/tests"
+  :class :package-inferred-system
+  :depends-on ("rove"
+               "qlot/tests/parser"
+               "qlot/tests/main")
+  :perform (test-op (op c) (symbol-call :rove :run c)))
