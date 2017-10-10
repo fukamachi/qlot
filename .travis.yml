@@ -12,8 +12,6 @@ env:
 install:
   # Roswell
   - curl -L https://raw.githubusercontent.com/roswell/roswell/release/scripts/install-for-ci.sh | sh
-  # Libraries to use the latest version
-  - ros install froydnj/archive
   - ros install fukamachi/rove
 
 before_script:
