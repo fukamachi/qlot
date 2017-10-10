@@ -4,7 +4,7 @@
 
 **Qlot** (pronounced `kyü-'lät`, like culotte) is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
 
-<strong><span style="color:red">Warning</span>: This software is still ALPHA quality. The APIs will be likely to change.</strong>
+<strong><span style="color:red">Warning</span>: This software is still BETA quality. The APIs will be likely to change.</strong>
 
 ## Usage
 
