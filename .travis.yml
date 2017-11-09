@@ -12,6 +12,9 @@ env:
 install:
   # Roswell
   - curl -L https://raw.githubusercontent.com/roswell/roswell/release/scripts/install-for-ci.sh | sh
+  # Install the latest ASDF
+  - ros install asdf
+  # Rove
   - ros install fukamachi/rove
 
 before_script:
@@ -20,3 +23,4 @@ before_script:
 
 script:
   - rove qlot.asd
+  - ros config set asdf.version system && rove qlot.asd
