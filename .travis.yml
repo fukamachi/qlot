@@ -7,6 +7,7 @@ env:
     - ROSWELL_INSTALL_DIR=$HOME/.roswell
   matrix:
     - LISP=sbcl-bin
+    - LISP=sbcl/git
     - LISP=ccl-bin
 
 install:
