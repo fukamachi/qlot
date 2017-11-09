@@ -91,8 +91,10 @@ with the same key."
           '(asdf::environment-source-registry
             asdf::system-source-registry
             asdf::system-source-registry-directory))
-         (original-defined-systems asdf::*defined-systems*)
-         (asdf::*defined-systems* (make-hash-table :test 'equal)))
+         (original-defined-systems #+asdf3.3 asdf::*registered-systems*
+                                   #-asdf3.3 asdf::*defined-systems*)
+         (#+asdf3.3 asdf::*registered-systems*
+          #-asdf3.3 asdf::*defined-systems* (make-hash-table :test 'equal)))
 
     ;; Set systems already loaded to prevent reloading the same library in the local Quicklisp.
     (maphash (lambda (name system)
@@ -100,7 +102,8 @@ with the same key."
                  (when (or (null system-path)
                            (pathname-in-directory-p system-path qlhome)
                            (typep (cdr system) 'asdf:require-system))
-                   (setf (gethash name asdf::*defined-systems*) system))))
+                   (setf (gethash name #+asdf3.3 asdf::*registered-systems*
+                                       #-asdf3.3 asdf::*defined-systems*) system))))
              original-defined-systems)
 
     #-quicklisp
@@ -116,7 +119,8 @@ with the same key."
     (multiple-value-prog1 (funcall fn)
       ;; Make all systems that were actually loaded from the local quicklisp
       ;; visible through ASDF outside of the local environment.
-      (merge-hash-tables asdf::*defined-systems* original-defined-systems))))
+      (merge-hash-tables #+asdf3.3 asdf::*registered-systems*
+                         #-asdf3.3 asdf::*defined-systems* original-defined-systems))))
 
 (defmacro with-local-quicklisp ((qlhome &key systems central-registry) &body body)
   (let ((g-qlhome (gensym "QLHOME"))
