@@ -64,7 +64,8 @@ exec ros +Q -- $0 "$@"
                               (ros:getenv "QUICKLISP_HOME"))))
 
              ;; Overwrite CL_SOURCE_REGISTRY to the current directory
-             (setenv "CL_SOURCE_REGISTRY" (namestring *default-pathname-defaults*))
+             (setenv "CL_SOURCE_REGISTRY"
+                     (uiop:native-namestring (probe-file *default-pathname-defaults*)))
 
              ;; Add ~/.roswell/bin to $PATH
              (setenv "PATH"
