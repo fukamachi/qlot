@@ -14,7 +14,8 @@
            #:project-systems
            #:sbcl-contrib-p
            #:with-retrying
-           #:make-keyword))
+           #:make-keyword
+           #:extend-source-registry))
 (in-package #:qlot/util)
 
 (defvar *system-quicklisp-home*
@@ -191,6 +192,7 @@ with the same key."
                       asdf::*default-source-registry-exclusions*))
     systems))
 
+
 (defmacro with-retrying (&body body)
   (let ((retrying (gensym))
         (e (gensym)))
@@ -210,3 +212,44 @@ with the same key."
   "This function differ from alexandria:make-keyword
    because it upcases text before making it a keyword."
   (intern (string-upcase text) :keyword))
+
+
+(defun extend-source-registry (current-value dir-to-add)
+  "According to ASDF documentation:
+   https://common-lisp.net/project/asdf/asdf/Shell_002dfriendly-syntax-for-configuration.html
+   environment variable can contain a string with directories to search systems in,
+   or a s-exp in DSL, describing sources of systems.
+
+   This function modifies such string by adding `dir-to-add' in such
+   way, so it will have a preference over other system sources specified
+   in CL_SOURCE_REGISTRY environment variable."
+  (if current-value
+      (cond ((and (> (length current-value)
+                     0)
+                  (char= (elt current-value 0)
+                         #\())
+             ;; If current-value is a lisp form
+             (let ((data (read-from-string current-value)))
+               (unless (eql (first data)
+                            :source-registry)
+                 (error "Source registry definition should start with :source-registry keyword"))
+
+               (setf data
+                     (append
+                      (list :source-registry
+                            (list :directory (list dir-to-add)))
+                      (rest data)))
+
+               ;; Now serialize it back to a string and return as result
+               (write-to-string data
+                                ;; We need this flag to keep the form as a one line
+                                :pretty nil)))
+            ;; When current-value is a string, then just
+            ;; add qlot's path to the front
+            (t (format nil "~A~A~A"
+                       dir-to-add
+                       (if (uiop/os:os-windows-p)
+                           ";"
+                           ":")
+                       current-value)))
+      dir-to-add))

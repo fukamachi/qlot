@@ -68,8 +68,13 @@ COMMANDS:
                    (ros:getenv "QUICKLISP_HOME"))))
 
   ;; Overwrite CL_SOURCE_REGISTRY to the current directory
+  (ros:quicklisp)
+  (uiop:symbol-call :ql :quickload :qlot :silent t)
   (setenv "CL_SOURCE_REGISTRY"
-          (uiop:native-namestring (probe-file *default-pathname-defaults*))))
+          (uiop:symbol-call :qlot/util :extend-source-registry
+                            (uiop:getenv "CL_SOURCE_REGISTRY")
+                            (uiop:native-namestring (probe-file *default-pathname-defaults*)))))
+
 
 (defun parse-argv (argv)
   (let ((target nil)
@@ -95,6 +100,7 @@ COMMANDS:
                   (print-error "'~A' does not exist." target))
               :projects projects)
         (list :projects projects))))
+
 
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
