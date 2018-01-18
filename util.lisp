@@ -98,10 +98,11 @@ with the same key."
 
     ;; Set systems already loaded to prevent reloading the same library in the local Quicklisp.
     (maphash (lambda (name system)
-               (let ((system-path (asdf:system-source-directory (cdr system))))
+               (let* ((system-object #+asdf3.3 system #-asdf3.3 (cdr system))
+                      (system-path (asdf:system-source-directory system-object)))
                  (when (or (null system-path)
                            (pathname-in-directory-p system-path qlhome)
-                           (typep (cdr system) 'asdf:require-system))
+                           (typep system-object 'asdf:require-system))
                    (setf (gethash name #+asdf3.3 asdf::*registered-systems*
                                        #-asdf3.3 asdf::*defined-systems*) system))))
              original-defined-systems)
