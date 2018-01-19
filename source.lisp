@@ -249,31 +249,38 @@
                ((:version :require) (second dep))
                (:feature (third dep))))
            (normalize (dep)
-             (cond
-               ((and (consp dep)
-                     (keywordp (car dep)))
-                (dep-list-name dep))
-               ((or (symbolp dep)
-                    (stringp dep))
-                (string-downcase dep))
-               (t (error "Can't normalize dependency: ~S" dep)))))
+             (real-system-name
+              (cond
+                ((and (consp dep)
+                      (keywordp (car dep)))
+                 (dep-list-name dep))
+                ((or (symbolp dep)
+                     (stringp dep))
+                 (string-downcase dep))
+                (t (error "Can't normalize dependency: ~S" dep)))))
+           (real-system-name (name)
+             (subseq name 0 (position #\/ name))))
     (lambda (fun form env)
       (when (and (consp form)
-                 (eq (car form) 'asdf:defsystem))
-        (let ((defsystem-depends-on (getf (cddr form) :defsystem-depends-on))
-              (depends-on (getf (cddr form) :depends-on))
-              (weakly-depends-on (getf (cddr form) :weakly-depends-on)))
-          #+quicklisp
-          (when defsystem-depends-on
-            (ql:quickload defsystem-depends-on :silent t))
-          (setf (gethash (string-downcase (cadr form)) *dependencies*)
-                (sort
-                 (remove-if #'sbcl-contrib-p
-                            (remove-duplicates
-                             (mapcar #'normalize
-                                     (append defsystem-depends-on depends-on weakly-depends-on))
-                             :test #'equalp))
-                 #'string<))))
+                 (eq (first form) 'asdf:defsystem))
+        (destructuring-bind (system-name &rest system-form) (cdr form)
+          (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
+                (depends-on (getf system-form :depends-on))
+                (weakly-depends-on (getf system-form :weakly-depends-on))
+                (system-name (string-downcase system-name)))
+            #+quicklisp
+            (when defsystem-depends-on
+              (ql:quickload defsystem-depends-on :silent t))
+            (setf (gethash system-name *dependencies*)
+                  (sort
+                   (remove system-name
+                           (remove-if #'sbcl-contrib-p
+                                      (remove-duplicates
+                                       (mapcar #'normalize
+                                               (append defsystem-depends-on depends-on weakly-depends-on))
+                                       :test #'equalp))
+                           :test #'string=)
+                   #'string<)))))
       (funcall old-hook fun form env))))
 
 (defun system-file-systems (system-file)
@@ -296,7 +303,7 @@
           (*dependencies* (make-hash-table :test 'equal)))
       (dolist (system-file (source-system-files source))
         (dolist (system (system-file-systems system-file))
-          (format s "~A ~A ~A ~{~A~^ ~}~%"
+          (format s "~A ~A ~A~{ ~A~}~%"
                   (source-project-name source)
                   (pathname-name system-file)
                   (asdf:component-name system)
