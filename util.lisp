@@ -11,7 +11,8 @@
            #:all-required-systems
            #:generate-random-string
            #:with-in-directory
-           #:project-systems))
+           #:project-systems
+           #:sbcl-contrib-p))
 (in-package #:qlot/util)
 
 (defvar *system-quicklisp-home*

@@ -4,7 +4,8 @@
                 #:tmp-path)
   (:import-from #:qlot/util
                 #:find-qlfile
-                #:with-package-functions)
+                #:with-package-functions
+                #:sbcl-contrib-p)
   (:import-from #:uiop
                 #:directory-files
                 #:subdirectories
@@ -266,10 +267,13 @@
           (when defsystem-depends-on
             (ql:quickload defsystem-depends-on :silent t))
           (setf (gethash (string-downcase (cadr form)) *dependencies*)
-                (remove-duplicates
-                 (mapcar #'normalize
-                         (append defsystem-depends-on depends-on weakly-depends-on))
-                 :test #'equalp))))
+                (sort
+                 (remove-if #'sbcl-contrib-p
+                            (remove-duplicates
+                             (mapcar #'normalize
+                                     (append defsystem-depends-on depends-on weakly-depends-on))
+                             :test #'equalp))
+                 #'string<))))
       (funcall old-hook fun form env))))
 
 (defun system-file-systems (system-file)
