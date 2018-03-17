@@ -231,7 +231,16 @@
                                                              nil
                                                              (pathname-type script))
                                                   #-unix (pathname-type script))))
-                                   (uiop:copy-file script to)
+                                   (with-open-file (stream to :direction :output
+                                                              :if-exists :supersede
+                                                              :if-does-not-exist :create)
+                                     (format stream "#!/bin/sh
+CURRENT=$(dirname $0)
+cd \"$CURRENT/../../\"
+qlot exec \"$CURRENT/../~A\"
+"
+                                             (subseq (namestring script)
+                                                     (length (namestring qlhome)))))
                                    #+sbcl (sb-posix:chmod to #o700))))))))))))
           (loop for source in all-sources
                 for preference from (get-universal-time)
