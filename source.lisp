@@ -253,7 +253,9 @@
               (cond
                 ((and (consp dep)
                       (keywordp (car dep)))
-                 (dep-list-name dep))
+                 (let ((name (dep-list-name dep)))
+                   (etypecase name
+                     ((or symbol string) (string-downcase name)))))
                 ((or (symbolp dep)
                      (stringp dep))
                  (string-downcase dep))
