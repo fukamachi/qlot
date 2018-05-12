@@ -62,7 +62,23 @@ It's almost the same as using Quicklisp, except it also introduces a shell comma
 $ which qlot
 /Users/nitro_idiot/.roswell/bin/qlot
 $ qlot
-Usage: qlot [install | update | bundle | exec shell-args..]
+Usage: qlot COMMAND [ARGS..]
+
+COMMANDS:
+    install
+        Installs libraries to './quicklisp'.
+
+    update
+        Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+
+    bundle
+        Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
+
+    run
+        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
+
+    exec [shell-args..]
+        Invokes the following shell-command with the project local Quicklisp.
 ```
 
 ## Tutorial

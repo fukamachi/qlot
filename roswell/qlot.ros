@@ -24,6 +24,46 @@ exec ros +Q -- $0 "$@"
   (fresh-line *error-output*)
   (ros:quit -1))
 
+(defun print-usage ()
+  (format *error-output*
+          "~&Usage: ~A COMMAND [ARGS..]
+
+COMMANDS:
+    install
+        Installs libraries to './quicklisp'.
+
+    update
+        Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+
+    bundle
+        Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
+
+    run
+        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
+
+    exec [shell-args..]
+        Invokes the following shell-command with the project local Quicklisp.
+"
+          (file-namestring *load-pathname*)))
+
+(defun use-local-quicklisp ()
+  ;; Set QUICKLISP_HOME ./quicklisp/
+  (unless (ros:getenv "QUICKLISP_HOME")
+    (setenv "QUICKLISP_HOME" "quicklisp/"))
+  (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
+                  (merge-pathnames (ros:getenv "QUICKLISP_HOME")
+                                   (make-pathname :defaults *load-pathname* :name nil :type nil)))))
+    (unless (probe-file path)
+      (print-error "'~A' does not exist."
+                   (ros:getenv "QUICKLISP_HOME")))
+    (unless (probe-file (merge-pathnames "setup.lisp" path))
+      (print-error "Invalid Quicklisp directory: '~A'"
+                   (ros:getenv "QUICKLISP_HOME"))))
+
+  ;; Overwrite CL_SOURCE_REGISTRY to the current directory
+  (setenv "CL_SOURCE_REGISTRY"
+          (uiop:native-namestring (probe-file *default-pathname-defaults*))))
+
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
   (handler-case
@@ -49,23 +89,16 @@ exec ros +Q -- $0 "$@"
              (ros:quicklisp)
              (uiop:symbol-call :ql :quickload :qlot :silent t)
              (uiop:symbol-call :qlot :bundle))
-            ((equal "exec" $1)
-             ;; Set QUICKLISP_HOME ./quicklisp/
-             (unless (ros:getenv "QUICKLISP_HOME")
-               (setenv "QUICKLISP_HOME" "quicklisp/"))
-             (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
-                             (merge-pathnames (ros:getenv "QUICKLISP_HOME")
-                                              (make-pathname :defaults *load-pathname* :name nil :type nil)))))
-               (unless (probe-file path)
-                 (print-error "'~A' does not exist."
-                              (ros:getenv "QUICKLISP_HOME")))
-               (unless (probe-file (merge-pathnames "setup.lisp" path))
-                 (print-error "Invalid Quicklisp directory: '~A'"
-                              (ros:getenv "QUICKLISP_HOME"))))
+            ((equal "run" $1)
+             (use-local-quicklisp)
 
-             ;; Overwrite CL_SOURCE_REGISTRY to the current directory
-             (setenv "CL_SOURCE_REGISTRY"
-                     (uiop:native-namestring (probe-file *default-pathname-defaults*)))
+             (let ((ros (funcall (or #+win32 (lambda (x) (substitute #\\ #\/ x)) #'identity)
+                                 (if (zerop (length (ros:opt "wargv0")))
+                                     (ros:opt "argv0")
+                                     (ros:opt "wargv0")))))
+               (ros:exec (list ros "run"))))
+            ((equal "exec" $1)
+             (use-local-quicklisp)
 
              ;; Add ~/.roswell/bin to $PATH
              (setenv "PATH"
@@ -77,8 +110,6 @@ exec ros +Q -- $0 "$@"
                (unless command
                  (print-error "Command not found: ~A" (first argv)))
                (ros:exec (cons command (rest argv)))))
-            (t (format *error-output*
-                       "~&Usage: ~A [install | update | bundle | exec shell-args..]~%"
-                       (file-namestring *load-pathname*))
+            (t (print-usage)
                (ros:quit 1)))
     #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 nil))))
