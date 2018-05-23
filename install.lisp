@@ -237,7 +237,7 @@
                                      (format stream "#!/bin/sh
 CURRENT=$(dirname $0)
 cd \"$CURRENT/../../\"
-qlot exec \"$CURRENT/../~A\" \"$@\"
+qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 "
                                              (subseq (namestring script)
                                                      (length (namestring qlhome)))))
