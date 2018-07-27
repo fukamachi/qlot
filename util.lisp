@@ -12,7 +12,8 @@
            #:generate-random-string
            #:with-in-directory
            #:project-systems
-           #:sbcl-contrib-p))
+           #:sbcl-contrib-p
+           #:with-retrying))
 (in-package #:qlot/util)
 
 (defvar *system-quicklisp-home*
@@ -188,3 +189,18 @@ with the same key."
      :exclude (append (list "bundle-libs" "quicklisp")
                       asdf::*default-source-registry-exclusions*))
     systems))
+
+(defmacro with-retrying (&body body)
+  (let ((retrying (gensym))
+        (e (gensym))
+        (restart (gensym)))
+    `(let ((,retrying (make-hash-table :test 'equal)))
+       (handler-bind ((asdf:missing-component
+                        (lambda (,e)
+                          (unless (gethash (asdf::missing-requires ,e) ,retrying)
+                            (let ((,restart (find-restart 'asdf:retry)))
+                              (when ,restart
+                                (setf (gethash (asdf::missing-requires ,e) ,retrying) t)
+                                (asdf:clear-configuration)
+                                (invoke-restart ,restart)))))))
+         ,@body))))

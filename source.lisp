@@ -5,7 +5,8 @@
   (:import-from #:qlot/util
                 #:find-qlfile
                 #:with-package-functions
-                #:sbcl-contrib-p)
+                #:sbcl-contrib-p
+                #:with-retrying)
   (:import-from #:uiop
                 #:directory-files
                 #:subdirectories
@@ -50,7 +51,8 @@
          (system-name (string-downcase package-name))
          (package (or (find-package package-name)
                       (progn
-                        #+quicklisp (ql:quickload system-name :silent t)
+                        #+quicklisp
+                        (with-retrying (ql:quickload system-name :silent t))
                         #-quicklisp (asdf:load-system system-name)
                         (find-package package-name)))))
     (when package
