@@ -11,8 +11,13 @@
                 #:source-equal)
   (:import-from #:qlot/source/ql
                 #:source-ql)
+  (:import-from #:qlot/source/git)
+  (:import-from #:qlot/source/github)
+  (:import-from #:qlot/source/http)
   (:import-from #:qlot/error
                 #:qlot-qlfile-error)
+  (:import-from #:qlot/util
+                #:with-retrying)
   (:import-from #:cl-ppcre)
   (:import-from #:split-sequence
                 #:split-sequence)
@@ -37,12 +42,10 @@
     (destructuring-bind (source-type &rest args)
         (split-sequence #\Space line :remove-empty-subseqs t)
       (apply #'make-source
-             (handler-case
-                 (find-source-class source-type)
-               (error (e)
+             (or (find-source-class source-type)
                  (error 'qlot-qlfile-error
-                        :format-control "~A"
-                        :format-arguments (list e))))
+                        :format-control "Unknown source type: ~A"
+                        :format-arguments (list source-type)))
              (mapcar (lambda (arg)
                        (if (char= (aref arg 0) #\:)
                            (intern (string-upcase (subseq arg 1)) :keyword)
@@ -68,7 +71,7 @@
                                          (let ((system-name
                                                  (string-downcase
                                                   (substitute #\/ #\. (package-error-package e)))))
-                                           #+quicklisp (ql:quickload system-name :silent t)
+                                           #+quicklisp (with-retrying (ql:quickload system-name :silent t))
                                            #-quicklisp (asdf:load-system system-name)
                                            (uiop:read-file-forms file))))
         for source = (apply #'make-instance (getf args :class) (getf args :initargs))

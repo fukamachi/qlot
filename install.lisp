@@ -32,6 +32,7 @@
                 #:generate-random-string)
   (:import-from #:qlot/proxy
                 #:get-proxy)
+  (:import-from #:cl-ppcre)
   (:import-from #:uiop
                 #:ensure-directory-pathname
                 #:absolute-pathname-p
