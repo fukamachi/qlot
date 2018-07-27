@@ -11,6 +11,7 @@
   (:import-from #:qlot/util
                 #:with-package-functions)
   (:import-from #:dexador)
+  (:import-from #:ironclad)
   (:export #:source-http
            #:source-http-url))
 (in-package #:qlot/source/http)
@@ -70,8 +71,5 @@
               (source-http-archive-md5 source2))))
 
 (defun archive-md5 (source)
-  #+quicklisp (ql:quickload :ironclad :silent t)
-  #-quicklisp (asdf:load-system :ironclad)
-  (with-package-functions :ironclad (byte-array-to-hex-string digest-file)
-    (byte-array-to-hex-string
-     (digest-file :md5 (source-archive source)))))
+  (ironclad:byte-array-to-hex-string
+   (ironclad:digest-file :md5 (source-archive source))))

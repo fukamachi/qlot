@@ -12,6 +12,7 @@
                 #:subdirectories
                 #:directory-pathname-p
                 #:absolute-pathname-p)
+  (:import-from #:ironclad)
   (:export #:*dist-base-url*
            #:source
            #:make-source
@@ -48,13 +49,7 @@
 (defun find-source-class (class-name)
   (let* ((package-name (format nil "~A/~:@(~A~)"
                                :qlot/source class-name))
-         (system-name (string-downcase package-name))
-         (package (or (find-package package-name)
-                      (progn
-                        #+quicklisp
-                        (with-retrying (ql:quickload system-name :silent t))
-                        #-quicklisp (asdf:load-system system-name)
-                        (find-package package-name)))))
+         (package (find-package package-name)))
     (when package
       (intern (format nil "~A-~:@(~A~)" :source class-name)
               package))))
@@ -276,7 +271,8 @@
                 (system-name (string-downcase system-name)))
             #+quicklisp
             (when defsystem-depends-on
-              (ql:quickload defsystem-depends-on :silent t))
+              (with-retrying
+                (ql:quickload defsystem-depends-on :silent t)))
             (setf (gethash system-name *dependencies*)
                   (sort
                    (remove system-name
@@ -324,22 +320,19 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
   (first (uiop:directory* path)))
 
 (defmethod releases.txt ((source source-has-directory))
-  #+quicklisp (ql:quickload :ironclad :silent t)
-  #-quicklisp (asdf:load-system :ironclad)
   (let* ((tarball-file (source-archive source))
          (source-dir (normalize-pathname (source-directory source)))
          (prefix (car (last (pathname-directory source-dir)))))
     (multiple-value-bind (size file-md5 content-sha1)
         (with-open-file (in tarball-file :element-type '(unsigned-byte 8))
-          (with-package-functions :ironclad (byte-array-to-hex-string digest-file digest-sequence)
-            (values (file-length in)
-                    (byte-array-to-hex-string
-                     (digest-file :md5 tarball-file))
-                    (byte-array-to-hex-string
-                     (digest-sequence :sha1
-                                      (let ((out (make-array (file-length in) :element-type '(unsigned-byte 8))))
-                                        (read-sequence out in)
-                                        out))))))
+          (values (file-length in)
+                  (ironclad:byte-array-to-hex-string
+                   (ironclad:digest-file :md5 tarball-file))
+                  (ironclad:byte-array-to-hex-string
+                   (ironclad:digest-sequence :sha1
+                                             (let ((out (make-array (file-length in) :element-type '(unsigned-byte 8))))
+                                               (read-sequence out in)
+                                               out)))))
       (with-slots (project-name) source
         (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A~A ~A ~A ~A ~A~{ ~A~}~%"
                 project-name
