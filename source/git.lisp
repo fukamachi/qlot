@@ -9,6 +9,7 @@
                 #:with-in-directory)
   (:import-from #:uiop
                 #:delete-directory-tree)
+  (:import-from #:cl-ppcre)
   (:export #:source-git
            #:retry-git-clone))
 (in-package #:qlot/source/git)
