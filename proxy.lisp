@@ -16,7 +16,8 @@
 #+quicklisp
 (progn
   ;; dummy for suppress style warning
-  (defun orig-http-fetch ())
+  (defun orig-http-fetch (&rest args)
+    (declare (ignore args)))
   (setf (symbol-function 'orig-http-fetch) (fdefinition
                                              (find-symbol (string :http-fetch) :ql-http)))
   ;; do not use proxy if connect localhost
