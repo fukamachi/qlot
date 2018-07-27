@@ -255,7 +255,9 @@
                       (keywordp (car dep)))
                  (let ((name (dep-list-name dep)))
                    (etypecase name
-                     ((or symbol string) (string-downcase name)))))
+                     ((or symbol string) (string-downcase name))
+                     (list (ecase (first name)
+                             (:require (normalize (second name))))))))
                 ((or (symbolp dep)
                      (stringp dep))
                  (string-downcase dep))
