@@ -122,20 +122,22 @@
                          (source-git-tag source)
                          "master")))
     (tagbody git-cloning
-       (restart-case
-           (safety-shell-command "git"
-                                 `("clone"
-                                   "--branch" ,checkout-to
-                                   "--depth" "1"
-                                   "--recursive"
-                                   "--config" "core.eol=lf"
-                                   "--config" "core.autocrlf=input"
-                                   ,(source-git-remote-url source)
-                                   ,destination))
-         (retry-git-clone ()
-           :report "Retry to git clone the repository."
-           (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
-           (go git-cloning)))))
+      (when (uiop:directory-exists-p destination)
+        (uiop:delete-directory-tree destination))
+      (restart-case
+          (safety-shell-command "git"
+                                `("clone"
+                                  "--branch" ,checkout-to
+                                  "--depth" "1"
+                                  "--recursive"
+                                  "--config" "core.eol=lf"
+                                  "--config" "core.autocrlf=input"
+                                  ,(source-git-remote-url source)
+                                  ,destination))
+        (retry-git-clone ()
+          :report "Retry to git clone the repository."
+          (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
+          (go git-cloning)))))
 
   (when (source-git-ref source)
     (let ((*error-output* (make-broadcast-stream)))
