@@ -192,8 +192,7 @@ with the same key."
 
 (defmacro with-retrying (&body body)
   (let ((retrying (gensym))
-        (e (gensym))
-        (restart (gensym)))
+        (e (gensym)))
     `(let ((,retrying (make-hash-table :test 'equal)))
        (tagbody retry
          (handler-bind ((asdf:missing-component
