@@ -67,6 +67,7 @@
 
 (defun parse-qlfile-lock (file)
   (loop for (project-name . args) in (handler-case (uiop:read-file-forms file)
+                                       ;; Perhaps, this isn't needed anymore since stop loading source systems lazily.
                                        (package-error (e)
                                          (let ((system-name
                                                  (string-downcase
