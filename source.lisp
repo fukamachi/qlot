@@ -5,8 +5,7 @@
   (:import-from #:qlot/util
                 #:find-qlfile
                 #:with-package-functions
-                #:sbcl-contrib-p
-                #:with-retrying)
+                #:sbcl-contrib-p)
   (:import-from #:uiop
                 #:directory-files
                 #:subdirectories
@@ -271,8 +270,19 @@
                 (system-name (string-downcase system-name)))
             #+quicklisp
             (when defsystem-depends-on
-              (with-retrying
-                (ql:quickload defsystem-depends-on :silent t)))
+              (let ((map (make-hash-table :test 'equal)))
+                (labels ((get-deps (name)
+                           (when (gethash name map)
+                             (return-from get-deps nil))
+                           (setf (gethash name map) t)
+                           (let ((system (ql-dist:find-system name)))
+                             (when system
+                               (cons system
+                                     (loop for system-name in (ql-dist:required-systems system)
+                                           append (get-deps system-name)))))))
+                  (mapc #'ql-dist:ensure-installed
+                        (mapcan #'get-deps
+                                (copy-seq defsystem-depends-on))))))
             (setf (gethash system-name *dependencies*)
                   (sort
                    (remove system-name
