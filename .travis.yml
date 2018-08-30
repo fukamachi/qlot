@@ -20,4 +20,4 @@ before_script:
   - ros config
 
 script:
-  - ros -s rove -e '(rove:run :qlot/tests)'
+  - ros -s rove -e '(unless (rove:run :qlot/tests) (uiop:quit 1)'
