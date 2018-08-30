@@ -9,14 +9,13 @@
                 #:source-dist-name
                 #:source-defrost-args
                 #:source-equal)
-  (:import-from #:qlot/source/ql
-                #:source-ql)
   (:import-from #:qlot/source/git)
   (:import-from #:qlot/source/github)
   (:import-from #:qlot/source/http)
   (:import-from #:qlot/error
                 #:qlot-qlfile-error)
   (:import-from #:qlot/util
+                #:make-keyword
                 #:with-retrying)
   (:import-from #:cl-ppcre)
   (:import-from #:split-sequence
@@ -25,6 +24,8 @@
                 #:file-exists-p)
   (:import-from #:alexandria
                 #:delete-from-plist)
+  (:import-from #:qlot/dist
+                #:register-distribution)
   (:export #:parse-qlfile
            #:parse-qlfile-lock
            #:prepare-qlfile))
@@ -39,18 +40,33 @@
     (setf line (canonical-line line))
     (when (string= line "")
       (return-from parse-qlfile-line))
+    
     (destructuring-bind (source-type &rest args)
         (split-sequence #\Space line :remove-empty-subseqs t)
-      (apply #'make-source
-             (or (find-source-class source-type)
-                 (error 'qlot-qlfile-error
-                        :format-control "Unknown source type: ~A"
-                        :format-arguments (list source-type)))
-             (mapcar (lambda (arg)
-                       (if (char= (aref arg 0) #\:)
-                           (intern (string-upcase (subseq arg 1)) :keyword)
-                           arg))
-                     args)))))
+      (cond
+        ((string-equal source-type
+                       "dist")
+         (unless (= (length args) 2)
+           (error "Distribution's definition should contain it's name and url, like that: dist ultralisp http://dist.ultralisp.org/"))
+         (register-distribution (first args)
+                                (second args))
+         ;; Here we only registered a distribution and should not
+         ;; return any value
+         (values))
+        (t
+         (handler-case (apply #'make-source
+                              (make-keyword source-type)
+                              (mapcar (lambda (arg)
+                                        (if (char= (aref arg 0) #\:)
+                                            (make-keyword (subseq arg 1))
+                                            arg))
+                                      args))
+           ;; TODO: add proper condition classes for other implementations
+           #+ccl
+           (ccl:no-applicable-method-exists ()
+             (error 'qlot-qlfile-error
+                    :format-control "Unknown source type: ~A"
+                    :format-arguments (list source-type)))))))))
 
 (defun parse-qlfile (file)
   (with-open-file (in file)
@@ -99,7 +115,7 @@
 
 (defun prepare-qlfile (file &key ignore-lock)
   (format t "~&Reading '~A'...~%" file)
-  (let ((default-ql-source (make-source 'source-ql :all :latest))
+  (let ((default-ql-source (make-source :ql :all :latest))
         (lock-file (and (not ignore-lock)
                         (uiop:file-exists-p
                          (make-pathname :defaults file

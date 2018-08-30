@@ -23,7 +23,7 @@
                 :initform nil
                 :accessor source-http-archive-md5)))
 
-(defmethod make-source ((source (eql 'source-http)) &rest args)
+(defmethod make-source ((source (eql :http)) &rest args)
   (destructuring-bind (project-name url &optional archive-md5) args
     (make-instance 'source-http
                    :project-name project-name

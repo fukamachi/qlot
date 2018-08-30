@@ -44,7 +44,7 @@
     (setf (source-http-url source)
           (source-github-url source))))
 
-(defmethod make-source ((source (eql 'source-github)) &rest args)
+(defmethod make-source ((source (eql :github)) &rest args)
   (destructuring-bind (project-name repos &key ref branch tag) args
     (make-instance 'source-github
                    :project-name project-name

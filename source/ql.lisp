@@ -15,21 +15,77 @@
            #:source-ql-all))
 (in-package #:qlot/source/ql)
 
+
+(defparameter *default-distribution*
+  "http://beta.quicklisp.org/dist/quicklisp.txt")
+
+
 (defclass source-ql (source)
-  ((%version :initarg :%version)))
+  ((%version :initarg :%version)
+   (distribution :initarg :distribution
+                 :reader source-distribution)))
 
 (defclass source-ql-all (source)
-  ((%version :initarg :%version)))
+  ((%version :initarg :%version)
+   (distribution :initarg :distribution
+                 :reader source-distribution)))
 
-(defmethod make-source ((source (eql 'source-ql)) &rest args)
+
+(defun set-default-distribution (instance)
+  (when (not (slot-boundp instance 'distribution))
+    (setf (slot-value instance 'distribution)
+          *default-distribution*)))
+
+(defmethod initialize-instance :after ((instance source-ql)
+                                       &rest initargs)
+  (declare (ignorable initargs))
+  (set-default-distribution instance))
+
+
+(defmethod initialize-instance :after ((instance source-ql-all)
+                                       &rest initargs)
+  (declare (ignorable initargs))
+  (set-default-distribution instance))
+
+
+(defun get-distribution-url-pattern (distribution)
+  (check-type distribution string)
+  ;; TODO: add autodiscovery
+  (if (string-equal distribution
+                    *default-distribution*)
+      "http://beta.quicklisp.org/dist/quicklisp/~A/distinfo.txt"
+      "http://dist.ultralisp.org/ultralisp/~A/releases.txt"))
+
+
+(defun get-versioned-distribution-url (distribution version)
+  (check-type distribution string)
+  (check-type version string)
+  
+  (format nil
+          (get-distribution-url-pattern distribution)
+          version))
+
+
+(defmethod make-source ((source (eql :ql)) &rest args
+                        &key (distribution *default-distribution*)
+                          &allow-other-keys)
+  (remf args :distribution)
+  
   (destructuring-bind (project-name version) args
-    (if (eq project-name :all)
-        (make-instance 'source-ql-all
-                       :project-name "quicklisp"
-                       :%version version)
-        (make-instance 'source-ql
-                       :project-name project-name
-                       :%version version))))
+    (let ((url (if (eql version :latest)
+                   distribution
+                   (get-versioned-distribution-url distribution version))))
+      (if (eq project-name :all)
+          (make-instance 'source-ql-all
+                         :project-name (if (string= distribution *default-distribution*)
+                                           "quicklisp"
+                                           "ultralisp")
+                         :distribution url
+                         :%version version)
+          (make-instance 'source-ql
+                         :project-name project-name
+                         :distribution url
+                         :%version version)))))
 
 (defmethod print-object ((source source-ql-all) stream)
   (with-slots (project-name %version version) source
@@ -59,7 +115,7 @@
   (unless (slot-boundp source 'version)
     (setf (source-version source)
           (if (eq (slot-value source '%version) :latest)
-              (ql-latest-version)
+              (ql-latest-version source)
               (slot-value source '%version)))))
 
 (defmethod prepare ((source source-ql))
@@ -78,26 +134,43 @@
        (string= (slot-value source1 '%version)
                 (slot-value source2 '%version))))
 
-(defun ql-latest-version ()
-  (let ((quicklisp.txt (http-get "http://beta.quicklisp.org/dist/quicklisp.txt")))
+(defun ql-latest-version (source)
+  (check-type source (or source-ql source-ql-all))
+  (let ((quicklisp.txt (http-get (source-distribution source))))
     (or
      (loop for line in (split-sequence #\Newline quicklisp.txt)
            when (starts-with-subseq "version: " line)
              do (return (subseq line 9)))
      (error "Failed to get the latest version of Quicklisp."))))
 
-(defun retrieve-quicklisp-releases (version)
-  (http-get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/releases.txt"
-                    version)))
 
-(defun retrieve-quicklisp-systems (version)
-  (http-get (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/systems.txt"
-                    version)))
+(defun retrieve-quicklisp-metadata-item (source item-name)
+  (check-type source (or source-ql
+                         source-ql-all))
+  (check-type item-name string)
+  
+  (let* ((url (source-distribution source))
+         (dist-metadata (http-get url))
+         (search-for (format nil "~A: " item-name))
+         (value (loop for line in (split-sequence #\Newline dist-metadata)
+                      when (starts-with-subseq search-for line)
+                        do (return (subseq line (length search-for))))))
+    (unless value
+      (error "Failed to get the latest version of Quicklisp."))
+    value))
+
+(defun retrieve-quicklisp-releases (source)
+  (let* ((release-index-url (retrieve-quicklisp-metadata-item source "release-index-url")))
+    (http-get release-index-url)))
+
+(defun retrieve-quicklisp-systems (source)
+  (let* ((system-index-url (retrieve-quicklisp-metadata-item source "system-index-url")))
+    (http-get system-index-url)))
 
 (defun source-ql-releases (source)
   (with-slots (project-name) source
     (let* ((version (source-ql-version source))
-           (releases.txt (retrieve-quicklisp-releases version)))
+           (releases.txt (retrieve-quicklisp-releases source)))
       (loop with project-name/sp = (concatenate 'string project-name " ")
             for line in (split-sequence #\Newline releases.txt)
             when (starts-with-subseq project-name/sp line)
@@ -109,8 +182,7 @@
 
 (defun source-ql-systems (source)
   (with-slots (project-name) source
-    (let* ((version (source-ql-version source))
-           (systems.txt (retrieve-quicklisp-systems version)))
+    (let ((systems.txt (retrieve-quicklisp-systems source)))
       (loop with project-name/sp = (concatenate 'string project-name " ")
             for line in (split-sequence #\Newline systems.txt)
             when (starts-with-subseq project-name/sp line)
@@ -120,20 +192,22 @@
   (:method ((source source-ql))
     (with-slots (%version) source
       (if (eq %version :latest)
-          (ql-latest-version)
+          (ql-latest-version source)
           %version)))
   (:method ((source source-ql-all))
     (with-slots (version) source
       (if (eq version :latest)
-          (ql-latest-version)
+          (ql-latest-version source)
           version))))
 
 (defmethod distinfo.txt ((source source-ql))
+  (break)
   (format nil "~{~(~A~): ~A~%~}"
           (list :name                      (source-project-name source)
                 :version                   (source-version source)
                 :system-index-url          (url-for source 'systems.txt)
                 :release-index-url         (url-for source 'releases.txt)
+                ;; TODO: replace this with auto-discovery
                 :archive-base-url          "http://beta.quicklisp.org/"
                 :canonical-distinfo-url    (url-for source 'distinfo.txt)
                 :distinfo-subscription-url (url-for source 'project.txt))))
@@ -146,9 +220,7 @@
   (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~{~A~^ ~}~%"
           (source-ql-releases source)))
 
+
 (defmethod url-path-for ((source source-ql-all) (for (eql 'project.txt)))
   (prepare source)
-  (with-slots (version) source
-    (if (eq version :latest)
-        "http://beta.quicklisp.org/dist/quicklisp.txt"
-        (format nil "http://beta.quicklisp.org/dist/quicklisp/~A/distinfo.txt" version))))
+  (source-distribution source))

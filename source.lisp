@@ -3,6 +3,7 @@
   (:import-from #:qlot/tmp
                 #:tmp-path)
   (:import-from #:qlot/util
+                #:make-keyword
                 #:find-qlfile
                 #:with-package-functions
                 #:sbcl-contrib-p
@@ -68,7 +69,8 @@
 (defmethod initialize-instance :after ((source source) &rest initargs)
   (setf (slot-value source 'initargs) initargs))
 
-(defgeneric make-source (source &rest args))
+(defgeneric make-source (source &rest args)
+  (:documentation "Receives a keyword, denoting a source type and returns an instance of such source."))
 
 (defgeneric freeze-source-slots (source)
   (:method ((source source))
