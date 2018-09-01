@@ -44,6 +44,15 @@
                 #:directory-pathname-p
                 #:pathname-directory-pathname
                 #:delete-directory-tree)
+
+  ;; We need to import from these packages explicitly
+  ;; because they add make-source methods and these methods
+  ;; should be available during 'qlot install' or 'qlot update'
+  (:import-from #:qlot/source/ql)
+  (:import-from #:qlot/source/git)
+  (:import-from #:qlot/source/github)
+  (:import-from #:qlot/source/http)
+
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-quicklisp
