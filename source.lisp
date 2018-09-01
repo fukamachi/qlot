@@ -20,7 +20,6 @@
            #:freeze-source-slots
            #:defrost-source
            #:source-direct-dependencies
-           #:find-source-class
            #:prepare
            #:update-available-p
            #:project-name
@@ -46,13 +45,6 @@
 
 (defvar *dist-base-url* nil)
 
-(defun find-source-class (class-name)
-  (let* ((package-name (format nil "~A/~:@(~A~)"
-                               :qlot/source class-name))
-         (package (find-package package-name)))
-    (when package
-      (intern (format nil "~A-~:@(~A~)" :source class-name)
-              package))))
 
 (defclass source ()
   ((project-name :initarg :project-name

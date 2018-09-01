@@ -2,7 +2,6 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:make-source
-                #:find-source-class
                 #:defrost-source
                 #:source-project-name
                 #:source-version
