@@ -29,7 +29,8 @@
                 #:ensure-installed-in-local-quicklisp
                 #:pathname-in-directory-p
                 #:all-required-systems
-                #:generate-random-string)
+                #:generate-random-string
+                #:project-systems)
   (:import-from #:qlot/proxy
                 #:get-proxy)
   (:import-from #:cl-ppcre)
@@ -273,15 +274,27 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (uninstall dist)))))))
 
     ;; Quickload project systems.
-    ;; NOTE: Commenting out because I'm not sure this is really required.
-    ;;   All non-Quicklisp dists' releases should be installed above.
-    #+nil
-    (let ((systems (project-systems (uiop:pathname-directory-pathname file))))
+    (let ((systems (project-systems (uiop:pathname-directory-pathname file)))
+          (tries-so-far (make-hash-table :test 'equalp)))
       (with-package-functions :ql-dist (ensure-installed find-system)
         (with-package-functions :ql (quickload)
           (with-local-quicklisp (qlhome :systems systems)
             (dolist (asd systems)
-              (quickload (pathname-name asd)))))))
+              (tagbody retry
+                (handler-case
+                    (progn
+                      (locally
+                          (declare #+sbcl (sb-ext:muffle-conditions cl:warning))
+                        (handler-bind ((cl:warning #'muffle-warning))
+                          (asdf:load-system (pathname-name asd)))))
+                  (asdf:missing-dependency (c)
+                    (let ((missing (asdf::missing-requires c)))
+                      (when (gethash missing tries-so-far)
+                        (error "Cannot load a dependency ~A, which is required by ~A"
+                               missing (asdf::missing-required-by c)))
+                      (setf (gethash missing tries-so-far) t)
+                      (quickload missing :silent t)
+                      (go retry))))))))))
 
     (with-quicklisp-home qlhome
       (with-open-file (out (merge-pathnames (format nil "~A.lock" (file-namestring file))
