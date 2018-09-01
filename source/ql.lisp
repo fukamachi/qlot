@@ -40,7 +40,15 @@
 (defun set-default-distribution (instance)
   (when (not (slot-boundp instance 'distribution))
     (setf (slot-value instance 'distribution)
-          *default-distribution*)))
+          *default-distribution*))
+
+  ;; Now we may be need to update distribution's url
+  ;; if it should contain a version number
+  (let ((version (slot-value instance '%version)))
+    (when (not (eql version
+                    :latest))
+      (setf (slot-value instance 'distribution)
+            (get-versioned-distribution-url instance version)))))
 
 (defmethod initialize-instance :after ((instance source-ql)
                                        &rest initargs)
@@ -51,7 +59,13 @@
 (defmethod initialize-instance :after ((instance source-ql-all)
                                        &rest initargs)
   (declare (ignorable initargs))
-  (set-default-distribution instance))
+  (set-default-distribution instance)
+
+  ;; If project name wasn't specified, we'll extract it from
+  ;; distribution's metadata
+  (unless (slot-boundp instance 'project-name)
+    (setf (slot-value instance 'project-name)
+          (retrieve-quicklisp-metadata-item instance :name))))
 
 
 (defun get-distribution-url-pattern (source)
@@ -85,33 +99,29 @@
   (remf args :distribution)
   
   (destructuring-bind (project-name version) args
-    (let ((url (if (eql version :latest)
-                   distribution
-                   (get-versioned-distribution-url source version))))
-      (if (eq project-name :all)
-          (make-instance 'source-ql-all
-                         :project-name (if (string= distribution *default-distribution*)
-                                           "quicklisp"
-                                           "ultralisp")
-                         :distribution url
-                         :%version version)
-          (make-instance 'source-ql
-                         :project-name project-name
-                         :distribution url
-                         :%version version)))))
+    (if (eq project-name :all)
+        (make-instance 'source-ql-all
+                       :distribution distribution
+                       :%version version)
+        (make-instance 'source-ql
+                       :project-name project-name
+                       :distribution distribution
+                       :%version version))))
 
 (defmethod print-object ((source source-ql-all) stream)
   (with-slots (project-name %version version) source
-    (format stream "#<~S ~A ~A~:[~;~:*(~A)~]>"
-            (type-of source)
-            (if (stringp project-name)
-                project-name
-                (prin1-to-string project-name))
-            (if (stringp %version)
-                %version
-                (prin1-to-string %version))
-            (and (slot-boundp source 'version)
-                 (source-version source)))))
+    (print-unreadable-object (source stream :type t :identity t)
+      (format stream "~A ~A~:[~;~:*(~A)~]"
+              (if (slot-boundp source 'project-name)
+                  (if (stringp project-name)
+                      project-name
+                      (prin1-to-string project-name))
+                  "<unknown>")
+              (if (stringp %version)
+                  %version
+                  (prin1-to-string %version))
+              (and (slot-boundp source 'version)
+                   (source-version source))))))
 
 (defmethod print-object ((source source-ql) stream)
   (with-slots (project-name %version) source
@@ -172,6 +182,7 @@
             for trimmed-value = (trim value)
             when value
               appending (list key trimmed-value)))))
+
 
 (defun retrieve-quicklisp-metadata-item (source item-name &optional default)
   (check-type source (or source-ql

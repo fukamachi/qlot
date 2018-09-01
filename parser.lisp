@@ -62,8 +62,8 @@
                                             arg))
                                       args))
            ;; TODO: add proper condition classes for other implementations
-           #+ccl
-           (ccl:no-applicable-method-exists ()
+           ((or #+sbcl sb-pcl::no-applicable-method-error
+                #+ccl ccl:no-applicable-method-exists) ()
              (error 'qlot-qlfile-error
                     :format-control "Unknown source type: ~A"
                     :format-arguments (list source-type)))))))))
