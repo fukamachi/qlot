@@ -3,11 +3,16 @@
 #|
 exec ros +Q -m qlot -L sbcl-bin -- $0 "$@"
 |#
+(progn
+  #+quicklisp
+  (ql:quickload '(#:string-case #:split-sequence) :silent t))
 
 (ros:include "util")
 
 (defpackage #:ros/script/qlot
-  (:use #:cl)
+  (:use #:cl
+        #:string-case
+        #:split-sequence)
   (:import-from #:roswell.util
                 #:which
                 #:setenv))
@@ -34,6 +39,8 @@ COMMANDS:
 
     update
         Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+        Possible to update specific projects with --project option.
+        ex) qlot update --project mito
 
     bundle
         Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
@@ -64,6 +71,31 @@ COMMANDS:
   (setenv "CL_SOURCE_REGISTRY"
           (uiop:native-namestring (probe-file *default-pathname-defaults*))))
 
+(defun parse-argv (argv)
+  (let ((target nil)
+        (projects '())
+        (parsing-options nil))
+    (loop for option = (pop argv)
+          while option
+          do (string-case (option)
+               ("--project"
+                (setf parsing-options t)
+                (let ((project (pop argv)))
+                  (setf projects
+                        (append
+                         projects
+                         (split-sequence #\, project :remove-empty-subseqs t)))))
+               (t
+                (unless (and (null parsing-options)
+                           (null target))
+                  (error "Unknown option: ~A" option))
+                (setf target option))))
+    (if target
+        (list (or (probe-file target)
+                  (print-error "'~A' does not exist." target))
+              :projects projects)
+        (list :projects projects))))
+
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
   (handler-case
@@ -77,14 +109,9 @@ COMMANDS:
                  (uiop:symbol-call :qlot :install (probe-file (first argv)))
                  (uiop:symbol-call :qlot :install)))
             ((equal "update" $1)
-             (when (and (first argv)
-                        (not (probe-file (first argv))))
-               (print-error "'~A' does not found." (first argv)))
              (ros:quicklisp)
              (uiop:symbol-call :ql :quickload :qlot :silent t)
-             (if argv
-                 (uiop:symbol-call :qlot :update (probe-file (first argv)))
-                 (uiop:symbol-call :qlot :update)))
+             (apply #'uiop:symbol-call :qlot :update (parse-argv argv)))
             ((equal "bundle" $1)
              (ros:quicklisp)
              (uiop:symbol-call :ql :quickload :qlot :silent t)

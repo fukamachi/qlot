@@ -156,7 +156,7 @@
 
     (format t "~&Successfully installed.~%")))
 
-(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") projects)
   (unless (uiop:file-exists-p file)
     (error "File does not exist: ~A" file))
 
@@ -168,7 +168,7 @@
     (unless (find-package :ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome file qlhome :ignore-lock t)
+    (apply-qlfile-to-qlhome file qlhome :ignore-lock t :projects projects)
 
     (format t "~&Successfully updated.~%")))
 
@@ -211,10 +211,10 @@
         (let ((*trace-output* (make-broadcast-stream)))
           (update-in-place dist new-dist))))))
 
-(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock)
+(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock projects)
   (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
                                                                           (merge-pathnames #P"tmp/qlot/" qlhome))))
-        (all-sources (prepare-qlfile file :ignore-lock ignore-lock)))
+        (all-sources (prepare-qlfile file :ignore-lock ignore-lock :projects projects)))
 
     (with-quicklisp-home qlhome
       (with-qlot-server all-sources

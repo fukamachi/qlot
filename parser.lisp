@@ -80,7 +80,7 @@
           when source
             collect source)))
 
-(defun parse-qlfile-lock (file)
+(defun parse-qlfile-lock (file &key (test #'identity))
   (loop for (project-name . args) in (handler-case (uiop:read-file-forms file)
                                        ;; Perhaps, this isn't needed anymore since stop loading source systems lazily.
                                        (package-error (e)
@@ -90,10 +90,12 @@
                                            #+quicklisp (with-retrying (ql:quickload system-name :silent t))
                                            #-quicklisp (asdf:load-system system-name)
                                            (uiop:read-file-forms file))))
-        for source = (apply #'make-instance (getf args :class) (getf args :initargs))
-        do (setf (source-defrost-args source)
-                 (delete-from-plist args :class :initargs))
-        collect source))
+        when (funcall test project-name)
+        collect
+        (let ((source (apply #'make-instance (getf args :class) (getf args :initargs))))
+          (setf (source-defrost-args source)
+                (delete-from-plist args :class :initargs))
+          source)))
 
 (defun merging-lock-sources (sources lock-sources)
   (flet ((make-sources-map (sources)
@@ -112,10 +114,10 @@
                   lock-source)
                 source)))))
 
-(defun prepare-qlfile (file &key ignore-lock)
+(defun prepare-qlfile (file &key ignore-lock projects)
   (format t "~&Reading '~A'...~%" file)
   (let ((default-ql-source (make-source :ql :all :latest))
-        (lock-file (and (not ignore-lock)
+        (lock-file (and (or (not ignore-lock) projects)
                         (uiop:file-exists-p
                          (make-pathname :defaults file
                                         :name (file-namestring file)
@@ -128,5 +130,7 @@
     (when lock-file
       (setf sources
             (merging-lock-sources sources
-                                  (parse-qlfile-lock lock-file))))
+                                  (parse-qlfile-lock lock-file
+                                                     :test (lambda (name)
+                                                             (not (find name projects :test 'equal)))))))
     sources))
