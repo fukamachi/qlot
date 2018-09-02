@@ -13,7 +13,8 @@
            #:with-in-directory
            #:project-systems
            #:sbcl-contrib-p
-           #:with-retrying))
+           #:with-retrying
+           #:make-keyword))
 (in-package #:qlot/util)
 
 (defvar *system-quicklisp-home*
@@ -204,3 +205,8 @@ with the same key."
                               #-quicklisp (asdf:load-system (asdf::missing-requires ,e))
                               (go retry)))))
            ,@body)))))
+
+(defun make-keyword (text)
+  "This function differ from alexandria:make-keyword
+   because it upcases text before making it a keyword."
+  (intern (string-upcase text) :keyword))

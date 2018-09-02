@@ -30,7 +30,7 @@
    (git-cloned-p :initform nil
                  :accessor git-cloned-p)))
 
-(defmethod make-source ((source (eql 'source-git)) &rest initargs)
+(defmethod make-source ((source (eql :git)) &rest initargs)
   (destructuring-bind (project-name remote-url &rest args) initargs
     (apply #'make-instance 'source-git
            :project-name project-name

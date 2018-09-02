@@ -3,6 +3,7 @@
   (:import-from #:qlot/tmp
                 #:tmp-path)
   (:import-from #:qlot/util
+                #:make-keyword
                 #:find-qlfile
                 #:with-package-functions
                 #:sbcl-contrib-p)
@@ -19,7 +20,6 @@
            #:freeze-source-slots
            #:defrost-source
            #:source-direct-dependencies
-           #:find-source-class
            #:prepare
            #:update-available-p
            #:project-name
@@ -45,13 +45,6 @@
 
 (defvar *dist-base-url* nil)
 
-(defun find-source-class (class-name)
-  (let* ((package-name (format nil "~A/~:@(~A~)"
-                               :qlot/source class-name))
-         (package (find-package package-name)))
-    (when package
-      (intern (format nil "~A-~:@(~A~)" :source class-name)
-              package))))
 
 (defclass source ()
   ((project-name :initarg :project-name
@@ -67,7 +60,8 @@
 (defmethod initialize-instance :after ((source source) &rest initargs)
   (setf (slot-value source 'initargs) initargs))
 
-(defgeneric make-source (source &rest args))
+(defgeneric make-source (source &rest args)
+  (:documentation "Receives a keyword, denoting a source type and returns an instance of such source."))
 
 (defgeneric freeze-source-slots (source)
   (:method ((source source))
