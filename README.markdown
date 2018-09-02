@@ -24,6 +24,9 @@ $ qlot install
 # Updating depending libraries of a project.
 $ qlot update
 
+# Updating specific libraries
+$ qlot update --project mito
+
 # Execute a command with a project-local Quicklisp
 $ qlot exec ros -S . run
 $ qlot exec clackup app.lisp
@@ -70,6 +73,8 @@ COMMANDS:
 
     update
         Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+        Possible to update specific projects with --project option.
+        ex) qlot update --project mito
 
     bundle
         Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
