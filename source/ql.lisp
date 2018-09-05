@@ -170,7 +170,7 @@
 (defun retrieve-metadata (source)
   (check-type source (or source-ql
                          source-ql-all))
-  
+
   (let* ((url (source-distribution source))
          (dist-metadata (http-get url)))
     (flet ((trim (text)
@@ -188,7 +188,7 @@
   (check-type source (or source-ql
                          source-ql-all))
   (check-type item-name keyword)
-  
+
   (let* ((metadata (retrieve-metadata source))
          (value (getf metadata item-name default)))
     (unless value
@@ -228,10 +228,13 @@
 
 (defgeneric source-ql-version (source)
   (:method ((source source-ql))
-    (with-slots (%version) source
-      (if (eq %version :latest)
-          (ql-latest-version source)
-          %version)))
+    (if (slot-boundp source 'version)
+        ;; Omit 'ql-' prefix.
+        (subseq (source-version source) 3)
+        (with-slots (%version) source
+          (if (eq %version :latest)
+              (ql-latest-version source)
+              %version))))
   (:method ((source source-ql-all))
     (with-slots (version) source
       (if (eq version :latest)
