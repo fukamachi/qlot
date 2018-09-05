@@ -192,7 +192,10 @@
                  (source-version source)))
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
-      (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))
+      (locally
+          (declare #+sbcl (sb-ext:muffle-conditions cl:warning))
+        (handler-bind ((cl:warning #'muffle-warning))
+          (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))))
 
 (defun update-source (source)
   (with-package-functions :ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
