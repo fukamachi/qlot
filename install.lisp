@@ -220,13 +220,13 @@
 
     (with-quicklisp-home qlhome
       (with-qlot-server all-sources
-        (flet ((install-all-releases (source)
+        (flet ((install-all-releases (source &optional dist)
                  (unless (equal (symbol-name (type-of source))
                                 (string :source-ql-all))
                    (let ((*standard-output* (make-broadcast-stream))
                          (*trace-output* (make-broadcast-stream)))
                      (with-package-functions :ql-dist (dist provided-releases ensure-installed base-directory)
-                       (let ((releases (provided-releases (dist (source-dist-name source)))))
+                       (let ((releases (provided-releases (or dist (dist (source-dist-name source))))))
                          (dolist (release releases)
                            (ensure-installed release)
 
@@ -259,8 +259,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 for preference from (get-universal-time)
                 do (cond
                      ((not (already-installed-p source))
-                      (install-source source)
-                      (install-all-releases source))
+                      (let ((dist (install-source source)))
+                        (install-all-releases source dist)))
                      ((source-update-available-p source)
                       (prepare source)
                       (if (string= (source-dist-name source) "quicklisp")
