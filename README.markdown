@@ -164,6 +164,31 @@ $ qlot update
 $ qlot bundle
 ```
 
+### exec
+
+`qlot exec` does following:
+
+* configures `CL_SOURCE_REGISTRY` environment variable by adding a current directory;
+* adds Roswell's `bin` directory to the `PATH` environment variable;
+* executes given command with arguments.
+
+Here are few usefull commands:
+
+* `qlot exec ros emacs` - starts Emacs for development. Inferior lisp will use only
+  systems, installed by `qlot install`. If you want to use systems from directories other than
+  current and `./quicklisp/`, then set `CL_SOURCE_REGISTRY` variable before starting `qlot`.
+  This can be useful in case, if you have development versions of some systems, for example,
+  in `~/common-lisp/` directory and want to use them during project development:
+  
+  ```
+  CL_SOURCE_REGISTRY=~/common-lisp// qlot exec ros emacs
+  ```
+  
+  Read more about `CL_SOURCE_REGISTRY` in
+  [asdf's documentation](https://common-lisp.net/project/asdf/asdf/Shell_002dfriendly-syntax-for-configuration.html).
+* `qlot exec ros build some-app.ros` - another command, useful, to build a binary
+  from systems, fixed in `qlfile` and `qlfile.lock`. This way you can be sure that your builds are stable.
+
 ## `qlfile` syntax
 
 "qlfile" is a collection of Quicklisp dist declarations. Each line of that represents a dist.

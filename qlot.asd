@@ -11,5 +11,6 @@
   :class :package-inferred-system
   :depends-on ("rove"
                "qlot/tests/parser"
-               "qlot/tests/main")
+               "qlot/tests/main"
+               "qlot/tests/util")
   :perform (test-op (op c) (symbol-call :rove :run c)))
