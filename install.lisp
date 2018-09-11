@@ -17,7 +17,11 @@
                 #:prepare
                 #:update-available-p
                 #:url-path-for
-                #:project.txt)
+                #:project.txt
+
+                ;; XXX
+                #:*dependencies*
+                #:system-file-systems)
   (:import-from #:qlot/shell
                 #:safety-shell-command)
   (:import-from #:qlot/util
@@ -26,7 +30,8 @@
                 #:with-quicklisp-home
                 #:with-local-quicklisp
                 #:with-package-functions
-                #:ensure-installed-in-local-quicklisp
+                #:*already-seen*
+                #:all-required-systems
                 #:pathname-in-directory-p
                 #:generate-random-string
                 #:project-systems)
@@ -296,32 +301,41 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
     ;; Quickload project systems.
+    (format t "~&Calculating project dependencies...~%")
     (let ((systems (project-systems (uiop:pathname-directory-pathname file)))
           (tries-so-far (make-hash-table :test 'equalp))
           (ql:*quickload-verbose* nil))
       (with-package-functions :ql-dist (ensure-installed find-system)
-        (with-package-functions :ql (quickload)
-          (with-local-quicklisp (qlhome :systems systems)
-            (dolist (asd systems)
-              (format t "~&Loading \"~(~A~)\" and its dependencies. (This may take awhile)~%" (pathname-name asd))
-              (tagbody retry
-                (handler-case
-                    (progn
-                      (locally
-                          (declare #+sbcl (sb-ext:muffle-conditions cl:warning))
-                        (handler-bind ((cl:warning #'muffle-warning))
-                          (let ((*standard-output* (make-broadcast-stream))
-                                (*error-output* (make-broadcast-stream)))
-                            (asdf:load-system (pathname-name asd) :verbose nil)))))
-                  (asdf:missing-dependency (c)
-                    (let ((missing (asdf::missing-requires c)))
-                      (when (gethash missing tries-so-far)
-                        (error "Cannot load a dependency ~A, which is required by ~A"
-                               missing (asdf::missing-required-by c)))
-                      (setf (gethash missing tries-so-far) t)
-                      (format t "~&Loading \"~(~A~)\".~%" missing)
-                      (quickload missing :silent t)
-                      (go retry))))))))))
+        (with-local-quicklisp (qlhome :systems systems)
+          (let ((*already-seen* (make-hash-table :test 'equal)))
+            (labels ((system-dependencies (system-name)
+                       (unless (gethash system-name *already-seen*)
+                         (let ((system (asdf:find-system system-name nil)))
+                           (cond
+                             ((or (null system)
+                                  (not (equal (asdf:component-pathname system)
+                                              (uiop:pathname-directory-pathname (first systems)))))
+                              (cons
+                               system-name
+                               (all-required-systems system-name)))
+                             (t
+                              ;; Probably the user application's system.
+                              ;; Continuing looking for it's dependencies
+                              (setf (gethash system-name *already-seen*) t)
+                              (mapcan #'system-dependencies
+                                      (mapcar #'string-downcase
+                                              (asdf::component-sideway-dependencies system)))))))))
+              (let ((dependencies
+                      (delete-if (lambda (system)
+                                   (or (member system systems :key #'pathname-name :test #'string-equal)
+                                       (not (find-system system))))
+                                 (mapcan #'system-dependencies
+                                         (mapcar #'asdf:component-name
+                                                 (let ((*dependencies* (make-hash-table :test 'equal)))
+                                                   (mapcan #'system-file-systems systems)))))))
+                (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
+                (mapc #'ensure-installed
+                      (mapcar #'find-system dependencies))))))))
 
     #+windows
     (uiop:run-program (list "attrib"

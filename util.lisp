@@ -7,7 +7,6 @@
            #:find-qlfile
            #:call-in-local-quicklisp
            #:with-local-quicklisp
-           #:ensure-installed-in-local-quicklisp
            #:all-required-systems
            #:generate-random-string
            #:with-in-directory
@@ -152,12 +151,17 @@ with the same key."
     (and (<= 3 (length name))
          (string-equal name "sb-" :end1 3))))
 
+(defvar *already-seen*)
+
 (defun all-required-systems (systems)
-  (let ((systems (if (listp systems) systems (list systems))))
+  (let ((systems (if (listp systems) systems (list systems)))
+        (already-seen (or *already-seen* (make-hash-table :test 'equal))))
     (with-package-functions :ql (required-systems find-system)
       (labels ((main (system-name)
-                 (unless (or (string-equal system-name "asdf")
+                 (unless (or (gethash system-name already-seen)
+                             (string-equal system-name "asdf")
                              (sbcl-contrib-p system-name))
+                   (setf (gethash system-name already-seen) t)
                    (let* ((system (find-system system-name))
                           (req (and system (required-systems system)))
                           (req (remove :asdf req :test #'string-equal)))
