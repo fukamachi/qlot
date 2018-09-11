@@ -67,11 +67,15 @@
     (setf (slot-value instance 'project-name)
           (retrieve-quicklisp-metadata-item instance :name))))
 
+(defmethod defrost-source :after ((source source-ql-all))
+  (when (slot-boundp source 'version)
+    (setf (slot-value source 'distribution)
+          (get-versioned-distribution-url source (slot-value source 'version)))))
 
 (defun get-distribution-url-pattern (source)
   (check-type source (or source-ql
                          source-ql-all))
-  
+
   (cond ((string-equal (source-distribution source)
                        *default-distribution*)
          *quicklisp-versioned-distinfo*)
