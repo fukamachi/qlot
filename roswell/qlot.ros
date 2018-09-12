@@ -1,18 +1,13 @@
 #!/bin/sh
 #|-*- mode:lisp -*-|#
 #|
-exec ros -Q -L sbcl-bin -- $0 "$@"
+exec ros +Q -L sbcl-bin -- $0 "$@"
 |#
-(progn
-  #+quicklisp
-  (ql:quickload '(#:string-case #:split-sequence) :silent t))
 
 (ros:include "util")
 
 (defpackage #:ros/script/qlot
-  (:use #:cl
-        #:string-case
-        #:split-sequence)
+  (:use #:cl)
   (:import-from #:roswell.util
                 #:which
                 #:setenv))
@@ -75,6 +70,26 @@ COMMANDS:
                             (uiop:getenv "CL_SOURCE_REGISTRY")
                             (uiop:native-namestring (probe-file *default-pathname-defaults*)))))
 
+(defmacro case-equal (keyform &body cases)
+  (let ((g-keyform (gensym "KEYFORM")))
+    `(let ((,g-keyform ,keyform))
+       (cond
+         ,@(loop for (case . body) in cases
+                 if (eq case 'otherwise)
+                   collect `(t ,@body)
+                 else
+                   collect `((find ,g-keyform ',(if (listp case)
+                                                    case
+                                                    (list case))
+                                   :test #'equal)
+                             ,@body))))))
+
+(defun split (div sequence)
+  (let ((pos (position div sequence)))
+    (if pos
+        (list* (subseq sequence 0 pos)
+               (split div (subseq sequence (1+ pos))))
+        (list sequence))))
 
 (defun parse-argv (argv)
   (let ((target nil)
@@ -82,17 +97,19 @@ COMMANDS:
         (parsing-options nil))
     (loop for option = (pop argv)
           while option
-          do (string-case (option)
+          do (case-equal option
                ("--project"
                 (setf parsing-options t)
                 (let ((project (pop argv)))
                   (setf projects
                         (append
                          projects
-                         (split-sequence #\, project :remove-empty-subseqs t)))))
-               (t
+                         (remove ""
+                                 (split #\, project)
+                                 :test 'equal)))))
+               (otherwise
                 (unless (and (null parsing-options)
-                           (null target))
+                             (null target))
                   (error "Unknown option: ~A" option))
                 (setf target option))))
     (if target
