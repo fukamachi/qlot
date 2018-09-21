@@ -325,14 +325,28 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                               (mapcan #'system-dependencies
                                       (mapcar #'string-downcase
                                               (asdf::component-sideway-dependencies system)))))))))
+              (let ((*dependencies* (make-hash-table :test 'equal)))
+                (let ((*macroexpand-hook* (lambda (&rest args)
+                                            (declare (ignore args)))))
+                  (mapcan #'system-file-systems systems))
+                (let ((deps '()))
+                  (maphash (lambda (system dependencies)
+                             (declare (ignore system))
+                             (setf deps (append deps dependencies)))
+                           *dependencies*)
+                  (let ((defsystem-dependencies (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal)))
+                    (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
+                    (mapc #'ensure-installed (mapcar #'find-system defsystem-dependencies)))))
               (let ((dependencies
+                     (delete-duplicates
                       (delete-if (lambda (system)
                                    (or (member system systems :key #'pathname-name :test #'string-equal)
                                        (not (find-system system))))
                                  (mapcan #'system-dependencies
                                          (mapcar #'asdf:component-name
                                                  (let ((*dependencies* (make-hash-table :test 'equal)))
-                                                   (mapcan #'system-file-systems systems)))))))
+                                                   (mapcan #'system-file-systems systems)))))
+                      :test 'equal)))
                 (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
                 (mapc #'ensure-installed
                       (mapcar #'find-system dependencies))))))))
