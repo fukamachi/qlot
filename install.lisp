@@ -30,6 +30,7 @@
                 #:with-quicklisp-home
                 #:with-local-quicklisp
                 #:with-package-functions
+                #:with-retrying
                 #:*already-seen*
                 #:all-required-systems
                 #:pathname-in-directory-p
@@ -310,7 +311,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (let ((*already-seen* (make-hash-table :test 'equal)))
             (labels ((system-dependencies (system-name)
                        (unless (gethash system-name *already-seen*)
-                         (let ((system (asdf:find-system system-name nil)))
+                         (let ((system (with-retrying (asdf:find-system system-name nil))))
                            (cond
                              ((or (null system)
                                   (not (equal (asdf:component-pathname system)
