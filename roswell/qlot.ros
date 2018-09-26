@@ -45,8 +45,16 @@ COMMANDS:
 
     exec [shell-args..]
         Invokes the following shell-command with the project local Quicklisp.
+
+OPTIONS:
+    --version
+        Show the Qlot version
 "
           (file-namestring *load-pathname*)))
+
+(defun print-version ()
+  (format t "~&Qlot ~A~%"
+          (asdf:component-version (asdf:find-system :qlot))))
 
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./quicklisp/
@@ -107,6 +115,9 @@ COMMANDS:
                          (remove ""
                                  (split #\, project)
                                  :test 'equal)))))
+               ("--version"
+                (print-version)
+                (ros:quit))
                (otherwise
                 (unless (and (null parsing-options)
                              (null target))
@@ -160,6 +171,9 @@ COMMANDS:
                (unless command
                  (print-error "Command not found: ~A" (first argv)))
                (ros:exec (cons command (rest argv)))))
+            ((equal "--version" $1)
+             (print-version)
+             (ros:quit))
             (t (print-usage)
                (ros:quit 1)))
     #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 nil))))
