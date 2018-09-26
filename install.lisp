@@ -304,7 +304,6 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     ;; Quickload project systems.
     (format t "~&Calculating project dependencies...~%")
     (let ((systems (project-systems (uiop:pathname-directory-pathname file)))
-          (tries-so-far (make-hash-table :test 'equalp))
           (ql:*quickload-verbose* nil))
       (with-package-functions :ql-dist (ensure-installed find-system)
         (with-local-quicklisp (qlhome :systems systems)
