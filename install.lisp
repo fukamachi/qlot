@@ -337,7 +337,11 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                            *dependencies*)
                   (let ((defsystem-dependencies (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal)))
                     (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
-                    (mapc #'ensure-installed (mapcar #'find-system defsystem-dependencies)))))
+                    (dolist (dep defsystem-dependencies)
+                      (let ((system (find-system dep)))
+                        (if system
+                            (ensure-installed system)
+                            (warn "~S is required but not in dists. Ignored." dep)))))))
               (let ((dependencies
                      (delete-duplicates
                       (delete-if (lambda (system)
