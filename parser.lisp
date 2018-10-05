@@ -1,6 +1,7 @@
 (defpackage #:qlot/parser
   (:use #:cl)
   (:import-from #:qlot/source
+                #:no-source-type
                 #:make-source
                 #:defrost-source
                 #:source-project-name
@@ -60,9 +61,7 @@
                                             (make-keyword (subseq arg 1))
                                             arg))
                                       args))
-           ;; TODO: add proper condition classes for other implementations
-           ((or #+sbcl sb-pcl::no-applicable-method-error
-                #+ccl ccl:no-applicable-method-exists) ()
+           (no-source-type ()
              (error 'qlot-qlfile-error
                     :format-control "Unknown source type: ~A"
                     :format-arguments (list source-type)))))))))

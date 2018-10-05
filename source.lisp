@@ -15,6 +15,7 @@
   (:import-from #:ironclad)
   (:export #:*dist-base-url*
            #:source
+           #:no-source-type
            #:make-source
            #:freeze-source
            #:freeze-source-slots
@@ -60,8 +61,11 @@
 (defmethod initialize-instance :after ((source source) &rest initargs)
   (setf (slot-value source 'initargs) initargs))
 
+(define-condition no-source-type (error) ())
+
 (defgeneric make-source (source &rest args)
-  (:documentation "Receives a keyword, denoting a source type and returns an instance of such source."))
+  (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")
+  (:method (error 'no-source-type)))
 
 (defgeneric freeze-source-slots (source)
   (:method ((source source))
