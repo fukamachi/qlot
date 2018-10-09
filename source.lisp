@@ -65,7 +65,9 @@
 
 (defgeneric make-source (source &rest args)
   (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")
-  (:method (error 'no-source-type)))
+  (:method (source &rest args)
+    (declare (ignore source args))
+    (error 'no-source-type)))
 
 (defgeneric freeze-source-slots (source)
   (:method ((source source))
