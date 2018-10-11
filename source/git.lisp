@@ -123,7 +123,7 @@
                          "master")))
     (tagbody git-cloning
       (when (uiop:directory-exists-p destination)
-        (uiop:delete-directory-tree destination))
+        (uiop:delete-directory-tree destination :validate t))
       (restart-case
           (safety-shell-command "git"
                                 `("clone"
