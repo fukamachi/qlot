@@ -155,7 +155,7 @@ with the same key."
     (and (<= 3 (length name))
          (string-equal name "sb-" :end1 3))))
 
-(defvar *already-seen*)
+(defvar *already-seen* nil)
 
 (defun all-required-systems (systems)
   (let ((systems (if (listp systems) systems (list systems)))
