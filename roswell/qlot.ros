@@ -65,7 +65,7 @@ OPTIONS:
                                    (make-pathname :defaults *load-pathname* :name nil :type nil)))))
     (unless (probe-file path)
       (print-error "'~A~A' does not exist."
-                   *default-directory-defaults*
+                   *default-pathname-defaults*
                    (ros:getenv "QUICKLISP_HOME")))
     (unless (probe-file (merge-pathnames "setup.lisp" path))
       (print-error "Invalid Quicklisp directory: '~A'"
