@@ -306,6 +306,10 @@ Here's quick steps to start project-local REPL with SLIME:
 2. Relaunch the Emacs.
 3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
 
+## Working with local git repositories
+
+`PROJECT_ROOT/quicklisp/local-projects` can be used for local git repositories. Symbolic links are also be accessible in Qlot environment.
+
 ## Author
 
 * Eitaro Fukamachi (e.arrows@gmail.com)
