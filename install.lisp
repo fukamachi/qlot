@@ -349,9 +349,10 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                (declare (ignore system))
                                (setf deps (append deps dependencies)))
                              *dependencies*)
-                    (let ((defsystem-dependencies (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal)))
+                    (let ((defsystem-dependencies (delete-if-not #'find-system (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal))))
                       (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
-                      (quickload (remove-if-not #'find-system defsystem-dependencies) :silent t))))
+                      (when defsystem-dependencies
+                        (quickload defsystem-dependencies :silent t)))))
                 (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
                                   (mapcan #'system-file-systems systems)))
                        (dependencies
