@@ -319,76 +319,73 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     (let* ((project-root (uiop:pathname-directory-pathname file))
            (systems (project-systems project-root))
            (ql:*quickload-verbose* nil))
-      (with-package-functions :ql-dist (ensure-installed find-system)
-        (with-local-quicklisp (qlhome :systems systems)
-          (let ((*already-seen* (make-hash-table :test 'equal)))
-            (labels ((system-dependencies (system-name)
-                       (unless (gethash system-name *already-seen*)
-                         (let ((system (with-retrying (asdf:find-system system-name nil))))
-                           (cond
-                             ((or (null system)
-                                  (not (equal (asdf:component-pathname system)
-                                              (uiop:pathname-directory-pathname (first systems)))))
-                              (cons
-                               system-name
-                               (all-required-systems system-name)))
-                             (t
-                              ;; Probably the user application's system.
-                              ;; Continuing looking for it's dependencies
-                              (setf (gethash system-name *already-seen*) t)
-                              (mapcan #'system-dependencies
-                                      (mapcar #'string-downcase
-                                              (asdf::component-sideway-dependencies system)))))))))
-              (let ((*dependencies* (make-hash-table :test 'equal)))
-                (let ((*macroexpand-hook* (lambda (&rest args)
-                                            (declare (ignore args)))))
-                  (mapcan #'system-file-systems systems))
-                (let ((deps '()))
-                  (maphash (lambda (system dependencies)
-                             (declare (ignore system))
-                             (setf deps (append deps dependencies)))
-                           *dependencies*)
-                  (let ((defsystem-dependencies (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal)))
-                    (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
-                    (dolist (dep defsystem-dependencies)
-                      (let ((system (find-system dep)))
-                        (if system
-                            (ensure-installed system)
-                            (warn "~S is required but not in dists. Ignored." dep)))))))
-              (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
-                                (mapcan #'system-file-systems systems)))
-                     (dependencies
-                       (delete-if (lambda (system)
-                                    (or (member system systems :key #'asdf:component-name :test #'string-equal)
-                                        (not (find-system system))))
-                                  (delete-duplicates
-                                   (mapcan #'system-dependencies
-                                           (mapcar #'asdf:component-name systems))
-                                   :test 'equal))))
-                (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
-                (mapc #'ensure-installed
-                      (mapcar #'find-system dependencies))
+      (with-package-functions :ql (quickload)
+        (with-package-functions :ql-dist (ensure-installed find-system)
+          (with-local-quicklisp (qlhome :systems systems)
+            (let ((*already-seen* (make-hash-table :test 'equal)))
+              (labels ((system-dependencies (system-name)
+                         (unless (gethash system-name *already-seen*)
+                           (let ((system (with-retrying (asdf:find-system system-name nil))))
+                             (cond
+                               ((or (null system)
+                                    (not (equal (asdf:component-pathname system)
+                                                (uiop:pathname-directory-pathname (first systems)))))
+                                (cons
+                                 system-name
+                                 (all-required-systems system-name)))
+                               (t
+                                ;; Probably the user application's system.
+                                ;; Continuing looking for it's dependencies
+                                (setf (gethash system-name *already-seen*) t)
+                                (mapcan #'system-dependencies
+                                        (mapcar #'string-downcase
+                                                (asdf::component-sideway-dependencies system)))))))))
+                (let ((*dependencies* (make-hash-table :test 'equal)))
+                  (let ((*macroexpand-hook* (lambda (&rest args)
+                                              (declare (ignore args)))))
+                    (mapcan #'system-file-systems systems))
+                  (let ((deps '()))
+                    (maphash (lambda (system dependencies)
+                               (declare (ignore system))
+                               (setf deps (append deps dependencies)))
+                             *dependencies*)
+                    (let ((defsystem-dependencies (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal)))
+                      (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
+                      (quickload (remove-if-not #'find-system defsystem-dependencies) :silent t))))
+                (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
+                                  (mapcan #'system-file-systems systems)))
+                       (dependencies
+                         (delete-if (lambda (system)
+                                      (or (member system systems :key #'asdf:component-name :test #'string-equal)
+                                          (not (find-system system))))
+                                    (delete-duplicates
+                                     (mapcan #'system-dependencies
+                                             (mapcar #'asdf:component-name systems))
+                                     :test 'equal))))
+                  (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
+                  (mapc #'ensure-installed
+                        (mapcar #'find-system dependencies))
 
-                (when (find-if (lambda (s) (typep s 'asdf:package-inferred-system))
-                               systems)
-                  (let ((pis-dependencies
-                          (delete-duplicates
-                           (mapcan #'system-dependencies
-                                   (remove-if (lambda (name)
-                                                (or (find (asdf:primary-system-name name)
-                                                          systems
-                                                          :key #'asdf:component-name
-                                                          :test 'string-equal)
-                                                    (not (find-system name))))
-                                              (delete-duplicates
-                                               (loop for file in (project-lisp-files project-root)
-                                                     append (lisp-file-dependencies file))
-                                               :test 'equal)))
-                           :test 'equal)))
-                    (format t "~&Ensuring additional ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%"
-                            (length pis-dependencies))
-                    (mapc #'ensure-installed
-                          (mapcar #'find-system pis-dependencies))))))))))
+                  (when (find-if (lambda (s) (typep s 'asdf:package-inferred-system))
+                                 systems)
+                    (let ((pis-dependencies
+                            (delete-duplicates
+                             (mapcan #'system-dependencies
+                                     (remove-if (lambda (name)
+                                                  (or (find (asdf:primary-system-name name)
+                                                            systems
+                                                            :key #'asdf:component-name
+                                                            :test 'string-equal)
+                                                      (not (find-system name))))
+                                                (delete-duplicates
+                                                 (loop for file in (project-lisp-files project-root)
+                                                       append (lisp-file-dependencies file))
+                                                 :test 'equal)))
+                             :test 'equal)))
+                      (format t "~&Ensuring additional ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%"
+                              (length pis-dependencies))
+                      (mapc #'ensure-installed
+                            (mapcar #'find-system pis-dependencies)))))))))))
 
     #+windows
     (uiop:run-program (list "attrib"
