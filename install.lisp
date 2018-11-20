@@ -352,6 +352,11 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                     (let ((defsystem-dependencies (delete-if-not #'find-system (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal))))
                       (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
                       (when defsystem-dependencies
+                        ;; XXX: Re-installing UIOP for preventing errors in case that bundled version is loaded and conflicts.
+                        (when (find "uiop" defsystem-dependencies :test 'equal)
+                          (unless (ignore-errors (asdf:find-system "uiop"))
+                            (asdf:clear-system "uiop")
+                            (quickload "uiop" :silent t)))
                         (quickload defsystem-dependencies :silent t)))))
                 (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
                                   (mapcan #'system-file-systems systems)))
