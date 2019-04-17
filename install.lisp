@@ -232,7 +232,87 @@
   (when (asdf/package-inferred-system::file-defpackage-form file)
     (asdf/package-inferred-system::package-inferred-system-file-dependencies file)))
 
-(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock projects)
+(defun quickload-project-systems (file qlhome)
+  (format t "~&Calculating project dependencies...~%")
+  
+  (let* ((project-root (uiop:pathname-directory-pathname file))
+         (systems (project-systems project-root))
+         (ql:*quickload-verbose* nil))
+    (with-package-functions :ql (quickload)
+      (with-package-functions :ql-dist (ensure-installed find-system)
+        (with-local-quicklisp (qlhome :systems systems)
+          (let ((*already-seen* (make-hash-table :test 'equal)))
+            (labels ((system-dependencies (system-name)
+                       (unless (gethash system-name *already-seen*)
+                         (let ((system (with-retrying (asdf:find-system system-name nil))))
+                           (cond
+                             ((or (null system)
+                                  (not (equal (asdf:component-pathname system)
+                                              (uiop:pathname-directory-pathname (first systems)))))
+                              (cons
+                               system-name
+                               (all-required-systems system-name)))
+                             (t
+                              ;; Probably the user application's system.
+                              ;; Continuing looking for it's dependencies
+                              (setf (gethash system-name *already-seen*) t)
+                              (mapcan #'system-dependencies
+                                      (mapcar #'string-downcase
+                                              (asdf::component-sideway-dependencies system)))))))))
+              (let ((*dependencies* (make-hash-table :test 'equal)))
+                (let ((*macroexpand-hook* (lambda (&rest args)
+                                            (declare (ignore args)))))
+                  (mapcan #'system-file-systems systems))
+                (let ((deps '()))
+                  (maphash (lambda (system dependencies)
+                             (declare (ignore system))
+                             (setf deps (append deps dependencies)))
+                           *dependencies*)
+                  (let ((defsystem-dependencies (delete-if-not #'find-system (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal))))
+                    (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
+                    (when defsystem-dependencies
+                      ;; XXX: Re-installing UIOP for preventing errors in case that bundled version is loaded and conflicts.
+                      (when (find "uiop" defsystem-dependencies :test 'equal)
+                        (unless (ignore-errors (asdf:find-system "uiop"))
+                          (asdf:clear-system "uiop")
+                          (quickload "uiop" :silent t)))
+                      (quickload defsystem-dependencies :silent t)))))
+              (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
+                                (mapcan #'system-file-systems systems)))
+                     (dependencies
+                       (delete-if (lambda (system)
+                                    (or (member system systems :key #'asdf:component-name :test #'string-equal)
+                                        (not (find-system system))))
+                                  (delete-duplicates
+                                   (mapcan #'system-dependencies
+                                           (mapcar #'asdf:component-name systems))
+                                   :test 'equal))))
+                (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
+                (mapc #'ensure-installed
+                      (mapcar #'find-system dependencies))
+
+                (when (find-if (lambda (s) (typep s 'asdf:package-inferred-system))
+                               systems)
+                  (let ((pis-dependencies
+                          (delete-duplicates
+                           (mapcan #'system-dependencies
+                                   (remove-if (lambda (name)
+                                                (or (find (asdf:primary-system-name name)
+                                                          systems
+                                                          :key #'asdf:component-name
+                                                          :test 'string-equal)
+                                                    (not (find-system name))))
+                                              (delete-duplicates
+                                               (loop for file in (project-lisp-files project-root)
+                                                     append (lisp-file-dependencies file))
+                                               :test 'equal)))
+                           :test 'equal)))
+                    (format t "~&Ensuring additional ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%"
+                            (length pis-dependencies))
+                    (mapc #'ensure-installed
+                          (mapcar #'find-system pis-dependencies))))))))))))
+
+(defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock projects (quickload-systems t))
   (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
                                                                           (merge-pathnames #P"tmp/qlot/" qlhome))))
         (all-sources (prepare-qlfile file :ignore-lock ignore-lock :projects projects)))
@@ -262,7 +342,7 @@
                                             :type #+unix (if (equalp (pathname-type script) "ros")
                                                              nil
                                                              (pathname-type script))
-                                                  #-unix (pathname-type script))))
+                                            #-unix (pathname-type script))))
                                    (with-open-file (stream to :direction :output
                                                               :if-exists :supersede
                                                               :if-does-not-exist :create)
@@ -314,85 +394,10 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 for (project-name . contents) = (freeze-source source)
                 do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-    ;; Quickload project systems.
-    (format t "~&Calculating project dependencies...~%")
-    (let* ((project-root (uiop:pathname-directory-pathname file))
-           (systems (project-systems project-root))
-           (ql:*quickload-verbose* nil))
-      (with-package-functions :ql (quickload)
-        (with-package-functions :ql-dist (ensure-installed find-system)
-          (with-local-quicklisp (qlhome :systems systems)
-            (let ((*already-seen* (make-hash-table :test 'equal)))
-              (labels ((system-dependencies (system-name)
-                         (unless (gethash system-name *already-seen*)
-                           (let ((system (with-retrying (asdf:find-system system-name nil))))
-                             (cond
-                               ((or (null system)
-                                    (not (equal (asdf:component-pathname system)
-                                                (uiop:pathname-directory-pathname (first systems)))))
-                                (cons
-                                 system-name
-                                 (all-required-systems system-name)))
-                               (t
-                                ;; Probably the user application's system.
-                                ;; Continuing looking for it's dependencies
-                                (setf (gethash system-name *already-seen*) t)
-                                (mapcan #'system-dependencies
-                                        (mapcar #'string-downcase
-                                                (asdf::component-sideway-dependencies system)))))))))
-                (let ((*dependencies* (make-hash-table :test 'equal)))
-                  (let ((*macroexpand-hook* (lambda (&rest args)
-                                              (declare (ignore args)))))
-                    (mapcan #'system-file-systems systems))
-                  (let ((deps '()))
-                    (maphash (lambda (system dependencies)
-                               (declare (ignore system))
-                               (setf deps (append deps dependencies)))
-                             *dependencies*)
-                    (let ((defsystem-dependencies (delete-if-not #'find-system (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal))))
-                      (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
-                      (when defsystem-dependencies
-                        ;; XXX: Re-installing UIOP for preventing errors in case that bundled version is loaded and conflicts.
-                        (when (find "uiop" defsystem-dependencies :test 'equal)
-                          (unless (ignore-errors (asdf:find-system "uiop"))
-                            (asdf:clear-system "uiop")
-                            (quickload "uiop" :silent t)))
-                        (quickload defsystem-dependencies :silent t)))))
-                (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
-                                  (mapcan #'system-file-systems systems)))
-                       (dependencies
-                         (delete-if (lambda (system)
-                                      (or (member system systems :key #'asdf:component-name :test #'string-equal)
-                                          (not (find-system system))))
-                                    (delete-duplicates
-                                     (mapcan #'system-dependencies
-                                             (mapcar #'asdf:component-name systems))
-                                     :test 'equal))))
-                  (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
-                  (mapc #'ensure-installed
-                        (mapcar #'find-system dependencies))
-
-                  (when (find-if (lambda (s) (typep s 'asdf:package-inferred-system))
-                                 systems)
-                    (let ((pis-dependencies
-                            (delete-duplicates
-                             (mapcan #'system-dependencies
-                                     (remove-if (lambda (name)
-                                                  (or (find (asdf:primary-system-name name)
-                                                            systems
-                                                            :key #'asdf:component-name
-                                                            :test 'string-equal)
-                                                      (not (find-system name))))
-                                                (delete-duplicates
-                                                 (loop for file in (project-lisp-files project-root)
-                                                       append (lisp-file-dependencies file))
-                                                 :test 'equal)))
-                             :test 'equal)))
-                      (format t "~&Ensuring additional ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%"
-                              (length pis-dependencies))
-                      (mapc #'ensure-installed
-                            (mapcar #'find-system pis-dependencies)))))))))))
-
+    (if quickload-systems
+        (quickload-project-systems file qlhome)
+        (format t "~&Skipping installation of project dependencies...~%"))
+    
     #+windows
     (uiop:run-program (list "attrib"
                             "-r" "-h"
@@ -405,8 +410,10 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 (defgeneric install-project (object &rest args)
   (:method ((object symbol) &rest args)
     (apply #'install-project (asdf:find-system object) args))
+  
   (:method ((object string) &rest args)
     (apply #'install-project (asdf:find-system object) args))
+  
   (:method ((object asdf:system) &rest args &key quicklisp-home &allow-other-keys)
     (let ((system-dir (asdf:component-pathname object)))
       (unless quicklisp-home
@@ -416,6 +423,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (apply #'install-qlfile
              (find-qlfile system-dir)
              args)))
+  
   (:method ((object pathname) &rest args &key quicklisp-home &allow-other-keys)
     (let* ((object (truename object))
            (dir (uiop:pathname-directory-pathname object)))
