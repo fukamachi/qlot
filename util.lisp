@@ -175,7 +175,8 @@ with the same key."
         (delete-duplicates (mapcan #'main systems) :test #'string-equal)))))
 
 (defun generate-random-string ()
-  (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5))))
+  (let ((*random-state* (make-random-state t)))
+    (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5)))))
 
 (defmacro with-in-directory (dir &body body)
   (let ((cwd (gensym "CWD")))
