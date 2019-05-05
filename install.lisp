@@ -370,7 +370,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      :test 'equal))))
                   (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
                   (mapc #'ensure-installed
-                        (mapcar #'find-system dependencies))
+                        (mapcar #'find-system
+                                (mapcar #'asdf:primary-system-name dependencies)))
 
                   (when (find-if (lambda (s) (typep s 'asdf:package-inferred-system))
                                  systems)
@@ -391,7 +392,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                       (format t "~&Ensuring additional ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%"
                               (length pis-dependencies))
                       (mapc #'ensure-installed
-                            (mapcar #'find-system pis-dependencies)))))))))))
+                            (mapcar #'find-system
+                                    (mapcar #'asdf:primary-system-name pis-dependencies))))))))))))
 
     #+windows
     (uiop:run-program (list "attrib"
