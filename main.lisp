@@ -80,7 +80,7 @@ If PATH isn't specified, this installs it to './quicklisp/'."
             (setf required-systems
                   (delete-if (lambda (system)
                                (or (member system systems :key #'pathname-name :test #'string-equal)
-                                   (not (find-system system))))
+                                   (not (find-system (asdf:primary-system-name system)))))
                              (mapcan #'system-dependencies
                                      (mapcar #'pathname-name systems)))))))
       (delete-duplicates
