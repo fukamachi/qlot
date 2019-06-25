@@ -339,7 +339,10 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                 (setf (gethash system-name *already-seen*) t)
                                 (mapcan #'system-dependencies
                                         (mapcar #'string-downcase
-                                                (asdf::component-sideway-dependencies system)))))))))
+                                                (asdf::component-sideway-dependencies system))))))))
+                       (find-system-with-fallback (system-name)
+                         (or (find-system system-name)
+                             (find-system (asdf:primary-system-name system-name)))))
                 (let ((*dependencies* (make-hash-table :test 'equal)))
                   (let ((*macroexpand-hook* (lambda (&rest args)
                                               (declare (ignore args)))))
@@ -370,8 +373,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      :test 'equal))))
                   (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length dependencies))
                   (mapc #'ensure-installed
-                        (mapcar #'find-system
-                                (mapcar #'asdf:primary-system-name dependencies)))
+                        (mapcar #'find-system-with-fallback dependencies))
 
                   (when (find-if (lambda (s) (typep s 'asdf:package-inferred-system))
                                  systems)
@@ -392,8 +394,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                       (format t "~&Ensuring additional ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%"
                               (length pis-dependencies))
                       (mapc #'ensure-installed
-                            (mapcar #'find-system
-                                    (mapcar #'asdf:primary-system-name pis-dependencies))))))))))))
+                            (mapcar #'find-system-with-fallback pis-dependencies)))))))))))
 
     #+windows
     (uiop:run-program (list "attrib"
