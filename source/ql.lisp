@@ -29,12 +29,14 @@
 (defclass source-ql (source)
   ((%version :initarg :%version)
    (distribution :initarg :distribution
-                 :reader source-distribution)))
+                 :reader source-distribution)
+   (%distinfo :accessor source-distinfo)))
 
 (defclass source-ql-all (source)
   ((%version :initarg :%version)
    (distribution :initarg :distribution
-                 :reader source-distribution)))
+                 :reader source-distribution)
+   (%distinfo :accessor source-distinfo)))
 
 
 (defun set-default-distribution (instance)
@@ -179,18 +181,22 @@
 (defun retrieve-metadata (source)
   (check-type source (or source-ql
                          source-ql-all))
+  (when (slot-boundp source '%distinfo)
+    (return-from retrieve-metadata
+      (source-distinfo source)))
 
   (let* ((url (source-distribution source))
          (dist-metadata (http-get url)))
     (flet ((trim (text)
              (string-trim '(#\Space #\Tab) text)))
-      (loop for line in (split-sequence #\Newline dist-metadata)
-            for splitted = (cl-ppcre:split ":" line :limit 2)
-            for key = (make-keyword (trim (first splitted)))
-            for value = (second splitted)
-            for trimmed-value = (trim value)
-            when value
-              appending (list key trimmed-value)))))
+      (setf (source-distinfo source)
+            (loop for line in (split-sequence #\Newline dist-metadata)
+                  for splitted = (cl-ppcre:split ":" line :limit 2)
+                  for key = (make-keyword (trim (first splitted)))
+                  for value = (second splitted)
+                  for trimmed-value = (trim value)
+                  when value
+                    appending (list key trimmed-value))))))
 
 
 (defun retrieve-quicklisp-metadata-item (source item-name &optional default)
