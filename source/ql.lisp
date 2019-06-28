@@ -29,12 +29,14 @@
 (defclass source-ql (source)
   ((%version :initarg :%version)
    (distribution :initarg :distribution
-                 :reader source-distribution)))
+                 :reader source-distribution)
+   (%distinfo :accessor source-distinfo)))
 
 (defclass source-ql-all (source)
   ((%version :initarg :%version)
    (distribution :initarg :distribution
-                 :reader source-distribution)))
+                 :reader source-distribution)
+   (%distinfo :accessor source-distinfo)))
 
 
 (defun set-default-distribution (instance)
@@ -81,7 +83,8 @@
          *quicklisp-versioned-distinfo*)
         (t
          (let ((url (retrieve-quicklisp-metadata-item source
-                                                      :distinfo-template-url)))
+                                                      :distinfo-template-url
+                                                      *quicklisp-versioned-distinfo*)))
            (unless url
              (error "There is no \"distinfo-template-url\" in metadata at ~A"
                     (source-distribution source)))
@@ -98,19 +101,23 @@
 
 
 (defmethod make-source ((source (eql :ql)) &rest args
-                        &key (distribution *default-distribution*)
+                        &key distribution
                           &allow-other-keys)
   (remf args :distribution)
   
   (destructuring-bind (project-name version) args
-    (if (eq project-name :all)
-        (make-instance 'source-ql-all
-                       :distribution distribution
-                       :%version version)
-        (make-instance 'source-ql
-                       :project-name project-name
-                       :distribution distribution
-                       :%version version))))
+    (let ((distribution (or distribution
+                            (if (eq version :latest)
+                                *default-distribution*
+                                (regex-replace-all "\\{\\{version\\}\\}" *quicklisp-versioned-distinfo* version)))))
+      (if (eq project-name :all)
+          (make-instance 'source-ql-all
+                         :distribution distribution
+                         :%version version)
+          (make-instance 'source-ql
+                         :project-name project-name
+                         :distribution distribution
+                         :%version version)))))
 
 (defmethod print-object ((source source-ql-all) stream)
   (with-slots (project-name %version version) source
@@ -174,18 +181,22 @@
 (defun retrieve-metadata (source)
   (check-type source (or source-ql
                          source-ql-all))
+  (when (slot-boundp source '%distinfo)
+    (return-from retrieve-metadata
+      (source-distinfo source)))
 
   (let* ((url (source-distribution source))
          (dist-metadata (http-get url)))
     (flet ((trim (text)
              (string-trim '(#\Space #\Tab) text)))
-      (loop for line in (split-sequence #\Newline dist-metadata)
-            for splitted = (cl-ppcre:split ":" line :limit 2)
-            for key = (make-keyword (trim (first splitted)))
-            for value = (second splitted)
-            for trimmed-value = (trim value)
-            when value
-              appending (list key trimmed-value)))))
+      (setf (source-distinfo source)
+            (loop for line in (split-sequence #\Newline dist-metadata)
+                  for splitted = (cl-ppcre:split ":" line :limit 2)
+                  for key = (make-keyword (trim (first splitted)))
+                  for value = (second splitted)
+                  for trimmed-value = (trim value)
+                  when value
+                    appending (list key trimmed-value))))))
 
 
 (defun retrieve-quicklisp-metadata-item (source item-name &optional default)
