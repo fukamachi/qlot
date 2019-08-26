@@ -4,16 +4,12 @@
         #:qlot/source)
   (:import-from #:qlot/util
                 #:make-keyword
+                #:starts-with
+                #:split-with
                 #:find-qlfile
                 #:with-package-functions)
   (:import-from #:qlot/http
                 #:http-get)
-  (:import-from #:alexandria
-                #:starts-with-subseq)
-  (:import-from #:split-sequence
-                #:split-sequence)
-  (:import-from #:cl-ppcre
-                #:regex-replace-all)
   (:export #:source-ql
            #:source-ql-all))
 (in-package #:qlot/source/ql)
@@ -90,6 +86,16 @@
                     (source-distribution source)))
            (values url)))))
 
+(defun replace-version (value version)
+  (check-type value string)
+  (with-output-to-string (*standard-output*)
+    (loop with i = 0
+          for pos = (search "{{version}}" value :start2 i)
+          do (princ (subseq value i pos))
+          if pos
+            do (princ version)
+               (setf i (+ pos (length "{{version}}")))
+          while pos)))
 
 (defun get-versioned-distribution-url (source version)
   (check-type source (or source-ql
@@ -97,19 +103,19 @@
   (check-type version string)
 
   (let ((url-pattern (get-distribution-url-pattern source)))
-    (regex-replace-all "\\{\\{version\\}\\}" url-pattern version)))
+    (replace-version url-pattern version)))
 
 
 (defmethod make-source ((source (eql :ql)) &rest args
                         &key distribution
                           &allow-other-keys)
   (remf args :distribution)
-  
+
   (destructuring-bind (project-name version) args
     (let ((distribution (or distribution
                             (if (eq version :latest)
                                 *default-distribution*
-                                (regex-replace-all "\\{\\{version\\}\\}" *quicklisp-versioned-distinfo* version)))))
+                                (replace-version *quicklisp-versioned-distinfo* version)))))
       (if (eq project-name :all)
           (make-instance 'source-ql-all
                          :distribution distribution
@@ -172,8 +178,8 @@
   (check-type source (or source-ql source-ql-all))
   (let ((quicklisp.txt (http-get (source-distribution source))))
     (or
-     (loop for line in (split-sequence #\Newline quicklisp.txt)
-           when (starts-with-subseq "version: " line)
+     (loop for line in (split-with #\Newline quicklisp.txt)
+           when (starts-with "version: " line)
              do (return (subseq line 9)))
      (error "Failed to get the latest version of Quicklisp."))))
 
@@ -190,8 +196,8 @@
     (flet ((trim (text)
              (string-trim '(#\Space #\Tab) text)))
       (setf (source-distinfo source)
-            (loop for line in (split-sequence #\Newline dist-metadata)
-                  for splitted = (cl-ppcre:split ":" line :limit 2)
+            (loop for line in (split-with #\Newline dist-metadata)
+                  for splitted = (split-with #\: line :limit 2)
                   for key = (make-keyword (trim (first splitted)))
                   for value = (second splitted)
                   for trimmed-value = (trim value)
@@ -225,9 +231,9 @@
     (let* ((version (source-ql-version source))
            (releases.txt (retrieve-quicklisp-releases source)))
       (loop with project-name/sp = (concatenate 'string project-name " ")
-            for line in (split-sequence #\Newline releases.txt)
-            when (starts-with-subseq project-name/sp line)
-              do (return (split-sequence #\Space line :remove-empty-subseqs t))
+            for line in (split-with #\Newline releases.txt)
+            when (starts-with project-name/sp line)
+              do (return (split-with #\Space line))
             finally
                (error "~S doesn't exist in quicklisp ~A."
                       project-name
@@ -237,9 +243,9 @@
   (with-slots (project-name) source
     (let ((systems.txt (retrieve-quicklisp-systems source)))
       (loop with project-name/sp = (concatenate 'string project-name " ")
-            for line in (split-sequence #\Newline systems.txt)
-            when (starts-with-subseq project-name/sp line)
-              collect (split-sequence #\Space line :remove-empty-subseqs t)))))
+            for line in (split-with #\Newline systems.txt)
+            when (starts-with project-name/sp line)
+              collect (split-with #\Space line)))))
 
 (defgeneric source-ql-version (source)
   (:method ((source source-ql))

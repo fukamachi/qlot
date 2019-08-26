@@ -16,14 +16,10 @@
                 #:qlot-qlfile-error)
   (:import-from #:qlot/util
                 #:make-keyword
+                #:split-with
                 #:with-retrying)
-  (:import-from #:cl-ppcre)
-  (:import-from #:split-sequence
-                #:split-sequence)
   (:import-from #:uiop
                 #:file-exists-p)
-  (:import-from #:alexandria
-                #:delete-from-plist)
   (:import-from #:qlot/dist
                 #:register-distribution)
   (:export #:parse-qlfile
@@ -31,18 +27,29 @@
            #:prepare-qlfile))
 (in-package #:qlot/parser)
 
+(defun trim-comment (value)
+  (check-type value string)
+  (do ((i 0 (1+ i)))
+      ((= i (length value)) value)
+    (let ((char (aref value i)))
+      (cond
+        ((char= char #\\)
+         ;; Skip the next char
+         (incf i))
+        ((or (char= char #\#)
+             (char= char #\;))
+         (return (subseq value 0 i)))))))
+
 (defun parse-qlfile-line (line)
-  (labels ((trim-comment (line)
-             (ppcre:regex-replace "(?<!\\\\)[#|;].*" line ""))
-           (canonical-line (line)
-             (string-trim '(#\Space #\Tab #\Newline #\Return)
-                          (trim-comment line))))
+  (flet ((canonical-line (line)
+           (string-trim '(#\Space #\Tab #\Newline #\Return)
+                        (trim-comment line))))
     (setf line (canonical-line line))
     (when (string= line "")
       (return-from parse-qlfile-line))
-    
+
     (destructuring-bind (source-type &rest args)
-        (split-sequence #\Space line :remove-empty-subseqs t)
+        (split-with #\Space line)
       (cond
         ((string-equal source-type
                        "dist")
@@ -93,7 +100,9 @@
         collect
         (let ((source (apply #'make-instance (getf args :class) (getf args :initargs))))
           (setf (source-defrost-args source)
-                (delete-from-plist args :class :initargs))
+                (loop for (k v) on args by #'cddr
+                      unless (member k '(:class :initargs))
+                        append (list k v)))
           source)))
 
 (defun merging-lock-sources (sources lock-sources)

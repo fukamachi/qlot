@@ -46,7 +46,6 @@
          (format nil "~A.tar.gz" (source-project-name source))))
   (dex:fetch (source-http-url source)
              (source-archive source)
-             :if-exists :supersede
              :proxy (get-proxy))
   (setf (source-directory source)
         (extract-tarball (source-archive source)

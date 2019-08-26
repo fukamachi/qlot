@@ -6,10 +6,10 @@
                 #:safety-shell-command
                 #:shell-command-error)
   (:import-from #:qlot/util
-                #:with-in-directory)
+                #:with-in-directory
+                #:split-with)
   (:import-from #:uiop
                 #:delete-directory-tree)
-  (:import-from #:cl-ppcre)
   (:export #:source-git
            #:retry-git-clone))
 (in-package #:qlot/source/git)
@@ -100,11 +100,13 @@
   (flet ((show-ref (pattern)
            (handler-case
                (let ((*standard-output* (make-broadcast-stream)))
-                 (ppcre:scan-to-strings "^\\S+"
-                                        (safety-shell-command "git"
-                                                              (list "ls-remote"
-                                                                    (source-git-remote-url source)
-                                                                    pattern))))
+                 (first
+                   (split-with #\Tab
+                               (safety-shell-command "git"
+                                                     (list "ls-remote"
+                                                           (source-git-remote-url source)
+                                                           pattern))
+                               :limit 2)))
              (shell-command-error ()
                (error "No git references named '~A'." pattern)))))
     (or (source-git-ref source)

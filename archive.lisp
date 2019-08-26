@@ -13,4 +13,4 @@
       (with-package-functions :ql-gunzipper (gunzip)
         (uiop:with-temporary-file (:pathname tarfile :type "tar")
           (unpack-tarball (gunzip tarball tarfile))
-          (first (contents tarfile)))))))
+          (merge-pathnames (first (contents tarfile)) destination))))))

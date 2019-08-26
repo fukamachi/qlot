@@ -35,10 +35,10 @@
                 #:all-required-systems
                 #:pathname-in-directory-p
                 #:generate-random-string
-                #:project-systems)
+                #:project-systems
+                #:starts-with)
   (:import-from #:qlot/proxy
                 #:get-proxy)
-  (:import-from #:cl-ppcre)
   (:import-from #:uiop
                 #:ensure-directory-pathname
                 #:absolute-pathname-p
@@ -203,13 +203,23 @@
         (handler-bind ((cl:warning #'muffle-warning))
           (install-dist (localhost (url-path-for source 'project.txt)) :prompt nil :replace nil))))))
 
+(defun %replace-localhost (url)
+  (if (starts-with "http://127.0.0.1:" url)
+      (concatenate 'string
+                   (localhost)
+                   (subseq url
+                           (or (position-if (lambda (char)
+                                              (not (char<= #\0 char #\9)))
+                                            url
+                                            :start (length "http://127.0.0.1:"))
+                               (length url))))
+      url))
+
 (defun update-source (source)
   (with-package-functions :ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
     (let ((dist (find-dist (source-dist-name source))))
       (setf (distinfo-subscription-url dist)
-            (ppcre:regex-replace "^http://127\\.0\\.0\\.1:\\d+"
-                                 (distinfo-subscription-url dist)
-                                 (localhost)))
+            (%replace-localhost (distinfo-subscription-url dist)))
       (let ((new-dist (available-update dist)))
         (format t "~&Updating dist ~S version ~S -> ~S.~%"
                 (name dist)

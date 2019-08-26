@@ -15,6 +15,8 @@
            #:sbcl-contrib-p
            #:with-retrying
            #:make-keyword
+           #:starts-with
+           #:split-with
            #:extend-source-registry))
 (in-package #:qlot/util)
 
@@ -221,6 +223,33 @@ with the same key."
    because it upcases text before making it a keyword."
   (intern (string-upcase text) :keyword))
 
+(defun starts-with (prefix value)
+  (and (<= (length prefix) (length value))
+       (string= prefix value :end2 (length prefix))))
+
+(defun split-with (delimiter value &key limit)
+  (check-type delimiter character)
+  (check-type value string)
+  (check-type limit (or null (integer 1)))
+  (let ((results '())
+        (pos 0)
+        (count 0))
+    (block nil
+      (flet ((keep (i)
+               (unless (= pos i)
+                 (push (subseq value pos i) results)
+                 (incf count))))
+        (do ((i 0 (1+ i)))
+            ((= i (length value))
+             (keep i))
+          (when (and limit
+                     (= (1+ count) limit))
+            (push (subseq value i (length value)) results)
+            (return))
+          (when (char= (aref value i) delimiter)
+            (keep i)
+            (setf pos (1+ i))))))
+    (nreverse results)))
 
 (defun extend-source-registry (current-value dir-to-add)
   "According to ASDF documentation:

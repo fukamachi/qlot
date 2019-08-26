@@ -17,10 +17,6 @@
   (:import-from #:qlot/util
                 #:*system-quicklisp-home*
                 #:with-quicklisp-home)
-  (:import-from #:alexandria
-                #:when-let
-                #:once-only
-                #:with-gensyms)
   (:import-from #:uiop
                 #:copy-file)
   (:export #:localhost
@@ -73,9 +69,10 @@
                 (let ((*tmp-directory* tmp-directory))
                   (prepare source))
                 (dolist (action '(project.txt distinfo.txt releases.txt systems.txt archive))
-                  (when-let (path (url-path-for source action))
-                    (setf (gethash (localhost path) route)
-                          (make-route source action))))
+                  (let ((path (url-path-for source action)))
+                    (when path
+                      (setf (gethash (localhost path) route)
+                            (make-route source action)))))
                 (funcall (make-route source 'project.txt)))))
       (lambda (env)
         (with-quicklisp-home *system-quicklisp-home*
@@ -86,13 +83,14 @@
                 '(404 (:content-type "text/plain") ("Not Found")))))))))
 
 (defmacro with-qlot-server (sources &body body)
-  (once-only (sources)
-    (with-gensyms (fetch-scheme-functions)
-      `(let ((,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http))
-             (*handler* (make-app (if (pathnamep ,sources)
-                                      (prepare-qlfile ,sources)
-                                      ,sources))))
-         (progv (list ,fetch-scheme-functions)
-             (list (cons '("qlot" . qlot-fetch)
-                         (symbol-value ,fetch-scheme-functions)))
-           ,@body)))))
+  (let ((g-sources (gensym "SOURCES"))
+        (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS")))
+    `(let ((,g-sources ,sources)
+           (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http))
+           (*handler* (make-app (if (pathnamep ,sources)
+                                    (prepare-qlfile ,sources)
+                                    ,sources))))
+       (progv (list ,fetch-scheme-functions)
+           (list (cons '("qlot" . qlot-fetch)
+                       (symbol-value ,fetch-scheme-functions)))
+         ,@body))))
