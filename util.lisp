@@ -100,7 +100,16 @@ with the same key."
          (original-defined-systems #+asdf3.3 asdf::*registered-systems*
                                    #-asdf3.3 asdf::*defined-systems*)
          (#+asdf3.3 asdf::*registered-systems*
-          #-asdf3.3 asdf::*defined-systems* (make-hash-table :test 'equal)))
+          #-asdf3.3 asdf::*defined-systems* (make-hash-table :test 'equal))
+         (user-cache (merge-pathnames
+                       (format nil "cache/~(~A~)-~A/**/*.*"
+                               (lisp-implementation-type)
+                               (lisp-implementation-version))
+                       qlhome))
+         (asdf::*output-translations-parameter* asdf::*output-translations-parameter*)
+         (asdf::*output-translations* asdf::*output-translations*))
+    (asdf::initialize-output-translations
+      `(:output-translations (t ,user-cache) :ignore-inherited-configuration))
 
     ;; Set systems already loaded to prevent reloading the same library in the local Quicklisp.
     (maphash (lambda (name system)
