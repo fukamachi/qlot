@@ -6,8 +6,8 @@ env:
     - PATH=~/.roswell/bin:$PATH
     - ROSWELL_INSTALL_DIR=$HOME/.roswell
   matrix:
-    - LISP=sbcl-bin
-    - LISP=ccl-bin
+    - LISP=sbcl-bin/1.5.5
+    #- LISP=ccl-bin
 
 install:
   # Roswell
