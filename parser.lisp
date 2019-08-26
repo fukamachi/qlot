@@ -40,7 +40,7 @@
     (setf line (canonical-line line))
     (when (string= line "")
       (return-from parse-qlfile-line))
-    
+
     (destructuring-bind (source-type &rest args)
         (split-sequence #\Space line :remove-empty-subseqs t)
       (cond

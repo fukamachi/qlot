@@ -74,7 +74,7 @@
    #+cmu (car ext:*command-line-strings*)
    #+ecl (car (si:command-args))))
 
-(defun install-quicklisp (&optional (path (merge-pathnames #P"quicklisp/" *default-pathname-defaults*)))
+(defun install-quicklisp (&optional (path (merge-pathnames #P".qlot/" *default-pathname-defaults*)))
   (format t "~&Installing Quicklisp to ~A ...~%" path)
   (let ((*standard-output* (make-broadcast-stream))
         (quicklisp-file (merge-pathnames (format nil "quicklisp-~A.lisp"
@@ -145,7 +145,7 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-qlfile (file &key (quicklisp-home #P"quicklisp/"))
+(defun install-qlfile (file &key (quicklisp-home #P".qlot/"))
   (unless (uiop:file-exists-p file)
     (error "File does not exist: ~A" file))
 
@@ -161,7 +161,7 @@
 
     (format t "~&Successfully installed.~%")))
 
-(defun update-qlfile (file &key (quicklisp-home #P"quicklisp/") projects)
+(defun update-qlfile (file &key (quicklisp-home #P".qlot/") projects)
   (unless (uiop:file-exists-p file)
     (error "File does not exist: ~A" file))
 
@@ -224,7 +224,7 @@
           (loop for dir in (uiop:subdirectories dir)
                 when (not (member (car (last (pathname-directory dir)))
                                   (append asdf/source-registry:*default-source-registry-exclusions*
-                                          (list "quicklisp"))
+                                          (list "quicklisp" ".qlot"))
                                   :test 'equal))
                 append (project-lisp-files dir))))
 
@@ -414,7 +414,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     (let ((system-dir (asdf:component-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (asdf:system-relative-pathname object #P"quicklisp/")
+              (list* :quicklisp-home (asdf:system-relative-pathname object #P".qlot/")
                      args)))
       (apply #'install-qlfile
              (find-qlfile system-dir)
@@ -424,7 +424,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
            (dir (uiop:pathname-directory-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (merge-pathnames #P"quicklisp/" dir)
+              (list* :quicklisp-home (merge-pathnames #P".qlot/" dir)
                      args)))
       (if (uiop:directory-pathname-p object)
           (apply #'install-qlfile (find-qlfile object) args)
@@ -439,7 +439,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     (let ((system-dir (asdf:component-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (asdf:system-relative-pathname object #P"quicklisp/")
+              (list* :quicklisp-home (asdf:system-relative-pathname object #P".qlot/")
                      args)))
       (apply #'update-qlfile
              (find-qlfile system-dir :errorp nil)
@@ -449,7 +449,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
            (dir (uiop:pathname-directory-pathname object)))
       (unless quicklisp-home
         (setf args
-              (list* :quicklisp-home (merge-pathnames #P"quicklisp/" dir)
+              (list* :quicklisp-home (merge-pathnames #P".qlot/" dir)
                      args)))
       (if (uiop:directory-pathname-p object)
           (apply #'update-qlfile (find-qlfile object) args)

@@ -82,9 +82,9 @@ with the same key."
     (error "Directory ~S does not exist." qlhome))
 
   (unless (probe-file (merge-pathnames #P"setup.lisp" qlhome))
-    (if (probe-file (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
+    (if (probe-file (merge-pathnames #P".qlot/setup.lisp" qlhome))
         ;; The given `qlhome' is the project root.
-        (setf qlhome (merge-pathnames #P"quicklisp/" qlhome))
+        (setf qlhome (merge-pathnames #P".qlot/" qlhome))
         (error "~S is not a quicklisp directory." qlhome)))
 
   (let* (#+quicklisp
@@ -114,9 +114,9 @@ with the same key."
              original-defined-systems)
 
     #-quicklisp
-    (load (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
+    (load (merge-pathnames #P".qlot/setup.lisp" qlhome))
     #+quicklisp
-    (push (merge-pathnames #P"quicklisp/" qlhome) asdf:*central-registry*)
+    (push (merge-pathnames #P".qlot/" qlhome) asdf:*central-registry*)
 
     (asdf:initialize-source-registry)
 
@@ -187,7 +187,7 @@ with the same key."
          (uiop:chdir ,cwd)))))
 
 (defun project-systems (project-dir)
-  (let ((qlhome (merge-pathnames #P"quicklisp/" project-dir))
+  (let ((qlhome (merge-pathnames #P".qlot/" project-dir))
         systems)
     (asdf::collect-sub*directories-asd-files
      project-dir
@@ -196,7 +196,7 @@ with the same key."
                             ;; KLUDGE: Ignore skeleton.asd of CL-Project
                             (search "skeleton" (pathname-name asd)))
                   (push asd systems)))
-     :exclude (append (list "bundle-libs" "quicklisp")
+     :exclude (append (list "bundle-libs" "quicklisp" ".qlot")
                       asdf::*default-source-registry-exclusions*))
     systems))
 

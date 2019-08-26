@@ -30,22 +30,22 @@
     (delete-if-exists "qlfile3.lock")))
 
 (deftest uninstall-test
-  (let ((res (install-quicklisp (merge-pathnames #P"quicklisp/" *tmp-directory*))))
+  (let ((res (install-quicklisp (merge-pathnames #P".qlot/" *tmp-directory*))))
     (ok (not (null res)) "can install Quicklisp"))
 
-  (dolist (dir (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+  (dolist (dir (uiop:subdirectories (merge-pathnames #P".qlot/dists/" *tmp-directory*)))
     (uiop:delete-directory-tree dir :validate t :if-does-not-exist :ignore))
 
-  (ok (null (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+  (ok (null (uiop:subdirectories (merge-pathnames #P".qlot/dists/" *tmp-directory*)))
       "can uninstall all dists"))
 
 (deftest install-test
   (install (asdf:system-relative-pathname :qlot #P"tests/data/qlfile")
-           :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
+           :quicklisp-home (merge-pathnames #P".qlot/" *tmp-directory*))
 
   (ok (equal (mapcar (lambda (path)
                        (car (last (pathname-directory path))))
-                     (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+                     (uiop:subdirectories (merge-pathnames #P".qlot/dists/" *tmp-directory*)))
              '("cl-dbi"
                "clack"
                "datafly"
@@ -56,11 +56,11 @@
 
 (deftest update-test
   (update (asdf:system-relative-pathname :qlot #P"tests/data/qlfile2")
-          :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
+          :quicklisp-home (merge-pathnames #P".qlot/" *tmp-directory*))
 
   (ok (equal (mapcar (lambda (path)
                        (car (last (pathname-directory path))))
-                     (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+                     (uiop:subdirectories (merge-pathnames #P".qlot/dists/" *tmp-directory*)))
              '("datafly"
                "log4cl"
                "quicklisp"
@@ -68,15 +68,15 @@
       "can update dists from qlfile")
 
   (update (asdf:system-relative-pathname :qlot #P"tests/data/qlfile3")
-          :quicklisp-home (merge-pathnames #P"quicklisp/" *tmp-directory*))
+          :quicklisp-home (merge-pathnames #P".qlot/" *tmp-directory*))
 
   (ok (equal (mapcar (lambda (path)
                        (car (last (pathname-directory path))))
-                     (uiop:subdirectories (merge-pathnames #P"quicklisp/dists/" *tmp-directory*)))
+                     (uiop:subdirectories (merge-pathnames #P".qlot/dists/" *tmp-directory*)))
              '("quicklisp"))
       "can install dists from qlfile")
 
   (ok
    (search "version: 2014-12-17"
-           (alexandria:read-file-into-string (merge-pathnames #P"quicklisp/dists/quicklisp/distinfo.txt" *tmp-directory*)))
+           (alexandria:read-file-into-string (merge-pathnames #P".qlot/dists/quicklisp/distinfo.txt" *tmp-directory*)))
    "can install old Quicklisp dist"))
