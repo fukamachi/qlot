@@ -35,6 +35,7 @@
                    (uiop:temporary-directory)))
 
 (setup
+  (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)
   (ensure-directories-exist *tmp-directory*))
 
 (deftest distify-git-tests

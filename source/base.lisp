@@ -18,7 +18,6 @@
   ((project-name :initarg :project-name
                  :reader source-project-name)
    (version :initarg :version
-            :initform nil
             :accessor source-version)
 
    ;; Keep these variables for dumping to qlfile.lock.

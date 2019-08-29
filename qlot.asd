@@ -12,5 +12,6 @@
   :depends-on ("rove"
                "qlot/tests/parser"
                "qlot/tests/distify/git"
-               "qlot/tests/utils")
+               "qlot/tests/utils"
+               "qlot/tests/utils/ql")
   :perform (test-op (op c) (symbol-call :rove :run c)))
