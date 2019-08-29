@@ -3,7 +3,8 @@
   (:import-from #:qlot/source/base
                 #:source-project-name
                 #:source-dist-name
-                #:source-version)
+                #:source-version
+                #:write-distinfo)
   (:import-from #:qlot/source/git
                 #:source-git
                 #:source-git-branch
@@ -38,19 +39,6 @@
           (format nil "git-~A"
                   (source-git-ref source)))))
 
-(defun distinfo.txt (source)
-  (load-source-git-version source)
-  (format nil "~{~(~A~): ~A~%~}"
-          (list :name (source-dist-name source)
-                :version (source-version source)
-                :distinfo-subscription-url (format nil "/~A.txt"
-                                                   (source-project-name source))
-                :release-index-url (format nil "/~A/~A/releases.txt"
-                                           (source-project-name source)
-                                           (source-version source))
-                :system-index-url (format nil "/~A/~A/systems.txt"
-                                          (source-project-name source)
-                                          (source-version source)))))
 (defun normalize-pathname (path)
   "Return the pathname PATH resolved to a normalized pathname in the filesystem.
 Does not resolve symlinks, but PATH must actually exist in the filesystem."
@@ -73,7 +61,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                                                 out)))))
       (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
               project-name
-              (format nil "qlot://localhost/archives/~A"
+              (format nil "/archives/~A"
                       (file-namestring tarball-file))
               size
               file-md5
@@ -102,9 +90,10 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
   (load-source-git-version source)
 
   (let ((*default-pathname-defaults* (truename destination)))
-    (uiop:with-output-file (out (merge-pathnames (format nil "~A.txt" (source-project-name source)))
+    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
+                                               :type "txt")
                                 :if-exists :supersede)
-      (princ (distinfo.txt source) out))
+      (write-distinfo source out))
 
     (let ((softwares (merge-pathnames #P"softwares/"))
           (archives (merge-pathnames #P"archives/"))

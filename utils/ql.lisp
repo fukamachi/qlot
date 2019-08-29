@@ -1,6 +1,12 @@
 (defpackage #:qlot/utils/ql
   (:use #:cl)
-  (:export #:quicklisp-distinfo-url))
+  (:import-from #:qlot/utils
+                #:split-with)
+  (:export #:quicklisp-distinfo-url
+           #:parse-distinfo-stream
+           #:parse-distinfo-file
+           #:parse-space-delimited-stream
+           #:parse-space-delimited-file))
 (in-package #:qlot/utils/ql)
 
 (defparameter *quicklisp-distinfo*
@@ -40,3 +46,25 @@
   (if version
       (replace-version *quicklisp-versioned-distinfo* version)
       *quicklisp-distinfo*))
+
+(defun parse-distinfo-stream (stream)
+  (loop for line = (read-line stream nil nil)
+        while line
+        for (key val) = (split-with #\: line :limit 2)
+        collect (cons key (string-left-trim '(#\Space) val))))
+
+(defun parse-distinfo-file (file)
+  (uiop:with-input-file (in file)
+    (parse-distinfo-stream in)))
+
+(defun parse-space-delimited-stream (stream &key (test #'identity))
+  (loop for line = (read-line stream nil nil)
+        while line
+        for data = (split-with #\Space line)
+        when (and (char/= (aref line 0) #\#)
+                  (funcall test data))
+        collect data))
+
+(defun parse-space-delimited-file (file &key (test #'identity))
+  (uiop:with-input-file (in file)
+    (parse-space-delimited-stream in :test test)))

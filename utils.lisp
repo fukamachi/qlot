@@ -2,7 +2,8 @@
   (:use #:cl)
   (:export #:with-in-directory
            #:make-keyword
-           #:split-with))
+           #:split-with
+           #:generate-random-string))
 (in-package #:qlot/utils)
 
 (defmacro with-in-directory (dir &body body)
@@ -41,3 +42,7 @@
             (keep i)
             (setf pos (1+ i))))))
     (nreverse results)))
+
+(defun generate-random-string ()
+  (let ((*random-state* (make-random-state t)))
+    (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5)))))

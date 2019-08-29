@@ -4,35 +4,16 @@
         #:qlot/distify/git)
   (:import-from #:qlot/source
                 #:make-source)
-  (:import-from #:cl-ppcre)
-  (:import-from #:alexandria
-                #:set-equal)
+  (:import-from #:qlot/utils/ql
+                #:parse-distinfo-file
+                #:parse-space-delimited-file)
+  (:import-from #:qlot/utils/tmp
+                #:tmp-directory)
   (:import-from #:assoc-utils
                 #:aget))
 (in-package #:qlot/tests/distify/git)
 
-(defun generate-random-string ()
-  (let ((*random-state* (make-random-state t)))
-    (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5)))))
-
-(defun parse-ql-metadata-file (file)
-  (uiop:with-input-file (in file)
-    (loop for line = (read-line in nil nil)
-          while line
-          for (key val) = (ppcre:split ": " line)
-          collect (cons key val))))
-
-(defun parse-space-delimited-file (file)
-  (uiop:with-input-file (in file)
-    (loop for line = (read-line in nil nil)
-          while line
-          when (char/= (aref line 0) #\#)
-          collect (ppcre:split "\\s+" line))))
-
-(defparameter *tmp-directory*
-  (merge-pathnames (format nil "qlot-~A/"
-                           (generate-random-string))
-                   (uiop:temporary-directory)))
+(defparameter *tmp-directory* (tmp-directory))
 
 (setup
   (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)
@@ -56,7 +37,7 @@
 
       (testing "distinfo.txt"
         (ok (uiop:file-exists-p distinfo.txt))
-        (let ((metadata (parse-ql-metadata-file distinfo.txt)))
+        (let ((metadata (parse-distinfo-file distinfo.txt)))
           (ok (equal (aget metadata "name") "cl-dbi"))
           (ok (equal (aget metadata "version") "git-64941e1848354767e08e57aca90d7c40350bb6b3"))
           (ok (equal (aget metadata "distinfo-subscription-url") "/cl-dbi.txt"))

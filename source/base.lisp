@@ -11,7 +11,8 @@
            #:source-frozen-slots
            #:freeze-source
            #:source-dist-name
-           #:source=))
+           #:source=
+           #:write-distinfo))
 (in-package #:qlot/source/base)
 
 (defclass source ()
@@ -64,3 +65,16 @@
   (:method ((source1 source) (source2 source))
     (string= (source-project-name source1)
              (source-project-name source2))))
+
+(defun write-distinfo (source &optional (stream *standard-output*))
+  (format stream "~{~(~A~): ~A~%~}"
+          (list :name (source-dist-name source)
+                :version (source-version source)
+                :distinfo-subscription-url (format nil "/~A.txt"
+                                                   (source-project-name source))
+                :release-index-url (format nil "/~A/~A/releases.txt"
+                                           (source-project-name source)
+                                           (source-version source))
+                :system-index-url (format nil "/~A/~A/systems.txt"
+                                          (source-project-name source)
+                                          (source-version source)))))
