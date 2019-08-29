@@ -76,16 +76,31 @@ with the same key."
            (setf (gethash value to-table) key)))
     (maphash #'add-to-original from-table)))
 
+(defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*))
+  (format *error-output*
+          "~&Project local Quicklisp directory has changed from 'quicklisp/' to '.qlot/' since v0.9.13.
+See https://github.com/fukamachi/qlot/pull/78 for the details.~%")
+  (when (y-or-n-p "Would you like Qlot to migrate?")
+    (let ((*default-pathname-defaults* pwd))
+      (rename-file #P"quicklisp/" (merge-pathnames #P".qlot/"))
+      (when (uiop:directory-exists-p #P".git")
+        (uiop:with-output-file (out #P".gitignore" :if-exists :append :if-does-not-exist :create)
+          (format out "~&.qlot/~%")))
+      t)))
+
 (defun call-in-local-quicklisp (fn qlhome &key systems (central-registry '()))
   (unless #+clisp (ext:probe-directory qlhome)
           #-clisp (probe-file qlhome)
     (error "Directory ~S does not exist." qlhome))
 
   (unless (probe-file (merge-pathnames #P"setup.lisp" qlhome))
-    (if (probe-file (merge-pathnames #P".qlot/setup.lisp" qlhome))
-        ;; The given `qlhome' is the project root.
-        (setf qlhome (merge-pathnames #P".qlot/" qlhome))
-        (error "~S is not a quicklisp directory." qlhome)))
+    (cond
+      ((or (probe-file (merge-pathnames #P".qlot/setup.lisp" qlhome))
+           (and (probe-file (merge-pathnames #P"quicklisp/setup.lisp" qlhome))
+                (rename-quicklisp-to-dot-qlot qlhome)))
+       ;; The given `qlhome' is the project root.)
+       (setf qlhome (merge-pathnames #P".qlot/" qlhome)))
+      (t (error "~S is not a quicklisp directory." qlhome))))
 
   (let* (#+quicklisp
          (ql:*quicklisp-home* qlhome)

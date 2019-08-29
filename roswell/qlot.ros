@@ -59,6 +59,11 @@ OPTIONS:
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
   (unless (ros:getenv "QUICKLISP_HOME")
+    (when (and (not (uiop:directory-exists-p #P".qlot/"))
+               (uiop:directory-exists-p #P"quicklisp/")
+               (uiop:file-exists-p #P"quicklisp/setup.lisp"))
+      (uiop:symbol-call :ql :quickload :qlot/util :silent t)
+      (uiop:symbol-call :qlot/util :rename-quicklisp-to-dot-qlot))
     (setenv "QUICKLISP_HOME" ".qlot/"))
   (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
                   (merge-pathnames (ros:getenv "QUICKLISP_HOME")
