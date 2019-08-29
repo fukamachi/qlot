@@ -76,10 +76,16 @@ with the same key."
            (setf (gethash value to-table) key)))
     (maphash #'add-to-original from-table)))
 
-(defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*))
+(defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
+  (fresh-line *error-output*)
+  (when enable-color
+    (format *error-output* "~C[33m" #\Esc))
   (format *error-output*
-          "~&Project local Quicklisp directory has changed from 'quicklisp/' to '.qlot/' since v0.9.13.
-See https://github.com/fukamachi/qlot/pull/78 for the details.~%")
+          "Project local Quicklisp directory has changed from 'quicklisp/' to '.qlot/' since v0.9.13.
+See https://github.com/fukamachi/qlot/pull/78 for the details.")
+  (when enable-color
+    (format *error-output* "~C[0m" #\Esc))
+  (fresh-line *error-output*)
   (when (y-or-n-p "Would you like Qlot to migrate?")
     (let ((*default-pathname-defaults* pwd))
       (rename-file #P"quicklisp/" (merge-pathnames #P".qlot/"))
