@@ -29,7 +29,8 @@
          (version
            (cdr (assoc "version" (parse-distinfo-stream body-stream) :test 'equal))))
     (check-type version string)
-    (setf (source-version source) version)))
+    (setf (source-version source)
+          (format nil "ql-~A" version))))
 
 (defun distify-ql (source destination)
   (load-source-ql-version source)

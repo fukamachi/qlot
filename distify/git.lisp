@@ -114,7 +114,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                                     "master")
                    :ref (source-git-ref source))
 
-        (let ((tarball (create-git-tarball (first (uiop:subdirectories softwares))
+        (let ((tarball (create-git-tarball source-directory
                                            archives
                                            (source-git-ref source))))
           (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata))
