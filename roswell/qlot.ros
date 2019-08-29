@@ -30,10 +30,10 @@ exec ros +Q -L sbcl-bin -- $0 "$@"
 
 COMMANDS:
     install
-        Installs libraries to './quicklisp'.
+        Installs libraries to './.qlot'.
 
     update
-        Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+        Makes './.qlot' up-to-date and update 'qlfile.lock'.
         Possible to update specific projects with --project option.
         ex) qlot update --project mito
 
@@ -57,9 +57,14 @@ OPTIONS:
           (asdf:component-version (asdf:find-system :qlot))))
 
 (defun use-local-quicklisp ()
-  ;; Set QUICKLISP_HOME ./quicklisp/
+  ;; Set QUICKLISP_HOME ./.qlot/
   (unless (ros:getenv "QUICKLISP_HOME")
-    (setenv "QUICKLISP_HOME" "quicklisp/"))
+    (when (and (not (uiop:directory-exists-p #P".qlot/"))
+               (uiop:directory-exists-p #P"quicklisp/")
+               (uiop:file-exists-p #P"quicklisp/setup.lisp"))
+      (uiop:symbol-call :ql :quickload :qlot/util :silent t)
+      (uiop:symbol-call :qlot/util :rename-quicklisp-to-dot-qlot nil t))
+    (setenv "QUICKLISP_HOME" ".qlot/"))
   (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
                   (merge-pathnames (ros:getenv "QUICKLISP_HOME")
                                    (make-pathname :defaults *load-pathname* :name nil :type nil)))))
