@@ -6,7 +6,12 @@
                 #:source-ql
                 #:source-ql-all
                 #:source-git)
-  (:export #:distify))
+  (:import-from #:qlot/parser
+                #:parse-qlfile
+                #:parse-qlfile-lock)
+  (:export #:distify
+           #:distify-qlfile
+           #:distify-qlfile-lock))
 (in-package #:qlot/distify)
 
 (defun distify (source-or-sources destination)
@@ -21,3 +26,9 @@
              source
              destination))
   destination)
+
+(defun distify-qlfile (qlfile destination)
+  (distify (parse-qlfile qlfile) destination))
+
+(defun distify-qlfile-lock (qlfile-lock destination)
+  (distify (parse-qlfile-lock qlfile-lock) destination))
