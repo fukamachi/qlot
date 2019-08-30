@@ -3,7 +3,7 @@
   (:import-from #:qlot/utils/shell
                 #:run-lisp)
   (:import-from #:qlot/utils/tmp
-                #:tmp-directory)
+                #:with-tmp-directory)
   (:export #:with-qlot-server))
 (in-package #:qlot/server)
 
@@ -32,15 +32,15 @@
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
         (destination (gensym "DESTINATION")))
     `(let* ((,g-qlfile ,qlfile)
-            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http))
-            (,destination (tmp-directory)))
-       ;; Run distify in another Lisp process
-       (run-lisp (list
-                   `(uiop:symbol-call :qlot/distify :distify-qlfile ,,g-qlfile ,,destination))
-                 :systems '("qlot/distify")
-                 :source-registry (asdf:system-source-directory :qlot))
-       (progv (list ,fetch-scheme-functions '*handler*)
-           (list (cons '("qlot" . qlot-fetch)
-                       (symbol-value ,fetch-scheme-functions))
-                 (make-handler ,destination))
-         ,@body))))
+            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
+       (with-tmp-directory (,destination)
+         ;; Run distify in another Lisp process
+         (run-lisp (list
+                     `(uiop:symbol-call :qlot/distify :distify-qlfile ,,g-qlfile ,,destination))
+                   :systems '("qlot/distify")
+                   :source-registry (asdf:system-source-directory :qlot))
+         (progv (list ,fetch-scheme-functions '*handler*)
+             (list (cons '("qlot" . qlot-fetch)
+                         (symbol-value ,fetch-scheme-functions))
+                   (make-handler ,destination))
+           ,@body)))))

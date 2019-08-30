@@ -5,7 +5,7 @@
   (:import-from #:qlot/utils/shell
                 #:run-lisp)
   (:import-from #:qlot/utils/tmp
-                #:tmp-directory)
+                #:with-tmp-directory)
   (:export #:install-quicklisp))
 (in-package #:qlot/install/quicklisp)
 
@@ -22,8 +22,7 @@
 
 (defun install-quicklisp (path)
   (format t "~&Installing Quicklisp to ~A ...~%" path)
-  (let ((tmp-dir (tmp-directory)))
-    (ensure-directories-exist tmp-dir)
+  (with-tmp-directory (tmp-dir)
     (let ((quicklisp-file (fetch-installer tmp-dir)))
       (run-lisp (list
                   `(load ,quicklisp-file)
