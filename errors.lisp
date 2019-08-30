@@ -18,6 +18,6 @@
    (lineno :initarg :lineno)
    (error :initarg :error))
   (:report (lambda (condition stream)
-             (with-slots (file lineno error)
-                 (format stream "Error raised while parsing '~A' at line ~A:~%  ~A"
-                         file lineno error)))))
+             (with-slots (file lineno error) condition
+               (format stream "Error raised while parsing '~A' at line ~A:~%  ~A"
+                       file lineno error)))))
