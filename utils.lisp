@@ -54,7 +54,7 @@
                     collect `(,fn (&rest ,args)
                                   (apply
                                    ,(if (and (listp fn) (eq (car fn) 'setf))
-                                        `(eval `(function (setf ,(intern ,(string (cadr fn)) ,package-designator))))
-                                        `(symbol-function (intern ,(string fn) ,package-designator)))
+                                        `(eval `(function (setf ,(intern ,(string (cadr fn)) ',package-designator))))
+                                        `(symbol-function (intern ,(string fn) ',package-designator)))
                                    ,args))))
        ,@body)))

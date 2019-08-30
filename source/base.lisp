@@ -1,5 +1,7 @@
 (defpackage #:qlot/source/base
   (:use #:cl)
+  (:import-from #:qlot/utils
+                #:with-package-functions)
   (:import-from #:qlot/errors
                 #:no-source-type)
   (:export #:source
@@ -10,6 +12,7 @@
            #:make-source
            #:source-frozen-slots
            #:freeze-source
+           #:defrost-source
            #:source-dist-name
            #:source=
            #:write-distinfo
@@ -49,6 +52,14 @@
          :initargs ,initargs
          :version ,version
          ,@(source-frozen-slots source))))))
+
+(defgeneric defrost-source (source)
+  (:method ((source source))
+    (let ((class-pkg (symbol-package (type-of source))))
+      (loop for (k v) on (source-defrost-args source) by #'cddr
+            for slot-name = (intern (string k) class-pkg)
+            when (slot-exists-p source slot-name)
+              do (setf (slot-value source slot-name) v)))))
 
 (defmethod print-object ((source source) stream)
   (format stream "#<~S ~A ~A>"

@@ -2,12 +2,14 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:make-source
-                #:source-defrost-args)
+                #:source-defrost-args
+                #:defrost-source)
   (:import-from #:qlot/utils
                 #:make-keyword
                 #:split-with)
   (:export #:parse-qlfile
-           #:parse-qlfile-lock))
+           #:parse-qlfile-lock
+           #:read-qlfile-for-install))
 (in-package #:qlot/parser)
 
 (defun trim-comment (value)
@@ -67,3 +69,39 @@
                       unless (member k '(:class :initargs))
                         append (list k v)))
           source)))
+
+(defun merging-lock-sources (sources lock-sources)
+  (flet ((make-sources-map (sources)
+           (let ((hash (make-hash-table :test 'equal)))
+             (dolist (source sources)
+               (setf (gethash (source-project-name source) hash) source))
+             hash)))
+    (let ((lock-sources-map (make-sources-map lock-sources)))
+      (loop for source in sources
+            for lock-source = (gethash (source-project-name source)
+                                       lock-sources-map)
+            collect
+            (if (source= source lock-source)
+                (progn
+                  (defrost-source)
+                  lock-source)
+                source)))))
+
+(defun read-qlfile-for-install (qlfile &key ignore-lock projects)
+  "Read 'qlfile' (or 'qlfile.lock' if exists) and return sources.
+  This adds the latest 'quicklisp' dist implicitly if no 'quicklisp' project exists in the file.
+  If :ignore-lock is T, read 'qlfile' even when 'qlfile.lock' exists.
+  If :projects is specified, read only those projects from qlfile.lock."
+  (format t "~&Reading '~A'...~%" qlfile)
+  (let ((sources (parse-qlfile qlfile))
+        (qlfile-lock (and (or (not ignore-lock) projects)
+                          (uiop:file-exists-p
+                            (make-pathname :defaults qlfile
+                                           :name (file-namestring qlfile)
+                                           :type "lock")))))
+    (if qlfile-lock
+        (merging-lock-sources sources
+                              (parse-qlfile-lock qlfile-lock)
+                              (not (find name projects :test 'equal)))
+        (cons (make-source :ql :all :latest)
+              sources))))
