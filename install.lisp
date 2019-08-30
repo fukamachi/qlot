@@ -140,11 +140,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                     (version (find-dist (source-dist-name source)))))
         new-dist))))
 
-(defun dump-qlfile-lock (qlfile sources)
-  (uiop:with-output-file (out (make-pathname :name (file-namestring qlfile)
-                                             :type "lock"
-                                             :defaults qlfile)
-                              :if-exists :supersede)
+(defun dump-qlfile-lock (file sources)
+  (uiop:with-output-file (out file :if-exists :supersede)
     (let ((*print-pretty* nil)
           (*print-case* :downcase))
       (loop for source in sources
@@ -171,6 +168,9 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (format t "~&Removing dist ~S.~%" (name dist))
                 (uninstall dist)))))))
 
-    (dump-qlfile-lock qlfile sources)
+    (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
+                                     :type "lock"
+                                     :defaults qlfile)
+                      sources)
 
     (values)))
