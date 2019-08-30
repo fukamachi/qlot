@@ -1,5 +1,7 @@
 (defpackage #:qlot/install
   (:use #:cl)
+  (:import-from #:qlot/install/quicklisp
+                #:install-quicklisp)
   (:import-from #:qlot/source
                 #:source-dist-name
                 #:source-version
@@ -66,12 +68,11 @@
          t)))
 
 (defun install-release (release)
-  (with-package-functions #:ql-dist (ensure-installed base-directory))
-  (ensure-installed release)
+  (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
 
   ;; Install Roswell scripts.
   (let* ((qlhome (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
-         (ros-dir (merge-pathnames #P"roswell/" (base-directory release)))
+         (ros-dir (merge-pathnames #P"roswell/" (uiop:symbol-call '#:ql-dist '#:base-directory release)))
          (bin-dir (merge-pathnames #P"bin/" qlhome))
          (scripts (uiop:directory-files ros-dir "*.*")))
     (when scripts
@@ -82,18 +83,18 @@
                     :type #+unix (if (equalp (pathname-type script) "ros")
                                      nil
                                      (pathname-type script))
-                          #-unix (pathname-type script)
+                    #-unix (pathname-type script)
                     :defaults bin-dir)))
           (uiop:with-output-file (out to
                                       :if-exists :supersede
                                       :if-does-not-exist :create)
-            (format stream "#!/bin/sh
+            (format out "#!/bin/sh
 CURRENT=$(dirname $0)
 cd \"$CURRENT/../../\"
 qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 "
-                                             (subseq (namestring script)
-                                                     (length (namestring qlhome)))))
+            (subseq (namestring script)
+                    (length (namestring qlhome)))))
           #+sbcl (sb-posix:chmod to #o700)))))
 
   (values))

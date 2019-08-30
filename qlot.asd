@@ -15,6 +15,7 @@
                "qlot/tests/distify/ql"
                "qlot/tests/distify"
                "qlot/tests/server"
+               "qlot/tests/install/quicklisp"
                "qlot/tests/utils"
                "qlot/tests/utils/ql")
   :perform (test-op (op c) (symbol-call :rove :run c)))
