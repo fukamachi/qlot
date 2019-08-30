@@ -20,19 +20,21 @@
 
 (defun make-handler (destination)
   (lambda (url)
-    (when (and (<= (length "qlot://localhost/")
+    (when (and (stringp url)
+               (<= (length "qlot://localhost/")
                    (length url))
                (string= "qlot://localhost/" url :end2 (length "qlot://localhost/")))
       (let* ((path (subseq url (length "qlot://localhost/")))
              (file (merge-pathnames path destination)))
-        (probe-file file)))))
+        (when (uiop:file-exists-p file)
+          file)))))
 
 (defmacro with-qlot-server (qlfile &body body)
   (let ((g-qlfile (gensym "QLFILE"))
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
         (destination (gensym "DESTINATION")))
-    `(let* ((,g-qlfile ,qlfile)
-            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
+    `(let ((,g-qlfile ,qlfile)
+           (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
        (with-tmp-directory (,destination)
          ;; Run distify in another Lisp process
          (run-lisp (list
