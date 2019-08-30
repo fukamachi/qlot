@@ -108,9 +108,9 @@
       (with-autoload-on-missing
         (asdf:load-asd system-file))
       (asdf:map-systems
-       (lambda (system)
-         (when (equalp system-file (asdf:system-source-file system))
-           (push system result))))
+        (lambda (system)
+          (when (equalp system-file (asdf:system-source-file system))
+            (push system result))))
       (nreverse result))))
 
 (defun system-dependencies (system-designator)

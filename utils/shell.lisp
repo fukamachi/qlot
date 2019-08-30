@@ -60,30 +60,7 @@
         form
         (prin1-to-string form))))
 
-#+ros.init
-(defun run-roswell (forms &key systems source-registry without-quicklisp)
-  (let ((ros (or (ros:opt "wargv0")
-                 (ros:opt "argv0"))))
-    (with-output-to-string (s)
-      (uiop:run-program (append (list ros)
-                                (when without-quicklisp
-                                  (list "+Q"))
-                                (when source-registry
-                                  (list "-S" (princ-to-string source-registry)))
-                                (loop for system in systems
-                                      append (list "-s" (princ-to-string system)))
-                                (loop for form in forms
-                                      append (list "-e"
-                                                   (str (if (pathnamep form)
-                                                            `(load ,form)
-                                                            form)))))
-                        :output s
-                        :error-output *error-output*))))
-
 (defun run-lisp (forms &key systems source-registry without-quicklisp)
-  #+ros.init
-  (run-roswell forms :systems systems :source-registry source-registry :without-quicklisp without-quicklisp)
-  #-ros.init
   (safety-shell-command *current-lisp-path*
                         (append
                           #+ccl '("--no-init" "--quiet" "--batch")
@@ -93,19 +70,34 @@
                           #+cmu '("-noinit")
                           #+ecl '("-norc")
 
+                          (list *eval-option* "(require 'asdf)")
+
+                          (when source-registry
+                            (list *eval-option*
+                                  (str `(push ,source-registry asdf:*central-registry*))))
+
+                          (list *eval-option*
+                                (str '(setf asdf::*default-source-registries*
+                                            (quote (asdf::environment-source-registry
+                                                     asdf::system-source-registry
+                                                     asdf::system-source-registry-directory)))))
+
+                          ;; XXX: Don't load qlot/distify with the local Quicklisp
                           #+quicklisp
                           (unless without-quicklisp
                             (when ql:*quicklisp-home*
                               `(,*eval-option*
                                  ,(str `(load ,(merge-pathnames #P"setup.lisp" ql:*quicklisp-home*))))))
 
-                          (when source-registry
-                            (list *eval-option*
-                                  (str `(push ,source-registry asdf:*central-registry*))))
-
                           (loop for system in systems
                                 append (list *eval-option*
-                                             (str `(ql:quickload ,system))))
+                                             #+quicklisp
+                                             (str (if (or without-quicklisp
+                                                          (null ql:*quicklisp-home*))
+                                                      `(asdf:load-system ,system)
+                                                      `(ql:quickload ,system)))
+                                             #-quicklisp
+                                             (str `(asdf:load-system ,system))))
 
                           (loop for form in forms
                                 append (list *eval-option*

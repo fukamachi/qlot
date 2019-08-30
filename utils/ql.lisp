@@ -58,17 +58,21 @@
   (uiop:with-input-file (in file)
     (parse-distinfo-stream in)))
 
-(defun parse-space-delimited-stream (stream &key (test #'identity))
-  (loop for line = (read-line stream nil nil)
-        while line
-        for data = (split-with #\Space line)
-        when (and (char/= (aref line 0) #\#)
-                  (funcall test data))
-        collect data))
+(defun parse-space-delimited-stream (stream &key (test #'identity) include-header)
+  (let ((header-line (read-line stream)))
+    (assert (char= (aref header-line 0) #\#))
+    (let ((rows (loop for line = (read-line stream nil nil)
+                      while line
+                      for data = (split-with #\Space line)
+                      when (funcall test data)
+                      collect data)))
+      (if include-header
+          (cons (list header-line) rows)
+          rows))))
 
-(defun parse-space-delimited-file (file &key (test #'identity))
+(defun parse-space-delimited-file (file &key (test #'identity) include-header)
   (uiop:with-input-file (in file)
-    (parse-space-delimited-stream in :test test)))
+    (parse-space-delimited-stream in :test test :include-header include-header)))
 
 (defmacro with-quicklisp-home (qlhome &body body)
   `(progv (list (intern #.(string :*quicklisp-home*) :ql))

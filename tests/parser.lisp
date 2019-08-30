@@ -64,7 +64,7 @@
 
   ;; https://github.com/fukamachi/qlot/issues/18
   (testing "CRLF"
-    (let ((parsed (parse-qlfile (test-qlfile #P"qlfile-csrf"))))
+    (let ((parsed (parse-qlfile (test-qlfile #P"qlfile-crlf"))))
       (ok (equal (length parsed) 4)))))
 
 (deftest parse-qlfile-lock-tests

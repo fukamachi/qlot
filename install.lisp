@@ -102,12 +102,10 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 (defun install-all-releases (source)
   (unless (equal (symbol-name (type-of source))
                  (string :source-ql-all))
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (with-package-functions #:ql-dist (dist provided-releases)
-        (let ((releases (provided-releases (dist (source-dist-name source)))))
-          (dolist (release releases)
-            (install-release release)))))))
+    (with-package-functions #:ql-dist (dist provided-releases)
+      (let ((releases (provided-releases (dist (source-dist-name source)))))
+        (dolist (release releases)
+          (install-release release))))))
 
 (defun install-source (source)
   (format t "~&Installing dist ~S.~%"
@@ -135,9 +133,11 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
               (install-all-releases source))
-            (format t "~&Already have dist ~S version ~S.~%"
-                    (source-dist-name source)
-                    (version (find-dist (source-dist-name source)))))
+            (progn
+              (setf (source-version source) (version (find-dist (source-dist-name source))))
+              (format t "~&Already have dist ~S version ~S.~%"
+                      (source-dist-name source)
+                      (source-version source))))
         new-dist))))
 
 (defun dump-qlfile-lock (file sources)
@@ -157,8 +157,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
         (let ((preference (get-universal-time)))
           (dolist (source sources)
             (if (already-installed-p source)
-                (install-source source)
-                (update-source source))
+                (update-source source)
+                (install-source source))
             (with-package-functions #:ql-dist (dist (setf preference))
               (setf (preference (dist (source-dist-name source)))
                     (incf preference))))
