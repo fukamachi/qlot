@@ -36,7 +36,7 @@
                  "")))))
 
 (deftest with-qlot-server-tests
-  (with-qlot-server (asdf:system-relative-pathname :qlot #P"tests/data/qlfile4")
+  (with-qlot-server ((asdf:system-relative-pathname :qlot #P"tests/data/qlfile4"))
     (uiop:with-temporary-file (:pathname file)
       (ql-http:fetch "qlot://localhost/lsx.txt" file)
       (ok (not (equal (uiop:read-file-string file)

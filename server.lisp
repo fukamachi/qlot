@@ -29,15 +29,20 @@
         (when (uiop:file-exists-p file)
           file)))))
 
-(defmacro with-qlot-server (qlfile &body body)
+(defmacro with-qlot-server ((qlfile &optional qlhome) &body body)
   (let ((g-qlfile (gensym "QLFILE"))
+        (g-qlhome (gensym "QLHOME"))
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
         (destination (gensym "DESTINATION")))
     `(let ((,g-qlfile ,qlfile)
+           (,g-qlhome ,qlhome)
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
        (with-tmp-directory (,destination)
          ;; Run distify in another Lisp process
          (run-lisp (list
+                     `(when ,,g-qlhome
+                        (load (merge-pathnames #P"setup.lisp" ,,g-qlhome))
+                        (setf (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)) ,,g-qlhome))
                      `(uiop:symbol-call :qlot/distify :distify-qlfile ,,g-qlfile ,,destination))
                    :systems '("qlot/distify")
                    :source-registry (asdf:system-source-directory :qlot))

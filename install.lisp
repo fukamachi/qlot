@@ -152,8 +152,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
-    (with-quicklisp-home qlhome
-      (with-qlot-server qlfile
+    (with-qlot-server (qlfile qlhome)
+      (with-quicklisp-home qlhome
         (let ((preference (get-universal-time)))
           (dolist (source sources)
             (if (already-installed-p source)

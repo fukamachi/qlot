@@ -60,7 +60,59 @@
         form
         (prin1-to-string form))))
 
-(defun run-lisp (forms &key systems source-registry without-quicklisp)
+(defun -e (form)
+  (list *eval-option* (str form)))
+
+(defun build-command-args (forms &key systems source-registry without-quicklisp)
+  (append
+    (-e "(require 'asdf)")
+
+    (when source-registry
+      (-e `(push ,source-registry asdf:*central-registry*)))
+
+    (-e '(setf asdf::*default-source-registries*
+               (quote (asdf::environment-source-registry
+                        asdf::system-source-registry
+                        asdf::system-source-registry-directory))))
+
+    #+quicklisp
+    (unless without-quicklisp
+      (when ql:*quicklisp-home*
+        (-e `(load ,(merge-pathnames #P"setup.lisp" ql:*quicklisp-home*)))))
+
+    (loop for system in systems
+          append (-e
+                   #+quicklisp
+                   (if (or without-quicklisp
+                           (null ql:*quicklisp-home*))
+                       `(asdf:load-system ,system)
+                       `(ql:quickload ,system))
+                   #-quicklisp
+                   `(asdf:load-system ,system)))
+
+    (loop for form in forms
+          append (-e
+                   (if (pathnamep form)
+                       `(load ,form)
+                       form)))))
+
+#+ros.init
+(defun run-roswell (forms &rest args &key systems source-registry without-quicklisp)
+  (declare (ignore systems source-registry without-quicklisp))
+  (let ((ros (or (ros:opt "wargv0")
+                 (ros:opt "argv0"))))
+    (with-output-to-string (s)
+      (uiop:run-program (append (list ros)
+                                (list "+Q")
+                                (apply #'build-command-args forms args))
+                        :output s
+                        :error-output *error-output*))))
+
+(defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
+  (declare (ignore systems source-registry without-quicklisp))
+  #+ros.init
+  (apply #'run-roswell forms args)
+  #-ros.init
   (safety-shell-command *current-lisp-path*
                         (append
                           #+ccl '("--no-init" "--quiet" "--batch")
@@ -70,48 +122,14 @@
                           #+cmu '("-noinit")
                           #+ecl '("-norc")
 
-                          (list *eval-option* "(require 'asdf)")
+                          (apply #'build-command-args forms args)
 
-                          (when source-registry
-                            (list *eval-option*
-                                  (str `(push ,source-registry asdf:*central-registry*))))
-
-                          (list *eval-option*
-                                (str '(setf asdf::*default-source-registries*
-                                            (quote (asdf::environment-source-registry
-                                                     asdf::system-source-registry
-                                                     asdf::system-source-registry-directory)))))
-
-                          ;; XXX: Don't load qlot/distify with the local Quicklisp
-                          #+quicklisp
-                          (unless without-quicklisp
-                            (when ql:*quicklisp-home*
-                              `(,*eval-option*
-                                 ,(str `(load ,(merge-pathnames #P"setup.lisp" ql:*quicklisp-home*))))))
-
-                          (loop for system in systems
-                                append (list *eval-option*
-                                             #+quicklisp
-                                             (str (if (or without-quicklisp
-                                                          (null ql:*quicklisp-home*))
-                                                      `(asdf:load-system ,system)
-                                                      `(ql:quickload ,system)))
-                                             #-quicklisp
-                                             (str `(asdf:load-system ,system))))
-
-                          (loop for form in forms
-                                append (list *eval-option*
-                                             (str (if (pathnamep form)
-                                                      `(load ,form)
-                                                      form))))
-
-                          `(,*eval-option*
-                             ,(prin1-to-string
-                                (quote
-                                  #+ccl (ccl:quit)
-                                  #+sbcl (sb-ext:exit)
-                                  #+allegro (excl:exit :quiet t)
-                                  #+clisp (ext:quit)
-                                  #+cmucl (unix:unix-exit)
-                                  #+ecl (ext:quit)
-                                  #-(or ccl sbcl allegro clisp cmucl ecl) (cl-user::quit)))))))
+                          (-e
+                            (quote
+                              #+ccl (ccl:quit)
+                              #+sbcl (sb-ext:exit)
+                              #+allegro (excl:exit :quiet t)
+                              #+clisp (ext:quit)
+                              #+cmucl (unix:unix-exit)
+                              #+ecl (ext:quit)
+                              #-(or ccl sbcl allegro clisp cmucl ecl) (cl-user::quit))))))
