@@ -12,7 +12,8 @@
            #:freeze-source
            #:source-dist-name
            #:source=
-           #:write-distinfo))
+           #:write-distinfo
+           #:source-distinfo-url))
 (in-package #:qlot/source/base)
 
 (defclass source ()
@@ -70,11 +71,15 @@
   (format stream "~{~(~A~): ~A~%~}"
           (list :name (source-dist-name source)
                 :version (source-version source)
-                :distinfo-subscription-url (format nil "/~A.txt"
+                :distinfo-subscription-url (format nil "qlot://localhost/~A.txt"
                                                    (source-project-name source))
-                :release-index-url (format nil "/~A/~A/releases.txt"
+                :release-index-url (format nil "qlot://localhost/~A/~A/releases.txt"
                                            (source-project-name source)
                                            (source-version source))
-                :system-index-url (format nil "/~A/~A/systems.txt"
+                :system-index-url (format nil "qlot://localhost/~A/~A/systems.txt"
                                           (source-project-name source)
                                           (source-version source)))))
+
+(defgeneric source-distinfo-url (source)
+  (:method ((source source))
+    (format nil "qlot://localhost/~A.txt" (source-project-name source))))

@@ -9,8 +9,6 @@
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
   (:import-from #:dexador)
-  (:import-from #:assoc-utils
-                #:aget)
   (:export #:distify-ql-all
            #:distify-ql))
 (in-package #:qlot/distify/ql)
@@ -46,8 +44,8 @@
       (ensure-directories-exist metadata)
       (let ((original-distinfo
               (parse-distinfo-stream (dex:get (source-distribution source) :want-stream t))))
-        (dolist (metadata-pair `(("systems.txt" . ,(aget original-distinfo "system-index-url"))
-                                 ("releases.txt" . ,(aget original-distinfo "release-index-url"))))
+        (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
+                                 ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair
             (check-type url string)
             (let ((data (parse-space-delimited-stream (dex:get url :want-stream t)

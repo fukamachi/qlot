@@ -21,6 +21,9 @@
                  :initform (quicklisp-distinfo-url))
    (%distinfo :accessor source-distinfo)))
 
+(defmethod source-distinfo-url ((source source-ql-all))
+  (source-distribution source))
+
 (defmethod make-source ((source (eql :ql)) &rest args
                         &key distribution
                           &allow-other-keys)

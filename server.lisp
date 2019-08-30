@@ -19,10 +19,12 @@
           (probe-file file)))
 
 (defun make-handler (destination)
-  (lambda (path)
-    (when (and (< 0 (length path))
-               (char= (aref path 0) #\/))
-      (let ((file (merge-pathnames (subseq path 1) destination)))
+  (lambda (url)
+    (when (and (<= (length "qlot://localhost/")
+                   (length url))
+               (string= "qlot://localhost/" url :end2 (length "qlot://localhost/")))
+      (let* ((path (subseq url (length "qlot://localhost/")))
+             (file (merge-pathnames path destination)))
         (probe-file file)))))
 
 (defmacro with-qlot-server (qlfile &body body)

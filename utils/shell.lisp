@@ -56,14 +56,18 @@
 
 (defun str (form)
   (let ((*package* (find-package :cl-user)))
-    (prin1-to-string form)))
+    (if (stringp form)
+        form
+        (prin1-to-string form))))
 
 #+ros.init
-(defun run-roswell (forms &key systems source-registry)
+(defun run-roswell (forms &key systems source-registry without-quicklisp)
   (let ((ros (or (ros:opt "wargv0")
                  (ros:opt "argv0"))))
     (with-output-to-string (s)
       (uiop:run-program (append (list ros)
+                                (when without-quicklisp
+                                  (list "+Q"))
                                 (when source-registry
                                   (list "-S" (princ-to-string source-registry)))
                                 (loop for system in systems
@@ -76,9 +80,9 @@
                         :output s
                         :error-output *error-output*))))
 
-(defun run-lisp (forms &key systems source-registry)
+(defun run-lisp (forms &key systems source-registry without-quicklisp)
   #+ros.init
-  (run-roswell forms :systems systems :source-registry source-registry)
+  (run-roswell forms :systems systems :source-registry source-registry :without-quicklisp without-quicklisp)
   #-ros.init
   (safety-shell-command *current-lisp-path*
                         (append
@@ -90,9 +94,10 @@
                           #+ecl '("-norc")
 
                           #+quicklisp
-                          (when ql:*quicklisp-home*
-                            `(,*eval-option*
-                               ,(str `(load ,(merge-pathnames #P"setup.lisp" ql:*quicklisp-home*)))))
+                          (unless without-quicklisp
+                            (when ql:*quicklisp-home*
+                              `(,*eval-option*
+                                 ,(str `(load ,(merge-pathnames #P"setup.lisp" ql:*quicklisp-home*))))))
 
                           (when source-registry
                             (list *eval-option*

@@ -61,7 +61,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                                                 out)))))
       (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
               project-name
-              (format nil "/archives/~A"
+              (format nil "qlot://localhost/archives/~A"
                       (file-namestring tarball-file))
               size
               file-md5

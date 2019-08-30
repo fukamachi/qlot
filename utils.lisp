@@ -3,7 +3,8 @@
   (:export #:with-in-directory
            #:make-keyword
            #:split-with
-           #:generate-random-string))
+           #:generate-random-string
+           #:with-package-functions))
 (in-package #:qlot/utils)
 
 (defmacro with-in-directory (dir &body body)
@@ -46,3 +47,14 @@
 (defun generate-random-string ()
   (let ((*random-state* (make-random-state t)))
     (format nil "~36R" (random (expt 36 #-gcl 8 #+gcl 5)))))
+
+(defmacro with-package-functions (package-designator functions &body body)
+  (let ((args (gensym "ARGS")))
+    `(flet (,@(loop for fn in functions
+                    collect `(,fn (&rest ,args)
+                                  (apply
+                                   ,(if (and (listp fn) (eq (car fn) 'setf))
+                                        `(eval `(function (setf ,(intern ,(string (cadr fn)) ,package-designator))))
+                                        `(symbol-function (intern ,(string fn) ,package-designator)))
+                                   ,args))))
+       ,@body)))

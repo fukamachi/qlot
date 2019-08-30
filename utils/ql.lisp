@@ -6,7 +6,8 @@
            #:parse-distinfo-stream
            #:parse-distinfo-file
            #:parse-space-delimited-stream
-           #:parse-space-delimited-file))
+           #:parse-space-delimited-file
+           #:with-quicklisp-home))
 (in-package #:qlot/utils/ql)
 
 (defparameter *quicklisp-distinfo*
@@ -68,3 +69,8 @@
 (defun parse-space-delimited-file (file &key (test #'identity))
   (uiop:with-input-file (in file)
     (parse-space-delimited-stream in :test test)))
+
+(defmacro with-quicklisp-home (qlhome &body body)
+  `(progv (list (intern #.(string :*quicklisp-home*) :ql))
+       (list ,qlhome)
+     ,@body))
