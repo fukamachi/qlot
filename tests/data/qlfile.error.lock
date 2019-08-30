@@ -1,0 +1,7 @@
+("datafly" .
+ (:class qlot.source.foobar:source-foobar
+  :initargs (:project-name "datafly" :repos "fukamachi/datafly" :ref nil :branch nil :tag nil)
+  :version "github-f53427a8f22682814ad00c1ca907a64e09f4776f"
+  :repos "fukamachi/datafly"
+  :url "https://github.com/fukamachi/datafly/archive/f53427a8f22682814ad00c1ca907a64e09f4776f.tar.gz"
+  :ref "f53427a8f22682814ad00c1ca907a64e09f4776f"))

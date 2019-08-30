@@ -12,7 +12,9 @@
   (:import-from #:qlot/source/ql
                 #:source-ql
                 #:source-ql-all
-                #:source-distribution))
+                #:source-distribution)
+  (:import-from #:qlot/errors
+                #:qlfile-parse-failed))
 (in-package #:qlot/tests/parser)
 
 (defun test-qlfile (name)
@@ -52,3 +54,22 @@
       ";; comment")
   (ok (equal (parse-qlfile-line " ;; This is a comment.") nil)
       " ;; comment"))
+
+(deftest parse-qlfile-tests
+  (let ((parsed (parse-qlfile (test-qlfile #P"qlfile"))))
+    (ok (equal (length parsed) 4)))
+
+  (ok (signals (parse-qlfile (test-qlfile #P"qlfile.error"))
+               'qlfile-parse-failed))
+
+  ;; https://github.com/fukamachi/qlot/issues/18
+  (testing "CRLF"
+    (let ((parsed (parse-qlfile (test-qlfile #P"qlfile-csrf"))))
+      (ok (equal (length parsed) 4)))))
+
+(deftest parse-qlfile-lock-tests
+  (let ((parsed (parse-qlfile-lock (test-qlfile #P"qlfile.lock"))))
+    (ok (equal (length parsed) 5)))
+
+  (ok (signals (parse-qlfile-lock (test-qlfile #P"qlfile.error.lock"))
+               'qlfile-parse-failed)))

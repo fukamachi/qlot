@@ -6,6 +6,8 @@
                 #:source-defrost-args
                 #:defrost-source
                 #:source=)
+  (:import-from #:qlot/errors
+                #:qlfile-parse-failed)
   (:import-from #:qlot/utils
                 #:make-keyword
                 #:split-with)
@@ -55,22 +57,42 @@
 
 (defun parse-qlfile (file)
   (with-open-file (in file)
-    (loop for line = (read-line in nil nil)
+    (loop for lineno from 1
+          for line = (read-line in nil nil)
           while line
-          for source = (parse-qlfile-line line)
+          for source = (handler-bind ((error
+                                        (lambda (e)
+                                          (error 'qlfile-parse-failed
+                                                 :file file
+                                                 :lineno lineno
+                                                 :error e))))
+                         (parse-qlfile-line line))
           when source
             collect source)))
 
+(defmacro with-handling-parse-error ((file lineno) &body body)
+  `(handler-bind ((error
+                    (lambda (e)
+                      (error 'qlfile-parse-failed
+                             :lineno ,lineno
+                             :file ,file
+                             :error e))))
+     ,@body))
+
 (defun parse-qlfile-lock (file &key (test #'identity))
-  (loop for (project-name . args) in (uiop:read-file-forms file)
+  (loop with lineno = 1
+        for (project-name . args) in (with-handling-parse-error (file lineno)
+                                       (uiop:read-file-forms file))
         when (funcall test project-name)
         collect
-        (let ((source (apply #'make-instance (getf args :class) (getf args :initargs))))
+        (let ((source (with-handling-parse-error (file lineno)
+                        (apply #'make-instance (getf args :class) (getf args :initargs)))))
           (setf (source-defrost-args source)
                 (loop for (k v) on args by #'cddr
                       unless (member k '(:class :initargs))
-                        append (list k v)))
-          source)))
+                      append (list k v)))
+          source)
+        do (incf lineno (1+ (/ (length args) 2)))))
 
 (defun merging-lock-sources (sources lock-sources)
   (flet ((make-sources-map (sources)

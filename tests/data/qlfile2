@@ -1,3 +1,3 @@
 ql log4cl 2014-03-17
 git shelly https://github.com/fukamachi/shelly.git :tag v0.7.7
-github datafly fukamachi/datafly
+git datafly https://github.com/fukamachi/datafly
