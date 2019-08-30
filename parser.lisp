@@ -2,8 +2,10 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:make-source
+                #:source-project-name
                 #:source-defrost-args
-                #:defrost-source)
+                #:defrost-source
+                #:source=)
   (:import-from #:qlot/utils
                 #:make-keyword
                 #:split-with)
@@ -83,7 +85,7 @@
             collect
             (if (source= source lock-source)
                 (progn
-                  (defrost-source)
+                  (defrost-source lock-source)
                   lock-source)
                 source)))))
 
@@ -101,7 +103,8 @@
                                            :type "lock")))))
     (if qlfile-lock
         (merging-lock-sources sources
-                              (parse-qlfile-lock qlfile-lock)
-                              (not (find name projects :test 'equal)))
+                              (parse-qlfile-lock qlfile-lock
+                                                 :test (lambda (name)
+                                                         (not (find name projects :test 'equal)))))
         (cons (make-source :ql :all :latest)
               sources))))
