@@ -8,7 +8,6 @@
 .#*
 
 t/tmp
-qlfile.lock
 t/data/qlfile2.lock
 
 tests/tmp

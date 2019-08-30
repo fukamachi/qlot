@@ -1,0 +1,26 @@
+("quicklisp" .
+ (:class qlot.source.ql:source-ql-all
+  :initargs (:distribution "http://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
+  :version "2019-08-13"))
+("clack" .
+ (:class qlot.source.git:source-git
+  :initargs (:project-name "clack" :remote-url "https://github.com/fukamachi/clack.git")
+  :version "git-2921d3642c9a169694000634ea7b0733d16425b5"
+  :remote-url "https://github.com/fukamachi/clack.git"
+  :ref "2921d3642c9a169694000634ea7b0733d16425b5"))
+("shelly" .
+ (:class qlot.source.git:source-git
+  :initargs (:project-name "shelly" :remote-url "https://github.com/fukamachi/shelly.git" :branch "v0.7.x")
+  :version "git-43f40827ca6633a139739043f4a7afe1403da718"
+  :remote-url "https://github.com/fukamachi/shelly.git"
+  :ref "43f40827ca6633a139739043f4a7afe1403da718"))
+("cl-dbi" .
+ (:class qlot.source.git:source-git
+  :initargs (:project-name "cl-dbi" :remote-url "https://github.com/fukamachi/cl-dbi.git" :ref "54928984e5756e92ba298aae51de8b95a6b0cf4b")
+  :version "git-54928984e5756e92ba298aae51de8b95a6b0cf4b"
+  :remote-url "https://github.com/fukamachi/cl-dbi.git"
+  :ref "54928984e5756e92ba298aae51de8b95a6b0cf4b"))
+("log4cl" .
+ (:class qlot.source.ql:source-ql
+  :initargs (:project-name "log4cl" :distribution "http://beta.quicklisp.org/dist/quicklisp/2014-03-17/distinfo.txt" :%version "2014-03-17")
+  :version "ql-2014-03-17"))
