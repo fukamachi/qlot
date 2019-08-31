@@ -3,26 +3,21 @@
 #|
 exec ros +Q -L sbcl-bin -- $0 "$@"
 |#
-
-(ros:include "util")
+(progn ;;init forms
+  (ros:include "util")
+  (ros:ensure-asdf)
+  (let ((*standard-output* (make-broadcast-stream))
+        (*trace-output* (make-broadcast-stream)))
+    (funcall (intern (string '#:load-system) '#:asdf) '#:qlot/cli)
+    (funcall (intern (string '#:load-system) '#:asdf) '#:qlot/errors)))
 
 (defpackage #:ros/script/qlot
   (:use #:cl)
   (:import-from #:roswell.util
                 #:which
-                #:setenv))
+                #:setenv
+                #:homedir))
 (in-package #:ros/script/qlot)
-
-(unless (find-package :uiop)
-  (ros:quicklisp)
-  (funcall (find-symbol #.(string :quickload) :ql) :uiop :silent t))
-
-(defun print-error (format-control &rest format-arguments)
-  (fresh-line *error-output*)
-  (princ "Error: " *error-output*)
-  (apply #'format *error-output* format-control format-arguments)
-  (fresh-line *error-output*)
-  (ros:quit -1))
 
 (defun print-usage ()
   (format *error-output*
@@ -30,10 +25,10 @@ exec ros +Q -L sbcl-bin -- $0 "$@"
 
 COMMANDS:
     install
-        Installs libraries to './quicklisp'.
+        Installs libraries to './.qlot'.
 
     update
-        Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+        Makes './.qlot' up-to-date and update 'qlfile.lock'.
         Possible to update specific projects with --project option.
         ex) qlot update --project mito
 
@@ -57,27 +52,29 @@ OPTIONS:
           (asdf:component-version (asdf:find-system :qlot))))
 
 (defun use-local-quicklisp ()
-  ;; Set QUICKLISP_HOME ./quicklisp/
+  ;; Set QUICKLISP_HOME ./.qlot/
   (unless (ros:getenv "QUICKLISP_HOME")
-    (setenv "QUICKLISP_HOME" "quicklisp/"))
+    (when (and (not (uiop:directory-exists-p #P".qlot/"))
+               (uiop:directory-exists-p #P"quicklisp/")
+               (uiop:file-exists-p #P"quicklisp/setup.lisp"))
+      (qlot/cli:rename-quicklisp-to-dot-qlot nil t))
+    (setenv "QUICKLISP_HOME" ".qlot/"))
   (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
                   (merge-pathnames (ros:getenv "QUICKLISP_HOME")
                                    (make-pathname :defaults *load-pathname* :name nil :type nil)))))
     (unless (probe-file path)
-      (print-error "'~A~A' does not exist."
-                   *default-pathname-defaults*
-                   (ros:getenv "QUICKLISP_HOME")))
+      (qlot/errors:ros-command-error "'~A~A' does not exist."
+                                     *default-pathname-defaults*
+                                     (ros:getenv "QUICKLISP_HOME")))
     (unless (probe-file (merge-pathnames "setup.lisp" path))
-      (print-error "Invalid Quicklisp directory: '~A'"
-                   (ros:getenv "QUICKLISP_HOME"))))
+      (qlot/errors:ros-command-error "Invalid Quicklisp directory: '~A'"
+                                     (ros:getenv "QUICKLISP_HOME"))))
 
   ;; Overwrite CL_SOURCE_REGISTRY to the current directory
-  (ros:quicklisp)
-  (uiop:symbol-call :ql :quickload :qlot :silent t)
   (setenv "CL_SOURCE_REGISTRY"
-          (uiop:symbol-call :qlot/util :extend-source-registry
-                            (uiop:getenv "CL_SOURCE_REGISTRY")
-                            (uiop:native-namestring (probe-file *default-pathname-defaults*)))))
+          (qlot/cli:extend-source-registry
+            (uiop:getenv "CL_SOURCE_REGISTRY")
+            (uiop:native-namestring (truename *default-pathname-defaults*)))))
 
 (defmacro case-equal (keyform &body cases)
   (let ((g-keyform (gensym "KEYFORM")))
@@ -102,55 +99,38 @@ OPTIONS:
 
 (defun parse-argv (argv)
   (let ((target nil)
-        (projects '())
-        (parsing-options nil))
+        (projects '()))
     (loop for option = (pop argv)
           while option
           do (case-equal option
                ("--project"
-                (setf parsing-options t)
-                (let ((project (pop argv)))
-                  (setf projects
-                        (append
-                         projects
-                         (remove ""
-                                 (split #\, project)
-                                 :test 'equal)))))
+                 (unless argv
+                   (qlot/errors:ros-command-error "--project requires a project name"))
+                 (setf projects
+                       (append projects
+                               (remove ""
+                                       (split #\, (pop argv))
+                                       :test 'equal))))
                ("--version"
-                (print-version)
-                (ros:quit))
+                 (print-version)
+                 (ros:quit))
                (otherwise
-                (unless (and (null parsing-options)
-                             (null target))
-                  (error "Unknown option: ~A" option))
-                (setf target option))))
-    (if target
-        (list (or (probe-file target)
-                  (print-error "'~A' does not exist." target))
-              :projects projects)
-        (list :projects projects))))
-
+                 (if target
+                     (qlot/errors:ros-command-error "'~A' is unknown option" option)
+                     (setf target option))))
+          finally
+          (return
+           (cons target (and projects (list :projects projects)))))))
 
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))
   (handler-case
       (cond ((equal "install" $1)
-             (when (and (first argv)
-                        (not (probe-file (first argv))))
-               (print-error "'~A' does not found." (first argv)))
              (ros:quicklisp)
-             (uiop:symbol-call :ql :quickload :qlot :silent t)
-             (if argv
-                 (uiop:symbol-call :qlot :install (probe-file (first argv)))
-                 (uiop:symbol-call :qlot :install)))
+             (apply #'qlot/cli:install argv))
             ((equal "update" $1)
              (ros:quicklisp)
-             (uiop:symbol-call :ql :quickload :qlot :silent t)
-             (apply #'uiop:symbol-call :qlot :update (parse-argv argv)))
-            ((equal "bundle" $1)
-             (ros:quicklisp)
-             (uiop:symbol-call :ql :quickload :qlot :silent t)
-             (uiop:symbol-call :qlot :bundle))
+             (apply #'qlot/cli:update (parse-argv argv)))
             ((equal "run" $1)
              (use-local-quicklisp)
 
@@ -165,16 +145,22 @@ OPTIONS:
              ;; Add ~/.roswell/bin to $PATH
              (setenv "PATH"
                      (format nil "~A:~A"
-                             (merge-pathnames "bin/" (roswell.util:homedir))
+                             (merge-pathnames "bin/" (homedir))
                              (ros:getenv "PATH")))
 
              (let ((command (which (first argv))))
                (unless command
-                 (print-error "Command not found: ~A" (first argv)))
+                 (qlot/errors:ros-command-error "Command not found: ~A" (first argv)))
                (ros:exec (cons command (rest argv)))))
             ((equal "--version" $1)
              (print-version)
              (ros:quit))
-            (t (print-usage)
-               (ros:quit 1)))
-    #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 nil))))
+            (t (error 'qlot/errors:command-not-found :command $1)))
+    #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 nil))
+    (qlot/errors:command-not-found (e)
+      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+      (print-usage)
+      (uiop:quit -1))
+    (qlot/errors:qlot-error (e)
+      (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
+      (uiop:quit -1))))

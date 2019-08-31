@@ -15,6 +15,8 @@
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
+  (:import-from #:qlot/errors
+                #:qlot-simple-error)
   (:export #:install-qlfile
            #:update-qlfile
            #:install-project
@@ -32,7 +34,9 @@
 
 (defun install-qlfile (qlfile &key (quicklisp-home *qlot-directory*))
   (unless (uiop:file-exists-p qlfile)
-    (error "File does not exist: ~A" qlfile))
+    (error 'qlot-simple-error
+           :format-control "File does not exist: ~A"
+           :format-arguments (list qlfile)))
 
   (let ((qlhome (canonical-qlhome quicklisp-home)))
     (unless (and (uiop:directory-exists-p qlhome)
@@ -51,12 +55,15 @@
 
 (defun update-qlfile (qlfile &key (quicklisp-home *qlot-directory*) projects)
   (unless (uiop:file-exists-p qlfile)
-    (error "Failed to update because the file '~A' does not exist." qlfile))
+    (error 'qlot-simple-error
+           :format-control "Failed to update because the file '~A' does not exist."
+           :format-arguments (list qlfile)))
 
   (let ((qlhome (canonical-qlhome quicklisp-home)))
     (unless (and (uiop:directory-exists-p qlhome)
                  (uiop:file-exists-p (merge-pathnames "setup.lisp" qlhome)))
-      (error "Local Quicklisp is not installed yet."))
+      (error 'qlot-simple-error
+             :format-control "Local Quicklisp is not installed yet."))
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
