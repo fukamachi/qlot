@@ -57,9 +57,12 @@
   (:method ((source source))
     (let ((class-pkg (symbol-package (type-of source))))
       (loop for (k v) on (source-defrost-args source) by #'cddr
-            for slot-name = (intern (string k) class-pkg)
+            for slot-name = (case k
+                              (:version 'version)
+                              (:project-name 'project-name)
+                              (otherwise (intern (string k) class-pkg)))
             when (slot-exists-p source slot-name)
-              do (setf (slot-value source slot-name) v)))))
+            do (setf (slot-value source slot-name) v)))))
 
 (defmethod print-object ((source source) stream)
   (format stream "#<~S ~A ~A>"

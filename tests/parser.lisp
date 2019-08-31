@@ -73,3 +73,14 @@
 
   (ok (signals (parse-qlfile-lock (test-qlfile #P"qlfile.error.lock"))
                'qlfile-parse-failed)))
+
+(deftest read-qlfile-for-install-tests
+  (let ((sources (read-qlfile-for-install (test-qlfile #P"qlfile") :ignore-lock t)))
+    (ok (typep (first sources) 'source-ql-all))
+    (ng (slot-boundp (first sources) 'qlot/source/base::version))
+    (ok (= (length sources) 5)))
+  (let ((sources (read-qlfile-for-install (test-qlfile #P"qlfile"))))
+    (ok (typep (first sources) 'source-ql-all))
+    (ok (slot-boundp (first sources) 'qlot/source/base::version))
+    (ok (string= (source-version (first sources)) "2019-08-13"))
+    (ok (= (length sources) 5))))

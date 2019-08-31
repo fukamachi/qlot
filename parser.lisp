@@ -3,6 +3,7 @@
   (:import-from #:qlot/source
                 #:make-source
                 #:source-project-name
+                #:source-dist-name
                 #:source-defrost-args
                 #:defrost-source
                 #:source=)
@@ -119,16 +120,20 @@
   If :ignore-lock is T, read 'qlfile' even when 'qlfile.lock' exists.
   If :projects is specified, read only those projects from qlfile.lock."
   (format t "~&Reading '~A'...~%" qlfile)
-  (let ((sources (parse-qlfile qlfile))
+  (let ((default-ql-source (make-source :ql :all :latest))
+        (sources (parse-qlfile qlfile))
         (qlfile-lock (and (or (not ignore-lock) projects)
                           (uiop:file-exists-p
                             (make-pathname :defaults qlfile
                                            :name (file-namestring qlfile)
                                            :type "lock")))))
+    (unless (find "quicklisp" sources
+                  :key #'source-dist-name
+                  :test #'string=)
+      (push default-ql-source sources))
     (if qlfile-lock
         (merging-lock-sources sources
                               (parse-qlfile-lock qlfile-lock
                                                  :test (lambda (name)
                                                          (not (find name projects :test 'equal)))))
-        (cons (make-source :ql :all :latest)
-              sources))))
+        sources)))

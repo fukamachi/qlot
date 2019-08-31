@@ -51,13 +51,17 @@
 (defmethod print-object ((source source-ql-all) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "quicklisp ~A"
-            (slot-value source '%version))))
+            (if (slot-boundp source 'version)
+                (source-version source)
+                (slot-value source '%version)))))
 
 (defmethod print-object ((source source-ql) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A"
             (source-project-name source)
-            (slot-value source '%version))))
+            (if (slot-boundp source 'version)
+                (source-version source)
+                (slot-value source '%version)))))
 
 (defmethod source= ((source1 source-ql-all) (source2 source-ql-all))
   (and (string= (source-project-name source1)
