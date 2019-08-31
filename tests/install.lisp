@@ -31,7 +31,8 @@
                    "clack"
                    "log4cl"
                    "quicklisp"
-                   "shelly")))
+                   "shelly")
+                :test 'string=))
   ;; Check if Dexador, qlot/distify depends on, is not installed in the local Quicklisp
   (ng (find-if (lambda (name)
                  (starts-with-subseq "dexador-" name))
