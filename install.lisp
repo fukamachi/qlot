@@ -14,10 +14,15 @@
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
-                #:with-quicklisp-home))
+                #:with-quicklisp-home)
+  (:export #:install-qlfile
+           #:update-qlfile
+           #:install-project
+           #:update-project))
 (in-package #:qlot/install)
 
 (defvar *qlot-directory* #P".qlot/")
+(defvar *default-qlfile* #P"qlfile")
 
 (defun canonical-qlhome (qlhome &optional (base *default-pathname-defaults*))
   (setf qlhome (uiop:ensure-directory-pathname qlhome))
@@ -174,3 +179,29 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                       sources)
 
     (values)))
+
+(defun install-project (object)
+  (etypecase object
+    ((or symbol string)
+     (install-project (asdf:find-system object)))
+    (asdf:system
+      (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
+                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)))
+    (pathname
+      (install-qlfile (if (uiop:directory-pathname-p object)
+                          (merge-pathnames *default-qlfile* object)
+                          object)))))
+
+(defun update-project (object &key projects)
+  (etypecase object
+    ((or symbol string)
+     (update-project (asdf:find-system object) :projects projects))
+    (asdf:system
+      (update-qlfile (asdf:system-relative-pathname object)
+                     :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
+                     :projects projects))
+    (pathname
+      (update-qlfile (if (uiop:directory-pathname-p object)
+                         (merge-pathnames *default-qlfile* object)
+                         object)
+                     :projects projects))))
