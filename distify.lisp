@@ -14,7 +14,7 @@
            #:distify-qlfile-lock))
 (in-package #:qlot/distify)
 
-(defun distify (source-or-sources destination)
+(defun distify (source-or-sources destination &key distinfo-only)
   (check-type destination pathname)
   (dolist (source (if (listp source-or-sources)
                       source-or-sources
@@ -24,11 +24,14 @@
                (source-ql-all #'distify-ql-all)
                (source-git #'distify-git))
              source
-             destination))
+             destination
+             :distinfo-only distinfo-only))
   destination)
 
-(defun distify-qlfile (qlfile destination)
-  (distify (parse-qlfile qlfile) destination))
+(defun distify-qlfile (qlfile destination &key distinfo-only)
+  (distify (parse-qlfile qlfile) destination
+           :distinfo-only distinfo-only))
 
-(defun distify-qlfile-lock (qlfile-lock destination)
-  (distify (parse-qlfile-lock qlfile-lock) destination))
+(defun distify-qlfile-lock (qlfile-lock destination &key distinfo-only)
+  (distify (parse-qlfile-lock qlfile-lock) destination
+           :distinfo-only distinfo-only))

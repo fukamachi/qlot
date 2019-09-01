@@ -1,6 +1,8 @@
 (defpackage #:qlot/distify/ql
   (:use #:cl)
   (:import-from #:qlot/source
+                #:source-ql
+                #:source-ql-all
                 #:source-project-name
                 #:source-version
                 #:source-distribution
@@ -13,7 +15,9 @@
            #:distify-ql))
 (in-package #:qlot/distify/ql)
 
-(defun distify-ql-all (source destination)
+(defun distify-ql-all (source destination &key distinfo-only)
+  (declare (ignore distinfo-only))
+  (check-type source source-ql-all)
   (let ((destination (truename destination)))
     (dex:fetch (source-distribution source)
                (make-pathname :name (source-project-name source)
@@ -30,13 +34,18 @@
     (setf (source-version source)
           (format nil "ql-~A" version))))
 
-(defun distify-ql (source destination)
+(defun distify-ql (source destination &key distinfo-only)
+  (check-type source source-ql)
   (load-source-ql-version source)
+
   (let ((destination (truename destination)))
     (uiop:with-output-file (out (make-pathname :name (source-project-name source)
                                                :type "txt"
                                                :defaults destination))
       (write-distinfo source out))
+    (when distinfo-only
+      (return-from distify-ql destination))
+
     (let ((metadata (merge-pathnames (format nil "~A/~A/"
                                              (source-project-name source)
                                              (source-version source))

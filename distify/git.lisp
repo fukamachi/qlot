@@ -85,7 +85,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                 (system-dependencies system))
         (asdf:clear-system system)))))
 
-(defun distify-git (source destination)
+(defun distify-git (source destination &key distinfo-only)
   (check-type source source-git)
   (load-source-git-version source)
 
@@ -94,6 +94,8 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                                                :type "txt")
                                 :if-exists :supersede)
       (write-distinfo source out))
+    (when distinfo-only
+      (return-from distify-git destination))
 
     (let ((softwares (merge-pathnames #P"softwares/"))
           (archives (merge-pathnames #P"archives/"))

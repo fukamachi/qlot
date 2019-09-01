@@ -10,7 +10,8 @@
   (:import-from #:qlot/parser
                 #:read-qlfile-for-install)
   (:import-from #:qlot/server
-                #:with-qlot-server)
+                #:with-qlot-server
+                #:run-distify-source-process)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -119,9 +120,11 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
         (dolist (release releases)
           (install-release release))))))
 
-(defun install-source (source)
+(defun install-source (source tmp-dir)
   (format t "~&Installing dist ~S.~%"
           (source-dist-name source))
+  (run-distify-source-process source tmp-dir
+                              :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
   (with-package-functions #:ql-dist (install-dist version)
     (let ((new-dist (install-dist (source-distinfo-url source)
                                   :prompt nil
@@ -130,7 +133,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (install-all-releases source)
       new-dist)))
 
-(defun update-source (source)
+(defun update-source (source tmp-dir)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
@@ -141,6 +144,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                       (version dist)
                       (version new-dist))
               (map nil #'uninstall (installed-releases dist))
+              (run-distify-source-process source tmp-dir
+                                          :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
               (let ((*trace-output* (make-broadcast-stream)))
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
@@ -164,13 +169,13 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
-    (with-qlot-server (qlfile qlhome)
+    (with-qlot-server (qlfile qlhome tmp-dir)
       (with-quicklisp-home qlhome
         (let ((preference (get-universal-time)))
           (dolist (source sources)
             (if (already-installed-p source)
-                (update-source source)
-                (install-source source))
+                (update-source source tmp-dir)
+                (install-source source tmp-dir))
             (with-package-functions #:ql-dist (dist (setf preference))
               (setf (preference (dist (source-dist-name source)))
                     (incf preference))))
