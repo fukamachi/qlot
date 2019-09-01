@@ -69,10 +69,10 @@ Usage: qlot COMMAND [ARGS..]
 
 COMMANDS:
     install
-        Installs libraries to './quicklisp'.
+        Installs libraries to './.qlot'.
 
     update
-        Makes './quicklisp' up-to-date and update 'qlfile.lock'.
+        Makes './.qlot' up-to-date and update 'qlfile.lock'.
         Possible to update specific projects with --project option.
         ex) qlot update --project mito
 
@@ -102,21 +102,21 @@ You can install libraries into the project directory via:
 $ qlot install
 ```
 
-It creates `quicklisp/` directory in the project directory and a file `qlfile.lock`.
+It creates `.qlot/` directory in the project directory and a file `qlfile.lock`.
 
 `qlfile.lock` is similar to `qlfile` except the library versions are qualified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
 
-Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository and make the `quicklisp/` directory ignored.
+Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository and make the `.qlot/` directory ignored.
 
 ```
-$ echo quicklisp/ >> .gitignore
+$ echo .qlot/ >> .gitignore
 $ git add qlfile qlfile.lock
 $ git commit -m 'Start using Qlot.'
 ```
 
-### Updating the project-local quicklisp
+### Updating the project-local Quicklisp
 
-You can update the content of `quicklisp/` directory via:
+You can update the content of `.qlot/` directory via:
 
 ```
 $ qlot update
@@ -150,7 +150,7 @@ $ qlot install /path/to/myapp/qlfile
 
 ### update
 
-`qlot update` will update the project-local `quicklisp/` directory using `qlfile`.
+`qlot update` will update the project-local `.qlot/` directory using `qlfile`.
 
 ```
 $ qlot update
@@ -176,7 +176,7 @@ Here are few usefull commands:
 
 * `qlot exec ros emacs` - starts Emacs for development. Inferior lisp will use only
   systems, installed by `qlot install`. If you want to use systems from directories other than
-  current and `./quicklisp/`, then set `CL_SOURCE_REGISTRY` variable before starting `qlot`.
+  current and `./.qlot/`, then set `CL_SOURCE_REGISTRY` variable before starting `qlot`.
   This can be useful in case, if you have development versions of some systems, for example,
   in `~/common-lisp/` directory and want to use them during project development:
   
@@ -308,7 +308,7 @@ Here's quick steps to start project-local REPL with SLIME:
 
 ## Working with local git repositories
 
-`PROJECT_ROOT/quicklisp/local-projects` can be used for local git repositories. Symbolic links are also be accessible in Qlot environment.
+`PROJECT_ROOT/.qlot/local-projects` can be used for local git repositories. Symbolic links are also be accessible in Qlot environment.
 
 ## Author
 
