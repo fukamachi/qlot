@@ -18,7 +18,7 @@ jobs:
           LISP: ${{ matrix.lisp }}
           ROSWELL_INSTALL_DIR: /usr
         run: |
-          curl -L https://raw.githubusercontent.com/roswell/roswell/release/scripts/install-for-ci.sh | sh
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
       - name: Install Rove
         run: ros install rove
       - name: Run tests
