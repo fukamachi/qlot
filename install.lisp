@@ -146,6 +146,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (map nil #'uninstall (installed-releases dist))
               (run-distify-source-process source tmp-dir
                                           :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
+              (setf dist (find-dist (source-dist-name source))
+                    new-dist (available-update dist))
               (let ((*trace-output* (make-broadcast-stream)))
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
