@@ -41,7 +41,8 @@
   (let ((destination (truename destination)))
     (uiop:with-output-file (out (make-pathname :name (source-project-name source)
                                                :type "txt"
-                                               :defaults destination))
+                                               :defaults destination)
+                                :if-exists :supersede)
       (write-distinfo source out))
     (when distinfo-only
       (return-from distify-ql destination))
