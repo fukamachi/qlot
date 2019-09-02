@@ -17,9 +17,7 @@
 
 (setup
   (uiop:delete-directory-tree *tmp-directory* :validate t :if-does-not-exist :ignore)
-  (ensure-directories-exist *tmp-directory*)
-  (mapc #'asdf:clear-system
-        '(:cl-dbi :dbi :dbd-mysql :dbd-postgres :dbd-sqlite3 :dbi-test)))
+  (ensure-directories-exist *tmp-directory*))
 
 (deftest distify-git-tests
   (let ((source (make-source :git

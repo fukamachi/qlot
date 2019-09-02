@@ -68,28 +68,27 @@
     (lambda (fun form env)
       (when (and (consp form)
                  (eq (first form) 'asdf:defsystem)
-                 *load-asd-file*)
+                 (equalp *load-asd-file* *load-pathname*))
         (destructuring-bind (system-name &rest system-form) (cdr form)
           (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
                 (depends-on (getf system-form :depends-on))
                 (weakly-depends-on (getf system-form :weakly-depends-on))
                 (system-name (asdf::coerce-name system-name)))
-            (let ((*load-asd-file* nil))
-              #+quicklisp
-              (when defsystem-depends-on
-                (let ((map (make-hash-table :test 'equal)))
-                  (labels ((get-deps (name)
-                             (when (gethash name map)
-                               (return-from get-deps nil))
-                             (setf (gethash name map) t)
-                             (let ((system (ql-dist:find-system name)))
-                               (when system
-                                 (cons system
-                                       (loop for system-name in (ql-dist:required-systems system)
-                                             append (get-deps system-name)))))))
-                    (mapc #'ql-dist:ensure-installed
-                          (mapcan #'get-deps
-                                  (copy-seq defsystem-depends-on)))))))
+            #+quicklisp
+            (when defsystem-depends-on
+              (let ((map (make-hash-table :test 'equal)))
+                (labels ((get-deps (name)
+                           (when (gethash name map)
+                             (return-from get-deps nil))
+                           (setf (gethash name map) t)
+                           (let ((system (ql-dist:find-system name)))
+                             (when system
+                               (cons system
+                                     (loop for system-name in (ql-dist:required-systems system)
+                                           append (get-deps system-name)))))))
+                  (mapc #'ql-dist:ensure-installed
+                        (mapcan #'get-deps
+                                (copy-seq defsystem-depends-on))))))
             (push (cons system-name
                         (sort
                           (remove system-name
@@ -101,8 +100,7 @@
                                   :test #'string=)
                           #'string<))
                   (gethash *load-asd-file* *registry*)))))
-      (let ((*load-asd-file* nil))
-        (funcall old-hook fun form env)))))
+      (funcall old-hook fun form env))))
 
 (defmacro with-directory ((system-file system-name dependencies) directory &body body)
   (let ((value (gensym "VALUE")))
@@ -110,9 +108,10 @@
        (dolist (,system-file (directory-system-files ,directory))
          (handler-bind ((style-warning #'muffle-warning))
            (let ((*macroexpand-hook* (make-hook *macroexpand-hook*))
+                 (*package* (find-package :asdf-user))
                  (*load-asd-file* ,system-file))
              (with-autoload-on-missing
-               (asdf:load-asd ,system-file)))))
+               (load ,system-file)))))
        (maphash (lambda (,system-file ,value)
                   (dolist (,value ,value)
                     (destructuring-bind (,system-name &rest ,dependencies) ,value
