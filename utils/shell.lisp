@@ -88,8 +88,10 @@
       (loop for system in systems
             append (-e
                      (if qlhome
-                         `(ql:quickload ,system)
-                         `(asdf:load-system ,system))))
+                         `(ql:quickload ,system :silent t)
+                         `(let ((*standard-output* (make-broadcast-stream))
+                                (*trace-output* (make-broadcast-stream)))
+                            (asdf:load-system ,system)))))
 
       (loop for form in forms
             append (-e
