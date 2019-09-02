@@ -2,7 +2,6 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:source-ql
-                #:source-ql-all
                 #:source-project-name
                 #:source-version
                 #:source-distribution
@@ -11,20 +10,8 @@
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
   (:import-from #:dexador)
-  (:export #:distify-ql-all
-           #:distify-ql))
+  (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
-
-(defun distify-ql-all (source destination &key distinfo-only)
-  (declare (ignore distinfo-only))
-  (check-type source source-ql-all)
-  (let ((destination (truename destination)))
-    (dex:fetch (source-distribution source)
-               (make-pathname :name (source-project-name source)
-                              :type "txt"
-                              :defaults destination)
-               :if-exists :supersede)
-    destination))
 
 (defun load-source-ql-version (source)
   (let* ((body-stream (dex:get (source-distribution source) :want-stream t))

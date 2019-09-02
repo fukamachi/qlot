@@ -47,8 +47,7 @@
                        "dist")
          (unless (= (length args) 2)
            (error "Distribution's definition should contain it's name and url, like that: dist ultralisp http://dist.ultralisp.org/"))
-         ;; TODO
-         (error "TODO: Implement a custom dist"))
+         (apply #'make-source (make-keyword source-type) args))
         (t
          (apply #'make-source
                 (make-keyword source-type)

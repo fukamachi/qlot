@@ -1,7 +1,8 @@
 (defpackage #:qlot/tests/distify/ql
   (:use #:cl
         #:rove
-        #:qlot/distify/ql)
+        #:qlot/distify/ql
+        #:qlot/distify/dist)
   (:import-from #:qlot/source
                 #:make-source
                 #:source-project-name
@@ -51,7 +52,7 @@
                    releases)))))
 
   (let ((source (make-source :ql :all :latest)))
-    (distify-ql-all source *tmp-directory*)
+    (distify-dist source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "quicklisp"
                                        :type "txt"
@@ -61,7 +62,7 @@
         (ok (equal (aget data "name") "quicklisp")))))
 
   (let ((source (make-source :ql :all "2019-08-13")))
-    (distify-ql-all source *tmp-directory*)
+    (distify-dist source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "quicklisp"
                                        :type "txt"

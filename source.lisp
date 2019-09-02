@@ -3,4 +3,5 @@
                  #:qlot/source/ql
                  #:qlot/source/git
                  #:qlot/source/http
-                 #:qlot/source/github))
+                 #:qlot/source/github
+                 #:qlot/source/dist))

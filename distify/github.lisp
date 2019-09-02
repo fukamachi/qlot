@@ -81,7 +81,8 @@
                                (source-project-name source)
                                (source-github-identifier source))
                        archives-dir)))
-        (dex:fetch (source-http-url source) archive)
+        (dex:fetch (source-http-url source) archive
+                   :if-exists :supersede)
 
         (let ((extracted-source-directory (extract-tarball archive softwares-dir))
               (source-directory (merge-pathnames (format nil "~A-~A/"

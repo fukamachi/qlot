@@ -26,7 +26,8 @@
                                     archives-dir)))
       (unless (uiop:file-exists-p archive)
         (ensure-directories-exist archive)
-        (dex:fetch (source-http-url source) archive))
+        (dex:fetch (source-http-url source) archive
+                   :if-exists :supersede))
 
       (let ((archive-md5 (byte-array-to-hex-string
                            (digest-file :md5 archive))))

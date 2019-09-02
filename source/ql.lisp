@@ -2,28 +2,21 @@
   (:nicknames #:qlot.source.ql)
   (:use #:cl
         #:qlot/source/base)
+  (:import-from #:qlot/source/dist
+                #:source-dist)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
   (:export #:source-ql
-           #:source-ql-all
-           #:source-distribution))
+           #:source-ql-all))
 (in-package #:qlot/source/ql)
 
-(defclass source-ql (source)
-  ((%version :initarg :%version)
-   (distribution :initarg :distribution
-                 :reader source-distribution)
-   (%distinfo :accessor source-distinfo)))
+(defclass source-ql (source-dist)
+  ())
 
-(defclass source-ql-all (source)
-  ((%version :initarg :%version)
-   (distribution :initarg :distribution
-                 :reader source-distribution
-                 :initform (quicklisp-distinfo-url))
-   (%distinfo :accessor source-distinfo)))
-
-(defmethod source-distinfo-url ((source source-ql-all))
-  (source-distribution source))
+(defclass source-ql-all (source-dist)
+  ()
+  (:default-initargs
+    :distribution (quicklisp-distinfo-url)))
 
 (defmethod make-source ((source (eql :ql)) &rest args
                         &key distribution
@@ -48,29 +41,5 @@
                          :distribution distribution
                          :%version version)))))
 
-(defmethod print-object ((source source-ql-all) stream)
-  (print-unreadable-object (source stream :type t :identity t)
-    (format stream "quicklisp ~A"
-            (if (slot-boundp source 'version)
-                (source-version source)
-                (slot-value source '%version)))))
-
-(defmethod print-object ((source source-ql) stream)
-  (print-unreadable-object (source stream :type t :identity t)
-    (format stream "~A ~A"
-            (source-project-name source)
-            (if (slot-boundp source 'version)
-                (source-version source)
-                (slot-value source '%version)))))
-
-(defmethod source= ((source1 source-ql-all) (source2 source-ql-all))
-  (and (string= (source-project-name source1)
-                (source-project-name source2))
-       (string= (slot-value source1 '%version)
-                (slot-value source2 '%version))))
-
-(defmethod source= ((source1 source-ql) (source2 source-ql))
-  (and (string= (source-project-name source1)
-                (source-project-name source2))
-       (string= (slot-value source1 '%version)
-                (slot-value source2 '%version))))
+(defmethod source-distinfo-url ((source source-ql))
+  (format nil "qlot://localhost/~A.txt" (source-project-name source)))

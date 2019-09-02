@@ -4,12 +4,10 @@
         #:qlot/parser)
   (:import-from #:qlot/parser
                 #:parse-qlfile-line)
-  (:import-from #:qlot/source/base
+  (:import-from #:qlot/source
                 #:source-project-name
-                #:source-version)
-  (:import-from #:qlot/source/git
-                #:source-git)
-  (:import-from #:qlot/source/ql
+                #:source-version
+                #:source-git
                 #:source-ql
                 #:source-ql-all
                 #:source-distribution)

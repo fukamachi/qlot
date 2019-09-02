@@ -3,6 +3,7 @@
   (:import-from #:qlot/install/quicklisp
                 #:install-quicklisp)
   (:import-from #:qlot/source
+                #:source-dist
                 #:source-dist-name
                 #:source-version
                 #:source-distinfo-url
@@ -124,8 +125,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (values))
 
 (defun install-all-releases (source)
-  (unless (equal (symbol-name (type-of source))
-                 (string :source-ql-all))
+  (unless (typep source 'source-dist)
     (with-package-functions #:ql-dist (find-dist provided-releases)
       (let ((dist (find-dist (source-dist-name source))))
         (let ((releases (provided-releases dist)))

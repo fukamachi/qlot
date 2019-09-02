@@ -281,6 +281,18 @@ github datafly fukamachi/datafly
 github datafly fukamachi/datafly :branch develop
 ```
 
+### dist
+
+```
+dist <dist name> <distribution URL> [<dist version>]
+```
+
+`dist` allows to use a custom Quicklisp dist, like Ultralisp.
+
+```
+dist ultralisp http://dist.ultralisp.org/
+```
+
 ## Priorities of distributions
 
 If multiple distributions provide the same library, lower one would take priority over higher ones.
