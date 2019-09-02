@@ -27,7 +27,9 @@
   (with-tmp-directory (tmp-dir)
     (let ((quicklisp-file (fetch-installer tmp-dir)))
       (run-lisp (list
-                  `(load ,quicklisp-file)
+                  `(let ((*standard-output* (make-broadcast-stream)))
+                     (load ,quicklisp-file))
+                  "(setf quicklisp-quickstart:*after-initial-setup-message* \"\")"
                   (format nil "(quicklisp-quickstart:install :path #P\"~A\")"
                           path))
                 :without-quicklisp t)
