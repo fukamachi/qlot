@@ -12,6 +12,8 @@
   (:import-from #:qlot/server
                 #:with-qlot-server
                 #:run-distify-source-process)
+  (:import-from #:qlot/logger
+                #:message)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -52,7 +54,7 @@
 
     ;; TODO: Quickload project systems
 
-    (format t "~&Successfully installed.~%")))
+    (message "Successfully installed.")))
 
 (defun update-qlfile (qlfile &key (quicklisp-home *qlot-directory*) projects)
   (unless (uiop:file-exists-p qlfile)
@@ -73,7 +75,7 @@
 
     ;; TODO: Quickload project systems
 
-    (format t "~&Successfully updated.~%")))
+    (message "Successfully installed.")))
 
 (defun already-installed-p (source)
   (with-package-functions #:ql-dist (find-dist)
@@ -121,8 +123,6 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (install-release release))))))
 
 (defun install-source (source tmp-dir)
-  (format t "~&Installing dist ~S.~%"
-          (source-dist-name source))
   (run-distify-source-process source tmp-dir
                               :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
   (with-package-functions #:ql-dist (install-dist version)
@@ -139,10 +139,10 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (let ((new-dist (available-update dist)))
         (if new-dist
             (progn
-              (format t "~&Updating dist ~S version ~S -> ~S.~%"
-                      (name dist)
-                      (version dist)
-                      (version new-dist))
+              (message "Updating dist ~S version ~S -> ~S."
+                       (name dist)
+                       (version dist)
+                       (version new-dist))
               (map nil #'uninstall (installed-releases dist))
               (run-distify-source-process source tmp-dir
                                           :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
@@ -154,9 +154,9 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (install-all-releases source))
             (progn
               (setf (source-version source) (version (find-dist (source-dist-name source))))
-              (format t "~&Already have dist ~S version ~S.~%"
-                      (source-dist-name source)
-                      (source-version source))))
+              (message "Already have dist ~S version ~S."
+                       (source-dist-name source)
+                       (source-version source))))
         new-dist))))
 
 (defun dump-qlfile-lock (file sources)
@@ -184,7 +184,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (with-package-functions #:ql-dist (uninstall name all-dists)
             (dolist (dist (all-dists))
               (unless (find (name dist) sources :test #'string= :key #'source-dist-name)
-                (format t "~&Removing dist ~S.~%" (name dist))
+                (message "Removing dist ~S." (name dist))
                 (uninstall dist)))))))
 
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)

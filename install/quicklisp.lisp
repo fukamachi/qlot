@@ -1,5 +1,7 @@
 (defpackage #:qlot/install/quicklisp
   (:use #:cl)
+  (:import-from #:qlot/logger
+                #:message)
   (:import-from #:qlot/utils
                 #:generate-random-string)
   (:import-from #:qlot/utils/shell
@@ -21,7 +23,7 @@
     quicklisp-file))
 
 (defun install-quicklisp (path)
-  (format t "~&Installing Quicklisp to ~A ...~%" path)
+  (message "Installing Quicklisp to ~A ..." path)
   (with-tmp-directory (tmp-dir)
     (let ((quicklisp-file (fetch-installer tmp-dir)))
       (run-lisp (list

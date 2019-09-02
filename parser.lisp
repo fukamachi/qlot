@@ -7,6 +7,8 @@
                 #:source-defrost-args
                 #:defrost-source
                 #:source=)
+  (:import-from #:qlot/logger
+                #:message)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed)
   (:import-from #:qlot/utils
@@ -119,7 +121,7 @@
   This adds the latest 'quicklisp' dist implicitly if no 'quicklisp' project exists in the file.
   If :ignore-lock is T, read 'qlfile' even when 'qlfile.lock' exists.
   If :projects is specified, read only those projects from qlfile.lock."
-  (format t "~&Reading '~A'...~%" qlfile)
+  (message "Reading '~A'..." qlfile)
   (let ((default-ql-source (make-source :ql :all :latest))
         (sources (parse-qlfile qlfile))
         (qlfile-lock (and (or (not ignore-lock) projects)
