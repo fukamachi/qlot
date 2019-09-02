@@ -35,7 +35,11 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-qlfile (qlfile &key (quicklisp-home *qlot-directory*))
+(defun install-qlfile (qlfile &key quicklisp-home)
+  (unless quicklisp-home
+    (setf quicklisp-home
+          (merge-pathnames *qlot-directory*
+                           (uiop:pathname-directory-pathname qlfile))))
   (unless (uiop:file-exists-p qlfile)
     (error 'qlot-simple-error
            :format-control "File does not exist: ~A"
@@ -56,7 +60,11 @@
 
     (message "Successfully installed.")))
 
-(defun update-qlfile (qlfile &key (quicklisp-home *qlot-directory*) projects)
+(defun update-qlfile (qlfile &key quicklisp-home projects)
+  (unless quicklisp-home
+    (setf quicklisp-home
+          (merge-pathnames *qlot-directory*
+                           (uiop:pathname-directory-pathname qlfile))))
   (unless (uiop:file-exists-p qlfile)
     (error 'qlot-simple-error
            :format-control "Failed to update because the file '~A' does not exist."
