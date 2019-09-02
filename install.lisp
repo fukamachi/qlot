@@ -205,6 +205,14 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
+(defun ensure-qlfile-pathname (object)
+  (cond
+    ((uiop:file-exists-p object)
+     object)
+    ((uiop:directory-exists-p (uiop:ensure-directory-pathname object))
+     (merge-pathnames *default-qlfile* (uiop:ensure-directory-pathname object)))
+    (t object)))
+
 (defun install-project (object)
   (etypecase object
     ((or symbol string)
@@ -213,9 +221,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                       :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)))
     (pathname
-      (install-qlfile (if (uiop:directory-pathname-p object)
-                          (merge-pathnames *default-qlfile* object)
-                          object)))))
+      (install-qlfile (ensure-qlfile-pathname object)))))
 
 (defun update-project (object &key projects)
   (etypecase object
@@ -226,7 +232,5 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
                      :projects projects))
     (pathname
-      (update-qlfile (if (uiop:directory-pathname-p object)
-                         (merge-pathnames *default-qlfile* object)
-                         object)
+      (update-qlfile (ensure-qlfile-pathname object)
                      :projects projects))))
