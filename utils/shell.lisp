@@ -68,37 +68,34 @@
   (list *eval-option* (str form)))
 
 (defun build-command-args (forms &key systems source-registry without-quicklisp)
-  (append
-    (-e "(require 'asdf)")
+  (let ((qlhome (if without-quicklisp
+                    nil
+                    (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
+    (append
+      (-e "(require 'asdf)")
 
-    (when source-registry
-      (-e `(push ,source-registry asdf:*central-registry*)))
+      (when source-registry
+        (-e `(push ,source-registry asdf:*central-registry*)))
 
-    (-e '(setf asdf::*default-source-registries*
-               (quote (asdf::environment-source-registry
-                        asdf::system-source-registry
-                        asdf::system-source-registry-directory))))
+      (-e '(setf asdf::*default-source-registries*
+                 (quote (asdf::environment-source-registry
+                          asdf::system-source-registry
+                          asdf::system-source-registry-directory))))
 
-    #+quicklisp
-    (unless without-quicklisp
-      (when ql:*quicklisp-home*
-        (-e `(load ,(merge-pathnames #P"setup.lisp" ql:*quicklisp-home*)))))
+      (when qlhome
+        (-e `(load ,(merge-pathnames #P"setup.lisp" qlhome))))
 
-    (loop for system in systems
-          append (-e
-                   #+quicklisp
-                   (if (or without-quicklisp
-                           (null ql:*quicklisp-home*))
-                       `(asdf:load-system ,system)
-                       `(ql:quickload ,system))
-                   #-quicklisp
-                   `(asdf:load-system ,system)))
+      (loop for system in systems
+            append (-e
+                     (if qlhome
+                         `(ql:quickload ,system)
+                         `(asdf:load-system ,system))))
 
-    (loop for form in forms
-          append (-e
-                   (if (pathnamep form)
-                       `(load ,form)
-                       form)))))
+      (loop for form in forms
+            append (-e
+                     (if (pathnamep form)
+                         `(load ,form)
+                         form))))))
 
 #+ros.init
 (defun run-roswell (forms &rest args &key systems source-registry without-quicklisp)
