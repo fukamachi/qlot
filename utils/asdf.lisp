@@ -74,21 +74,22 @@
                 (depends-on (getf system-form :depends-on))
                 (weakly-depends-on (getf system-form :weakly-depends-on))
                 (system-name (asdf::coerce-name system-name)))
-            #+quicklisp
-            (when defsystem-depends-on
-              (let ((map (make-hash-table :test 'equal)))
-                (labels ((get-deps (name)
-                           (when (gethash name map)
-                             (return-from get-deps nil))
-                           (setf (gethash name map) t)
-                           (let ((system (ql-dist:find-system name)))
-                             (when system
-                               (cons system
-                                     (loop for system-name in (ql-dist:required-systems system)
-                                           append (get-deps system-name)))))))
-                  (mapc #'ql-dist:ensure-installed
-                        (mapcan #'get-deps
-                                (copy-seq defsystem-depends-on))))))
+            (let ((*load-asd-file* nil))
+              #+quicklisp
+              (when defsystem-depends-on
+                (let ((map (make-hash-table :test 'equal)))
+                  (labels ((get-deps (name)
+                             (when (gethash name map)
+                               (return-from get-deps nil))
+                             (setf (gethash name map) t)
+                             (let ((system (ql-dist:find-system name)))
+                               (when system
+                                 (cons system
+                                       (loop for system-name in (ql-dist:required-systems system)
+                                             append (get-deps system-name)))))))
+                    (mapc #'ql-dist:ensure-installed
+                          (mapcan #'get-deps
+                                  (copy-seq defsystem-depends-on)))))))
             (push (cons system-name
                         (sort
                           (remove system-name
