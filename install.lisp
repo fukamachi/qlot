@@ -126,10 +126,11 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 (defun install-all-releases (source)
   (unless (equal (symbol-name (type-of source))
                  (string :source-ql-all))
-    (with-package-functions #:ql-dist (dist provided-releases)
-      (let ((releases (provided-releases (dist (source-dist-name source)))))
-        (dolist (release releases)
-          (install-release release))))))
+    (with-package-functions #:ql-dist (find-dist provided-releases)
+      (let ((dist (find-dist (source-dist-name source))))
+        (let ((releases (provided-releases dist)))
+          (dolist (release releases)
+            (install-release release)))))))
 
 (defun install-source (source tmp-dir)
   (run-distify-source-process source tmp-dir

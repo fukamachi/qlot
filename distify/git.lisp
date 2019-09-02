@@ -18,8 +18,7 @@
                 #:create-git-tarball)
   (:import-from #:qlot/utils/asdf
                 #:with-directory
-                #:system-file-systems
-                #:system-dependencies)
+                #:directory-system-files)
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
                 #:digest-file
@@ -68,22 +67,21 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
               content-sha1
               prefix
               (let (result)
-                (with-directory (file source-directory)
-                  (push (subseq (namestring file) (length (namestring source-directory)))
+                (dolist (system-file (directory-system-files source-directory))
+                  (push (subseq (namestring system-file)
+                                (length (namestring source-directory)))
                         result))
                 result)))))
 
 (defun systems.txt (project-name source-directory)
   (with-output-to-string (s)
     (format s "# project system-file system-name [dependency1..dependencyN]~%")
-    (with-directory (system-file source-directory)
-      (dolist (system (system-file-systems system-file))
-        (format s "~A ~A ~A~{ ~A~}~%"
-                project-name
-                (pathname-name system-file)
-                (asdf:component-name system)
-                (system-dependencies system))
-        (asdf:clear-system system)))))
+    (with-directory (system-file system-name dependencies) source-directory
+      (format s "~A ~A ~A~{ ~A~}~%"
+              project-name
+              (pathname-name system-file)
+              system-name
+              dependencies))))
 
 (defun distify-git (source destination &key distinfo-only)
   (check-type source source-git)
