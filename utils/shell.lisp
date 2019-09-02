@@ -72,9 +72,9 @@
     (-e "(require 'asdf)")
     (-e
       '(setf *debugger-hook*
-             (lambda (c parent)
-               (declare (ignore parent))
-               (uiop:print-backtrace :condition c)
+             (lambda (cl-user::c cl-user::parent)
+               (declare (ignore cl-user::parent))
+               (uiop:print-backtrace :condition cl-user::c)
                (uiop:quit -1))))))
 
 (defun build-command-args (forms &key systems source-registry without-quicklisp)
