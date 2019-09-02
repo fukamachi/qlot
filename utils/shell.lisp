@@ -105,8 +105,9 @@
   (let ((ros (or (ros:opt "wargv0")
                  (ros:opt "argv0"))))
     (safety-shell-command ros
-                          (cons "+Q"
-                                (apply #'build-command-args forms args)))))
+                          (list* "+Q"
+                                 "-L" "sbcl-bin"
+                                 (apply #'build-command-args forms args)))))
 
 (defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
   (declare (ignore systems source-registry without-quicklisp))
