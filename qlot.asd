@@ -14,6 +14,7 @@
                "qlot/tests/distify/ql"
                "qlot/tests/distify/git"
                "qlot/tests/distify/http"
+               "qlot/tests/distify/github"
                "qlot/tests/distify"
                "qlot/tests/server"
                "qlot/tests/install/quicklisp"

@@ -2,7 +2,8 @@
   (:use #:cl
         #:qlot/distify/ql
         #:qlot/distify/git
-        #:qlot/distify/http)
+        #:qlot/distify/http
+        #:qlot/distify/github)
   (:import-from #:qlot/source
                 #:source-ql
                 #:source-ql-all
