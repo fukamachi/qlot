@@ -9,6 +9,7 @@ exec ros +Q -L sbcl-bin -- $0 "$@"
   (let ((*standard-output* (make-broadcast-stream))
         (*trace-output* (make-broadcast-stream)))
     (funcall (intern (string '#:load-system) '#:asdf) '#:qlot/cli)
+    (funcall (intern (string '#:load-system) '#:asdf) '#:qlot/logger)
     (funcall (intern (string '#:load-system) '#:asdf) '#:qlot/errors)))
 
 (defpackage #:ros/script/qlot
@@ -44,6 +45,8 @@ COMMANDS:
 OPTIONS:
     --version
         Show the Qlot version
+    --debug
+        A flag to enable debug logging. (Only for 'install' or 'update')
 "
           (file-namestring *load-pathname*)))
 
@@ -114,6 +117,8 @@ OPTIONS:
                ("--version"
                  (print-version)
                  (ros:quit))
+               ("--debug"
+                 (setf qlot/logger:*debug* t))
                (otherwise
                  (if target
                      (qlot/errors:ros-command-error "'~A' is unknown option" option)
@@ -127,7 +132,7 @@ OPTIONS:
   (handler-case
       (cond ((equal "install" $1)
              (ros:quicklisp)
-             (apply #'qlot/cli:install argv))
+             (apply #'qlot/cli:install (parse-argv argv)))
             ((equal "update" $1)
              (ros:quicklisp)
              (apply #'qlot/cli:update (parse-argv argv)))
