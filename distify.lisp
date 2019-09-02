@@ -1,11 +1,13 @@
 (defpackage #:qlot/distify
   (:use #:cl
+        #:qlot/distify/ql
         #:qlot/distify/git
-        #:qlot/distify/ql)
+        #:qlot/distify/http)
   (:import-from #:qlot/source
                 #:source-ql
                 #:source-ql-all
-                #:source-git)
+                #:source-git
+                #:source-http)
   (:import-from #:qlot/parser
                 #:parse-qlfile
                 #:parse-qlfile-lock)
@@ -22,7 +24,8 @@
     (funcall (etypecase source
                (source-ql #'distify-ql)
                (source-ql-all #'distify-ql-all)
-               (source-git #'distify-git))
+               (source-git #'distify-git)
+               (source-http #'distify-http))
              source
              destination
              :distinfo-only distinfo-only))

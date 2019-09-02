@@ -11,8 +11,9 @@
   :class :package-inferred-system
   :depends-on ("rove"
                "qlot/tests/parser"
-               "qlot/tests/distify/git"
                "qlot/tests/distify/ql"
+               "qlot/tests/distify/git"
+               "qlot/tests/distify/http"
                "qlot/tests/distify"
                "qlot/tests/server"
                "qlot/tests/install/quicklisp"
