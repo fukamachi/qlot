@@ -67,12 +67,22 @@
 (defun -e (form)
   (list *eval-option* (str form)))
 
+(defvar *default-args*
+  (append
+    (-e "(require 'asdf)")
+    (-e
+      '(setf *debugger-hook*
+             (lambda (c parent)
+               (declare (ignore parent))
+               (uiop:print-backtrace :condition c)
+               (uiop:quit -1))))))
+
 (defun build-command-args (forms &key systems source-registry without-quicklisp)
   (let ((qlhome (if without-quicklisp
                     nil
                     (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
     (append
-      (-e "(require 'asdf)")
+      *default-args*
 
       (when source-registry
         (-e `(push ,source-registry asdf:*central-registry*)))
