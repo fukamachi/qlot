@@ -1,5 +1,7 @@
 (defpackage #:qlot/utils/shell
   (:use #:cl)
+  (:import-from #:qlot/logger
+                #:debug-log)
   (:export #:safety-shell-command
            #:shell-command-error
            #:run-lisp))
@@ -21,6 +23,7 @@
 
 (defun safety-shell-command (program args)
   (setf args (mapcar #'princ-to-string args))
+  (debug-log "Running shell command: ~A ~{~S~^ ~}" program args)
   (with-output-to-string (stdout)
     (with-output-to-string (stderr)
       (multiple-value-bind (output error code)
@@ -58,7 +61,8 @@
   (let ((*package* (find-package :cl-user)))
     (if (stringp form)
         form
-        (prin1-to-string form))))
+        (let ((*print-case* :downcase) (*print-pretty* nil))
+          (prin1-to-string form)))))
 
 (defun -e (form)
   (list *eval-option* (str form)))
@@ -101,12 +105,9 @@
   (declare (ignore systems source-registry without-quicklisp))
   (let ((ros (or (ros:opt "wargv0")
                  (ros:opt "argv0"))))
-    (with-output-to-string (s)
-      (uiop:run-program (append (list ros)
-                                (list "+Q")
-                                (apply #'build-command-args forms args))
-                        :output s
-                        :error-output *error-output*))))
+    (safety-shell-command ros
+                          (cons "+Q"
+                                (apply #'build-command-args forms args)))))
 
 (defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
   (declare (ignore systems source-registry without-quicklisp))

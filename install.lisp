@@ -13,7 +13,8 @@
                 #:with-qlot-server
                 #:run-distify-source-process)
   (:import-from #:qlot/logger
-                #:message)
+                #:message
+                #:debug-log)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -180,6 +181,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                           :ignore-lock ignore-lock
                                           :projects projects)))
     (with-qlot-server (qlfile qlhome tmp-dir)
+      (debug-log "Using temporary directory '~A'" tmp-dir)
       (with-quicklisp-home qlhome
         (let ((preference (get-universal-time)))
           (dolist (source sources)
