@@ -161,7 +161,7 @@ OPTIONS:
              (print-version)
              (ros:quit))
             (t (error 'qlot/errors:command-not-found :command $1)))
-    #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 nil))
+    #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
     (qlot/errors:command-not-found (e)
       (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
       (print-usage)
