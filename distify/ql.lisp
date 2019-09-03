@@ -16,7 +16,12 @@
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
-  (let* ((body-stream (dex:get (source-distribution source) :want-stream t))
+  (let* ((body-stream (handler-case (dex:get (source-distribution source) :want-stream t)
+                        (dex:http-request-failed (e)
+                          (error 'qlot-simple-error
+                                 :format-control "Not available dist: ~A (~A)"
+                                 :format-control (list (source-distribution source)
+                                                       (type-of e))))))
          (distinfo (parse-distinfo-stream body-stream))
          (release-index-url (cdr (assoc "release-index-url" distinfo :test 'equal)))
          (version

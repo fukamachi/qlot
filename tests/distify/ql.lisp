@@ -61,6 +61,14 @@
                                            :type "txt"
                                            :defaults *tmp-directory*))))
 
+  (let ((source (make-source :ql "hunchentoot" "2000-01-01")))
+    (ok (signals (distify-ql source *tmp-directory*)
+                 'qlot-error))
+
+    (ng (uiop:file-exists-p (make-pathname :name "hunchentoot"
+                                           :type "txt"
+                                           :defaults *tmp-directory*))))
+
   (let ((source (make-source :ql :all :latest)))
     (distify-dist source *tmp-directory*)
 
