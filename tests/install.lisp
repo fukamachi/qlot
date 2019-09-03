@@ -32,9 +32,17 @@
                    "log4cl"
                    "quicklisp"
                    "shelly")
-                :test 'string=))
+                 :test 'string=))
   ;; Check if Dexador, qlot/distify depends on, is not installed in the local Quicklisp
   (ng (find-if (lambda (name)
                  (starts-with-subseq "dexador-" name))
-               (uiop:subdirectories (merge-pathnames #P"dists/quicklisp/software/"))
-               :key #'directory-name)))
+               (uiop:subdirectories (merge-pathnames #P"dists/quicklisp/software/" *tmp-directory*))
+               :key #'directory-name))
+
+  (dolist (dist-name '("cl-dbi"
+                       "clack"
+                       "log4cl"
+                       "shelly"))
+    (ok (uiop:directory-exists-p
+          (merge-pathnames (format nil "dists/~A/software/" dist-name)
+                           *tmp-directory*)))))

@@ -3,14 +3,15 @@
   (:use #:cl
         #:qlot/source/base)
   (:import-from #:qlot/source/dist
-                #:source-dist)
+                #:source-dist
+                #:source-dist-base)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
   (:export #:source-ql
            #:source-ql-all))
 (in-package #:qlot/source/ql)
 
-(defclass source-ql (source-dist)
+(defclass source-ql (source-dist-base)
   ())
 
 (defclass source-ql-all (source-dist)

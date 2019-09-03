@@ -8,11 +8,13 @@
            #:source-distinfo-url))
 (in-package #:qlot/source/dist)
 
-(defclass source-dist (source)
+(defclass source-dist-base (source)
   ((%version :initarg :%version)
    (distribution :initarg :distribution
                  :reader source-distribution)
    (%distinfo :accessor source-distinfo)))
+
+(defclass source-dist (source-dist-base) ())
 
 (defmethod source-distinfo-url ((source source-dist))
   (source-distribution source))
