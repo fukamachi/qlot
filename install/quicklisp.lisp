@@ -30,7 +30,7 @@
                   `(let ((*standard-output* (make-broadcast-stream)))
                      (load ,quicklisp-file))
                   "(setf quicklisp-quickstart:*after-initial-setup-message* \"\")"
-                  (format nil "(quicklisp-quickstart:install :path #P\"~A\")"
+                  (format nil "(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (quicklisp-quickstart:install :path #P\"~A\"))"
                           path))
                 :without-quicklisp t)
       t)))
