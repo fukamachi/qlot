@@ -9,15 +9,32 @@
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
+  (:import-from #:qlot/errors
+                #:qlot-simple-error)
   (:import-from #:dexador)
   (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
   (let* ((body-stream (dex:get (source-distribution source) :want-stream t))
+         (distinfo (parse-distinfo-stream body-stream))
+         (release-index-url (cdr (assoc "release-index-url" distinfo :test 'equal)))
          (version
-           (cdr (assoc "version" (parse-distinfo-stream body-stream) :test 'equal))))
+           (cdr (assoc "version" distinfo :test 'equal))))
+    (check-type release-index-url string)
     (check-type version string)
+    ;; Check if the project is available
+    (let ((stream (dex:get release-index-url :want-stream t)))
+      (block nil
+        (parse-space-delimited-stream stream
+                                      :test (lambda (data)
+                                              (when (equal (first data) (source-project-name source))
+                                                (return t))))
+        (error 'qlot-simple-error
+               :format-control "'~A' is not available in dist '~A'"
+               :format-arguments (list
+                                   (source-project-name source)
+                                   (source-distribution source)))))
     (setf (source-version source)
           (format nil "ql-~A" version))))
 

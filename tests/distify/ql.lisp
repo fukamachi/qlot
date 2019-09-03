@@ -12,6 +12,8 @@
                 #:parse-space-delimited-file)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory)
+  (:import-from #:qlot/errors
+                #:qlot-error)
   (:import-from #:assoc-utils
                 #:aget))
 (in-package #:qlot/tests/distify/ql)
@@ -50,6 +52,14 @@
         (ok (every (lambda (row)
                      (equal (first row) "log4cl"))
                    releases)))))
+
+  (let ((source (make-source :ql "not-found-project" "2014-03-17")))
+    (ok (signals (distify-ql source *tmp-directory*)
+                 'qlot-error))
+
+    (ng (uiop:file-exists-p (make-pathname :name "not-found-project"
+                                           :type "txt"
+                                           :defaults *tmp-directory*))))
 
   (let ((source (make-source :ql :all :latest)))
     (distify-dist source *tmp-directory*)
