@@ -1,5 +1,5 @@
-(defpackage #:qlot/source/ultralisp
-  (:nicknames #:qlot.source.ultralisp)
+(defpackage #:qlot.source.ultralisp
+  (:nicknames #:qlot/source/ultralisp)
   (:use #:cl
         #:qlot/source/base)
   (:import-from #:qlot/source/ql
