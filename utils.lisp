@@ -6,7 +6,8 @@
            #:generate-random-string
            #:with-package-functions
            #:pathname-in-directory-p
-           #:merge-hash-tables))
+           #:merge-hash-tables
+           #:octets-stream-to-string))
 (in-package #:qlot/utils)
 
 (defmacro with-in-directory (dir &body body)
@@ -81,3 +82,10 @@ with the same key."
   (flet ((add-to-original (value key)
            (setf (gethash value to-table) key)))
     (maphash #'add-to-original from-table)))
+
+(defun octets-stream-to-string (stream)
+  (let ((buffer (make-array 1024 :element-type '(unsigned-byte 8))))
+    (with-output-to-string (s)
+      (loop for read-bytes = (read-sequence buffer stream)
+            do (write-string (map 'string #'code-char buffer) s)
+            while (= read-bytes 1024)))))

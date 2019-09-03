@@ -1,7 +1,8 @@
 (defpackage #:qlot/utils/ql
   (:use #:cl)
   (:import-from #:qlot/utils
-                #:split-with)
+                #:split-with
+                #:octets-stream-to-string)
   (:export #:quicklisp-distinfo-url
            #:parse-distinfo-stream
            #:parse-distinfo-file
@@ -49,26 +50,32 @@
       *quicklisp-distinfo*))
 
 (defun parse-distinfo-stream (stream)
-  (loop for line = (read-line stream nil nil)
-        while line
-        for (key val) = (split-with #\: line :limit 2)
-        collect (cons key (string-left-trim '(#\Space) val))))
+  (if (equal (stream-element-type stream) '(unsigned-byte 8))
+      (with-input-from-string (stream (octets-stream-to-string stream))
+        (parse-distinfo-stream stream))
+      (loop for line = (read-line stream nil nil)
+            while line
+            for (key val) = (split-with #\: line :limit 2)
+            collect (cons key (string-left-trim '(#\Space) val)))))
 
 (defun parse-distinfo-file (file)
   (uiop:with-input-file (in file)
     (parse-distinfo-stream in)))
 
 (defun parse-space-delimited-stream (stream &key (test #'identity) include-header)
-  (let ((header-line (read-line stream)))
-    (assert (char= (aref header-line 0) #\#))
-    (let ((rows (loop for line = (read-line stream nil nil)
-                      while line
-                      for data = (split-with #\Space line)
-                      when (funcall test data)
-                      collect data)))
-      (if include-header
-          (cons (list header-line) rows)
-          rows))))
+  (if (equal (stream-element-type stream) '(unsigned-byte 8))
+      (with-input-from-string (stream (octets-stream-to-string stream))
+        (parse-space-delimited-stream stream :test test :include-header include-header))
+      (let ((header-line (read-line stream)))
+        (assert (char= (aref header-line 0) #\#))
+        (let ((rows (loop for line = (read-line stream nil nil)
+                          while line
+                          for data = (split-with #\Space line)
+                          when (funcall test data)
+                          collect data)))
+          (if include-header
+              (cons (list header-line) rows)
+              rows)))))
 
 (defun parse-space-delimited-file (file &key (test #'identity) include-header)
   (uiop:with-input-file (in file)
