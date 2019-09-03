@@ -16,6 +16,8 @@
   (:import-from #:qlot/logger
                 #:message
                 #:debug-log)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -56,7 +58,9 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome qlfile qlhome)
+    (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
+        (list *proxy*)
+      (apply-qlfile-to-qlhome qlfile qlhome))
 
     ;; TODO: Quickload project systems
 
@@ -81,7 +85,9 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
 
-    (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects)
+    (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
+        (list *proxy*)
+      (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects))
 
     ;; TODO: Quickload project systems
 

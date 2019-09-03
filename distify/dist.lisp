@@ -4,6 +4,8 @@
                 #:source-dist
                 #:source-distribution
                 #:source-project-name)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:dexador)
   (:export #:distify-dist))
 (in-package #:qlot/distify/dist)
@@ -16,5 +18,6 @@
                (make-pathname :name (source-project-name source)
                               :type "txt"
                               :defaults destination)
-               :if-exists :supersede)
+               :if-exists :supersede
+               :proxy *proxy*)
     destination))

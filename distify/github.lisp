@@ -11,6 +11,8 @@
                 #:source-github-tag
                 #:source-github-identifier
                 #:write-distinfo)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt)
@@ -27,7 +29,7 @@
      (apply #'dex:get
             (format nil "https://api.github.com/repos/~A/~A" repos action)
             :want-stream t
-            :insecure t
+            :proxy *proxy*
             (if github-access-token
                 (list :basic-auth (cons github-access-token "x-oauth-basic"))
                 '())))))
@@ -85,7 +87,8 @@
                                (source-github-identifier source))
                        archives-dir)))
         (dex:fetch (source-http-url source) archive
-                   :if-exists :supersede)
+                   :if-exists :supersede
+                   :proxy *proxy*)
 
         (let ((extracted-source-directory (extract-tarball archive softwares-dir))
               (source-directory (merge-pathnames (format nil "~A-~A/"

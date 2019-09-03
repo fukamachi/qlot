@@ -2,6 +2,8 @@
   (:use #:cl)
   (:import-from #:qlot/logger
                 #:message)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils
                 #:generate-random-string)
   (:import-from #:qlot/utils/shell
@@ -17,9 +19,11 @@
                                                      (generate-random-string))
                                              to)
                             to)))
-    (uiop:symbol-call '#:ql-http '#:http-fetch
-                      "http://beta.quicklisp.org/quicklisp.lisp"
-                      quicklisp-file)
+    (progv (list (intern #.(string '#:*proxy-url*) '#:ql-http))
+        (list *proxy*)
+      (uiop:symbol-call '#:ql-http '#:http-fetch
+                        "http://beta.quicklisp.org/quicklisp.lisp"
+                        quicklisp-file))
     quicklisp-file))
 
 (defun install-quicklisp (path)
@@ -30,7 +34,8 @@
                   `(let ((*standard-output* (make-broadcast-stream)))
                      (load ,quicklisp-file))
                   "(setf quicklisp-quickstart:*after-initial-setup-message* \"\")"
-                  (format nil "(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (quicklisp-quickstart:install :path #P\"~A\"))"
-                          path))
+                  (format nil "(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (quicklisp-quickstart:install :path #P\"~A\"~@[ :proxy \"~A\"~]))"
+                          path
+                          *proxy*))
                 :without-quicklisp t)
       t)))

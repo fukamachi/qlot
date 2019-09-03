@@ -10,6 +10,8 @@
                 #:*debug*
                 #:*logger-message-stream*
                 #:*logger-debug-stream*)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils
                 #:pathname-in-directory-p
                 #:merge-hash-tables)
@@ -17,6 +19,7 @@
            #:update
            #:with-local-quicklisp
            #:quickload
+           #:*proxy*
            #:*debug*
            #:*logger-message-stream*
            #:*logger-debug-stream*))

@@ -7,6 +7,8 @@
                 #:source-version
                 #:source-version-prefix
                 #:write-distinfo)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt)
@@ -28,7 +30,8 @@
       (unless (uiop:file-exists-p archive)
         (ensure-directories-exist archive)
         (dex:fetch (source-http-url source) archive
-                   :if-exists :supersede))
+                   :if-exists :supersede
+                   :proxy *proxy*))
 
       (let ((archive-md5 (byte-array-to-hex-string
                            (digest-file :md5 archive))))

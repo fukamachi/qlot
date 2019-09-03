@@ -7,6 +7,8 @@
                 #:source-version-prefix
                 #:source-distribution
                 #:write-distinfo)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
@@ -17,7 +19,9 @@
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
-  (let* ((body-stream (handler-case (dex:get (source-distribution source) :want-stream t)
+  (let* ((body-stream (handler-case (dex:get (source-distribution source)
+                                             :want-stream t
+                                             :proxy *proxy*)
                         (dex:http-request-failed (e)
                           (error 'qlot-simple-error
                                  :format-control "Not available dist: ~A (~A)"
@@ -30,7 +34,9 @@
     (check-type release-index-url string)
     (check-type version string)
     ;; Check if the project is available
-    (let ((stream (dex:get release-index-url :want-stream t)))
+    (let ((stream (dex:get release-index-url
+                           :want-stream t
+                           :proxy *proxy*)))
       (block nil
         (parse-space-delimited-stream stream
                                       :test (lambda (data)
@@ -65,12 +71,14 @@
                                      destination)))
       (ensure-directories-exist metadata)
       (let ((original-distinfo
-              (parse-distinfo-stream (dex:get (source-distribution source) :want-stream t))))
+              (parse-distinfo-stream (dex:get (source-distribution source)
+                                              :want-stream t
+                                              :proxy *proxy*))))
         (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
                                  ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair
             (check-type url string)
-            (let ((data (parse-space-delimited-stream (dex:get url :want-stream t)
+            (let ((data (parse-space-delimited-stream (dex:get url :want-stream t :proxy *proxy*)
                                                       :test (lambda (data)
                                                               (equal (first data) (source-project-name source)))
                                                       :include-header t)))
