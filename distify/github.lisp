@@ -3,6 +3,7 @@
   (:import-from #:qlot/source
                 #:source-project-name
                 #:source-version
+                #:source-version-prefix
                 #:source-http-url
                 #:source-github-repos
                 #:source-github-ref
@@ -53,7 +54,9 @@
   (setf (source-github-ref source)
         (retrieve-source-git-ref-from-github source))
   (setf (source-version source)
-        (format nil "github-~A" (source-github-ref source))))
+        (format nil "~A~A"
+                (source-version-prefix source)
+                (source-github-ref source))))
 
 (defun distify-github (source destination &key distinfo-only)
   (load-source-github-version source)

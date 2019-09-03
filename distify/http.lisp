@@ -5,6 +5,7 @@
                 #:source-http-url
                 #:source-http-archive-md5
                 #:source-version
+                #:source-version-prefix
                 #:write-distinfo)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
@@ -40,7 +41,9 @@
 
         (setf (source-http-archive-md5 source) archive-md5)
         (setf (source-version source)
-              (format nil "http-~A" archive-md5)))
+              (format nil "~A~A"
+                      (source-version-prefix source)
+                      archive-md5)))
 
       (uiop:with-output-file (out (make-pathname :name (source-project-name source)
                                                  :type "txt"

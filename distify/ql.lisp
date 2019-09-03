@@ -4,6 +4,7 @@
                 #:source-ql
                 #:source-project-name
                 #:source-version
+                #:source-version-prefix
                 #:source-distribution
                 #:write-distinfo)
   (:import-from #:qlot/utils/ql
@@ -41,7 +42,9 @@
                                    (source-project-name source)
                                    (source-distribution source)))))
     (setf (source-version source)
-          (format nil "ql-~A" version))))
+          (format nil "~A~A"
+                  (source-version-prefix source)
+                  version))))
 
 (defun distify-ql (source destination &key distinfo-only)
   (check-type source source-ql)

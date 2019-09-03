@@ -16,7 +16,8 @@
            #:source-dist-name
            #:source=
            #:write-distinfo
-           #:source-distinfo-url))
+           #:source-distinfo-url
+           #:source-version-prefix))
 (in-package #:qlot/source/base)
 
 (defclass source ()
@@ -97,3 +98,12 @@
 (defgeneric source-distinfo-url (source)
   (:method ((source source))
     (format nil "qlot://localhost/~A.txt" (source-project-name source))))
+
+(defgeneric source-version-prefix (source)
+  (:method ((source source))
+    (concatenate 'string
+                 (let ((class-name (string-downcase (type-of source))))
+                   (if (eql 0 (search "source-" class-name))
+                       (subseq class-name #.(length "source-"))
+                       class-name))
+                 "-")))

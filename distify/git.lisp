@@ -4,6 +4,7 @@
                 #:source-project-name
                 #:source-dist-name
                 #:source-version
+                #:source-version-prefix
                 #:write-distinfo)
   (:import-from #:qlot/source/git
                 #:source-git
@@ -38,7 +39,8 @@
       (setf (source-git-ref source) ref)))
   (unless (ignore-errors (source-version source))
     (setf (source-version source)
-          (format nil "git-~A"
+          (format nil "~A~A"
+                  (source-version-prefix source)
                   (source-git-ref source)))))
 
 (defun distify-git (source destination &key distinfo-only)
