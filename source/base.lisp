@@ -16,7 +16,7 @@
            #:source-dist-name
            #:source=
            #:write-distinfo
-           #:source-distinfo-url
+           #:source-install-url
            #:source-version-prefix))
 (in-package #:qlot/source/base)
 
@@ -98,7 +98,7 @@
                                           (source-project-name source)
                                           (source-version source)))))
 
-(defgeneric source-distinfo-url (source)
+(defgeneric source-install-url (source)
   (:method ((source source))
     (format nil "qlot://localhost/~A.txt" (source-project-name source))))
 

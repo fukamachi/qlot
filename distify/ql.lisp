@@ -5,7 +5,7 @@
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
-                #:source-distribution
+                #:source-distinfo-url
                 #:write-distinfo)
   (:import-from #:qlot/proxy
                 #:*proxy*)
@@ -19,13 +19,13 @@
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
-  (let* ((body-stream (handler-case (dex:get (source-distribution source)
+  (let* ((body-stream (handler-case (dex:get (source-distinfo-url source)
                                              :want-stream t
                                              :proxy *proxy*)
                         (dex:http-request-failed (e)
                           (error 'qlot-simple-error
                                  :format-control "Not available dist: ~A (~A)"
-                                 :format-control (list (source-distribution source)
+                                 :format-control (list (source-distinfo-url source)
                                                        (type-of e))))))
          (distinfo (parse-distinfo-stream body-stream))
          (release-index-url (cdr (assoc "release-index-url" distinfo :test 'equal)))
@@ -46,7 +46,7 @@
                :format-control "'~A' is not available in dist '~A'"
                :format-arguments (list
                                    (source-project-name source)
-                                   (source-distribution source)))))
+                                   (source-distinfo-url source)))))
     (setf (source-version source)
           (format nil "~A~A"
                   (source-version-prefix source)
@@ -71,7 +71,7 @@
                                      destination)))
       (ensure-directories-exist metadata)
       (let ((original-distinfo
-              (parse-distinfo-stream (dex:get (source-distribution source)
+              (parse-distinfo-stream (dex:get (source-distinfo-url source)
                                               :want-stream t
                                               :proxy *proxy*))))
         (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))

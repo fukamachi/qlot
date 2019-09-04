@@ -12,13 +12,17 @@
 
 (defclass source-dist-project (source)
   ((%version :initarg :%version)
-   (distribution :initarg :distribution)))
+   (distribution :initarg :distribution
+                 :accessor source-distribution)
+   (distinfo :initarg :distinfo)))
 
 (defclass source-dist (source-dist-project)
   ())
 
-(defmethod source-distribution ((source source-dist-project))
+(defmethod source-distinfo-url ((source source-dist-project))
   (cond
+    ((slot-boundp source 'distinfo)
+     (slot-value source 'distinfo))
     ((slot-boundp source 'qlot/source/base::version)
      (make-versioned-distinfo-url (slot-value source 'distribution)
                                   (subseq (source-version source) (length (source-version-prefix source)))))
@@ -28,8 +32,8 @@
      (make-versioned-distinfo-url (slot-value source 'distribution)
                                   (slot-value source '%version)))))
 
-(defmethod source-distinfo-url ((source source-dist-project))
-  (source-distribution source))
+(defmethod source-install-url ((source source-dist-project))
+  (source-distinfo-url source))
 
 (defmethod make-source ((source (eql :dist)) &rest initargs)
   (destructuring-bind (project-name distribution &optional (version :latest)) initargs
@@ -37,6 +41,9 @@
                    :project-name project-name
                    :distribution distribution
                    :%version version)))
+
+(defmethod source-frozen-slots ((source source-dist-project))
+  `(:distinfo ,(source-distinfo-url source)))
 
 (defmethod defrost-source :after ((source source-dist-project))
   (setf (slot-value source '%version)

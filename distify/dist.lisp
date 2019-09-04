@@ -2,7 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:source-dist
-                #:source-distribution
+                #:source-distinfo-url
                 #:source-project-name)
   (:import-from #:qlot/proxy
                 #:*proxy*)
@@ -14,7 +14,7 @@
   (declare (ignore distinfo-only))
   (check-type source source-dist)
   (let ((destination (truename destination)))
-    (dex:fetch (source-distribution source)
+    (dex:fetch (source-distinfo-url source)
                (make-pathname :name (source-project-name source)
                               :type "txt"
                               :defaults destination)

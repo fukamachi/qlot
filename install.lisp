@@ -6,7 +6,7 @@
                 #:source-dist
                 #:source-dist-name
                 #:source-version
-                #:source-distinfo-url
+                #:source-install-url
                 #:freeze-source)
   (:import-from #:qlot/parser
                 #:read-qlfile-for-install)
@@ -143,7 +143,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (run-distify-source-process source tmp-dir
                               :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
   (with-package-functions #:ql-dist (install-dist version)
-    (let ((new-dist (install-dist (source-distinfo-url source)
+    (let ((new-dist (install-dist (source-install-url source)
                                   :prompt nil
                                   :replace nil)))
       (setf (source-version source) (version new-dist))
