@@ -18,7 +18,9 @@
   (setf (fdefinition (find-symbol (string '#:http-fetch) '#:ql-http))
         (lambda (url &rest rest)
           (let ((ql:*proxy-url*
-                  (if (eql (search "qlot://localhost/" url) 0)
+                  (if (eql (search #1="qlot://localhost/" url
+                                   :end2 (length #1#))
+                           0)
                       nil
                       ql:*proxy-url*)))
             (apply #'orig-http-fetch url rest)))))
