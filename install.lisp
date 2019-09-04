@@ -187,22 +187,23 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
-    (with-qlot-server (qlfile qlhome tmp-dir)
-      (debug-log "Using temporary directory '~A'" tmp-dir)
-      (with-quicklisp-home qlhome
-        (let ((preference (get-universal-time)))
-          (dolist (source sources)
+    (let ((preference (get-universal-time)))
+      (dolist (source sources)
+        (with-qlot-server (source qlhome tmp-dir)
+          (debug-log "Using temporary directory '~A'" tmp-dir)
+          (with-quicklisp-home qlhome
             (if (already-installed-p source)
                 (update-source source tmp-dir)
                 (install-source source tmp-dir))
             (with-package-functions #:ql-dist (dist (setf preference))
               (setf (preference (dist (source-dist-name source)))
-                    (incf preference))))
-          (with-package-functions #:ql-dist (uninstall name all-dists)
-            (dolist (dist (all-dists))
-              (unless (find (name dist) sources :test #'string= :key #'source-dist-name)
-                (message "Removing dist ~S." (name dist))
-                (uninstall dist)))))))
+                    (incf preference))))))
+      (with-quicklisp-home qlhome
+        (with-package-functions #:ql-dist (uninstall name all-dists)
+          (dolist (dist (all-dists))
+            (unless (find (name dist) sources :test #'string= :key #'source-dist-name)
+              (message "Removing dist ~S." (name dist))
+              (uninstall dist))))))
 
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
                                      :type "lock"

@@ -6,6 +6,8 @@
                 #:make-handler
                 #:qlot-fetch
                 #:with-qlot-server)
+  (:import-from #:qlot/source
+                #:make-source)
   (:import-from #:ironclad
                 #:digest-file))
 (in-package #:qlot/tests/server)
@@ -36,7 +38,7 @@
                  "")))))
 
 (deftest with-qlot-server-tests
-  (with-qlot-server ((asdf:system-relative-pathname :qlot #P"tests/data/qlfile4"))
+  (with-qlot-server ((make-source :git "lsx" "https://github.com/fukamachi/lsx"))
     (uiop:with-temporary-file (:pathname file)
       (ql-http:fetch "qlot://localhost/lsx.txt" file)
       (ok (not (equal (uiop:read-file-string file)

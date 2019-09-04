@@ -10,12 +10,7 @@
                 #:source-git
                 #:source-http
                 #:source-dist)
-  (:import-from #:qlot/parser
-                #:parse-qlfile
-                #:parse-qlfile-lock)
-  (:export #:distify
-           #:distify-qlfile
-           #:distify-qlfile-lock))
+  (:export #:distify))
 (in-package #:qlot/distify)
 
 (defun distify (source-or-sources destination &key distinfo-only)
@@ -32,11 +27,3 @@
              destination
              :distinfo-only distinfo-only))
   destination)
-
-(defun distify-qlfile (qlfile destination &key distinfo-only)
-  (distify (parse-qlfile qlfile) destination
-           :distinfo-only distinfo-only))
-
-(defun distify-qlfile-lock (qlfile-lock destination &key distinfo-only)
-  (distify (parse-qlfile-lock qlfile-lock) destination
-           :distinfo-only distinfo-only))
