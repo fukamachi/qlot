@@ -66,10 +66,12 @@
             do (setf (slot-value source slot-name) v)))))
 
 (defmethod print-object ((source source) stream)
-  (format stream "#<~S ~A ~A>"
-          (type-of source)
-          (source-project-name source)
-          (source-version source)))
+  (print-unreadable-object (source stream :type t :identity t)
+    (format stream "~A ~A"
+            (source-project-name source)
+            (if (slot-boundp source 'version)
+                (source-version source)
+                "<no version>"))))
 
 (defgeneric source-dist-name (source)
   (:method ((source source))
