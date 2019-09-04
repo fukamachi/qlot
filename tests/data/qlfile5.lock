@@ -1,0 +1,24 @@
+("quicklisp" .
+ (:class qlot.source.ql:source-ql-all
+  :initargs (:project-name "quicklisp" :%version :latest :distribution "http://beta.quicklisp.org/dist/quicklisp.txt")
+  :version "2018-02-28"))
+("ultralisp" .
+ (:class qlot.source.dist:source-dist
+  :initargs (:project-name "ultralisp" :distribution "http://dist.ultralisp.org/ultralisp.txt" :%version :latest)
+  :version "20190904101505"))
+("ironclad" .
+ (:class qlot.source.git:source-git
+  :initargs (:project-name "ironclad" :remote-url "https://github.com/sharplispers/ironclad")
+  :version "git-66ddf32d8afc6581315c72422bf2343eab65009e"))
+("cl-ppcre" .
+ (:class qlot.source.ql:source-ql
+  :initargs (:project-name "cl-ppcre" :distribution "http://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
+  :version "ql-2018-08-31"))
+("lsx" .
+ (:class qlot.source.github:source-github
+  :initargs (:project-name "lsx" :repos "fukamachi/lsx" :ref nil :branch nil :tag nil)
+  :version "github-546032449c010e4153501accf1cac521"))
+("fukamachi-lack" .
+ (:class qlot.source.ultralisp:source-ultralisp
+  :initargs (:project-name "fukamachi-lack" :%version :latest :distribution "http://dist.ultralisp.org/ultralisp.txt")
+  :version "ultralisp-20190904101505"))

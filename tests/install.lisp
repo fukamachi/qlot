@@ -33,18 +33,27 @@
 
       (ok (set-equal (mapcar #'directory-name
                              (uiop:subdirectories (merge-pathnames #P"dists/" qlhome)))
-                     '("cl-ppcre"
+                     '("quicklisp"
+                       "ultralisp"
                        "ironclad"
-                       "quicklisp")
+                       "cl-ppcre"
+                       "lsx"
+                       "fukamachi-lack")
                      :test 'string=)
           "dists are installed")
 
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/quicklisp/distinfo.txt") qlhome))))
         (ok (equal (aget data "version") "2018-02-28")))
+      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/ultralisp/distinfo.txt") qlhome))))
+        (ok (equal (aget data "version") "20190904101505")))
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/ironclad/distinfo.txt") qlhome))))
         (ok (equal (aget data "version") "git-66ddf32d8afc6581315c72422bf2343eab65009e")))
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/cl-ppcre/distinfo.txt") qlhome))))
         (ok (equal (aget data "version") "ql-2018-08-31")))
+      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/lsx/distinfo.txt") qlhome))))
+        (ok (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
+      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/fukamachi-lack/distinfo.txt") qlhome))))
+        (ok (equal (aget data "version") "ultralisp-20190904101505")))
 
       ;; Check if Dexador, qlot/distify depends on, is not installed in the local Quicklisp
       (ng (find-if (lambda (name)
@@ -52,8 +61,10 @@
                    (uiop:subdirectories (merge-pathnames #P"dists/quicklisp/software/" qlhome))
                    :key #'directory-name))
 
-      (dolist (dist-name '("cl-ppcre"
-                           "ironclad"))
+      (dolist (dist-name '("ironclad"
+                           "cl-ppcre"
+                           "lsx"
+                           "fukamachi-lack"))
         (ok (uiop:directory-exists-p
               (merge-pathnames (format nil "dists/~A/software/" dist-name)
                                qlhome)))))))
