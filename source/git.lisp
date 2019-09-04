@@ -48,11 +48,11 @@
               (source-git-tag source1))))
 
 (defmethod print-object ((source source-git) stream)
-  (format stream "#<~S ~A ~A~:[~;~:* ~A~]>"
-          (type-of source)
-          (source-project-name source)
-          (source-git-remote-url source)
-          (source-git-identifier source)))
+  (print-unreadable-object (source stream :type t :identity t)
+    (format stream "~A ~A~:[~;~:* ~A~]"
+            (source-project-name source)
+            (source-git-remote-url source)
+            (source-git-identifier source))))
 
 (defun source-git-identifier (source)
   (cond
