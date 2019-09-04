@@ -10,7 +10,7 @@
 (defclass source-ultralisp (source-ql)
   ()
   (:default-initargs
-    :distribution "http://dist.ultralisp.org/"))
+    :distribution "http://dist.ultralisp.org/ultralisp.txt"))
 
 (defmethod make-source ((source (eql :ultralisp)) &rest initargs)
   (destructuring-bind (project-name version)
