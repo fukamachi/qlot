@@ -9,7 +9,7 @@
                 #:source-version
                 #:source-git
                 #:source-ql
-                #:source-ql-all
+                #:source-dist
                 #:source-distribution)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed))
@@ -29,7 +29,7 @@
 
   (testing "ql source"
     (let ((source (parse-qlfile-line "ql :all :latest")))
-      (ok (typep source 'source-ql-all))
+      (ok (typep source 'source-dist))
       (ok (equal (source-project-name source) "quicklisp"))
       (ok (equal (source-distribution source) "http://beta.quicklisp.org/dist/quicklisp.txt")))
     (let ((source (parse-qlfile-line "ql log4cl 2014-03-17")))
@@ -74,11 +74,11 @@
 
 (deftest read-qlfile-for-install-tests
   (let ((sources (read-qlfile-for-install (test-qlfile #P"qlfile") :ignore-lock t)))
-    (ok (typep (first sources) 'source-ql-all))
+    (ok (typep (first sources) 'source-dist))
     (ng (slot-boundp (first sources) 'qlot/source/base::version))
     (ok (= (length sources) 5)))
   (let ((sources (read-qlfile-for-install (test-qlfile #P"qlfile"))))
-    (ok (typep (first sources) 'source-ql-all))
+    (ok (typep (first sources) 'source-dist))
     (ok (slot-boundp (first sources) 'qlot/source/base::version))
     (ok (string= (source-version (first sources)) "2019-08-13"))
     (ok (= (length sources) 5))))

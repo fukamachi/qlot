@@ -5,19 +5,19 @@
   (:import-from #:qlot/utils/ql
                 #:make-versioned-distinfo-url)
   (:export #:source-dist
+           #:source-dist-project
            #:source-distribution
-           #:source-distinfo
            #:source-distinfo-url))
 (in-package #:qlot/source/dist)
 
-(defclass source-dist-base (source)
+(defclass source-dist-project (source)
   ((%version :initarg :%version)
-   (distribution :initarg :distribution)
-   (%distinfo :accessor source-distinfo)))
+   (distribution :initarg :distribution)))
 
-(defclass source-dist (source-dist-base) ())
+(defclass source-dist (source-dist-project)
+  ())
 
-(defmethod source-distribution ((source source-dist-base))
+(defmethod source-distribution ((source source-dist-project))
   (cond
     ((slot-boundp source 'qlot/source/base::version)
      (make-versioned-distinfo-url (slot-value source 'distribution)
@@ -28,7 +28,7 @@
      (make-versioned-distinfo-url (slot-value source 'distribution)
                                   (slot-value source '%version)))))
 
-(defmethod source-distinfo-url ((source source-dist-base))
+(defmethod source-distinfo-url ((source source-dist-project))
   (source-distribution source))
 
 (defmethod make-source ((source (eql :dist)) &rest initargs)
@@ -38,12 +38,12 @@
                    :distribution distribution
                    :%version version)))
 
-(defmethod defrost-source :after ((source source-dist-base))
+(defmethod defrost-source :after ((source source-dist-project))
   (setf (slot-value source '%version)
         (subseq (source-version source)
                 (length (source-version-prefix source)))))
 
-(defmethod print-object ((source source-dist-base) stream)
+(defmethod print-object ((source source-dist-project) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A ~A"
             (source-project-name source)
@@ -52,7 +52,7 @@
                 (source-version source)
                 (slot-value source '%version)))))
 
-(defmethod source= ((source1 source-dist-base) (source2 source-dist-base))
+(defmethod source= ((source1 source-dist-project) (source2 source-dist-project))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
        (string= (slot-value source1 'distribution)

@@ -14,6 +14,8 @@
   (:import-from #:qlot/utils
                 #:make-keyword
                 #:split-with)
+  (:import-from #:qlot/utils/ql
+                #:quicklisp-distinfo-url)
   (:export #:parse-qlfile
            #:parse-qlfile-lock
            #:read-qlfile-for-install))
@@ -119,7 +121,7 @@
   If :ignore-lock is T, read 'qlfile' even when 'qlfile.lock' exists.
   If :projects is specified, read only those projects from qlfile.lock."
   (message "Reading '~A'..." qlfile)
-  (let ((default-ql-source (make-source :ql :all :latest))
+  (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
         (sources (parse-qlfile qlfile))
         (qlfile-lock (and (or (not ignore-lock) projects)
                           (uiop:file-exists-p
