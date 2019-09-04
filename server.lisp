@@ -4,6 +4,8 @@
                 #:source-project-name
                 #:source-initargs
                 #:source-frozen-slots)
+  (:import-from #:qlot/utils/ql
+                #:with-quicklisp-home)
   (:import-from #:qlot/utils/shell
                 #:run-lisp)
   (:import-from #:qlot/utils/tmp
@@ -71,4 +73,5 @@
              (list (cons '("qlot" . qlot-fetch)
                          (symbol-value ,fetch-scheme-functions))
                    (make-handler ,destination))
-           ,@body)))))
+           (with-quicklisp-home ,g-qlhome
+             ,@body))))))

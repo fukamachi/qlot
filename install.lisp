@@ -93,10 +93,19 @@
 
     (message "Successfully installed.")))
 
-(defun already-installed-p (source)
-  (with-package-functions #:ql-dist (find-dist)
-    (and (find-dist (source-dist-name source))
-         t)))
+(defun already-installed-p (source qlhome)
+  (with-quicklisp-home qlhome
+    (with-package-functions #:ql-dist (find-dist)
+      (and (find-dist (source-dist-name source))
+           t))))
+
+(defun update-available-p (source qlhome)
+  (with-quicklisp-home qlhome
+    (with-package-functions #:ql-dist (find-dist version)
+      (let ((dist (find-dist (source-dist-name source))))
+        (and dist
+             (equal (version dist)
+                    (source-version source)))))))
 
 (defun install-release (release)
   (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
@@ -189,15 +198,23 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                           :projects projects)))
     (let ((preference (get-universal-time)))
       (dolist (source sources)
-        (with-qlot-server (source qlhome tmp-dir)
-          (debug-log "Using temporary directory '~A'" tmp-dir)
-          (with-quicklisp-home qlhome
-            (if (already-installed-p source)
-                (update-source source tmp-dir)
-                (install-source source tmp-dir))
-            (with-package-functions #:ql-dist (dist (setf preference))
-              (setf (preference (dist (source-dist-name source)))
-                    (incf preference))))))
+        (cond
+          ((not (already-installed-p source qlhome))
+           (with-qlot-server (source qlhome tmp-dir)
+             (debug-log "Using temporary directory '~A'" tmp-dir)
+             (install-source source tmp-dir)))
+          ((update-available-p source qlhome)
+           (with-qlot-server (source qlhome tmp-dir)
+             (debug-log "Using temporary directory '~A'" tmp-dir)
+             (update-source source tmp-dir)))
+          (t
+           (message "Already have dist ~S version ~S."
+                    (source-dist-name source)
+                    (source-version source))))
+        (with-quicklisp-home qlhome
+          (with-package-functions #:ql-dist (dist (setf preference))
+            (setf (preference (dist (source-dist-name source)))
+                  (incf preference)))))
       (with-quicklisp-home qlhome
         (with-package-functions #:ql-dist (uninstall name all-dists)
           (dolist (dist (all-dists))
