@@ -12,7 +12,9 @@
 (in-package #:qlot/source/ql)
 
 (defclass source-ql (source-dist-base)
-  ())
+  ()
+  (:default-initargs
+    :distribution (quicklisp-distinfo-url)))
 
 (defclass source-ql-all (source-dist)
   ()
