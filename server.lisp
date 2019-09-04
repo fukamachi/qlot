@@ -2,6 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:source-project-name
+                #:source-version
                 #:source-initargs
                 #:source-frozen-slots)
   (:import-from #:qlot/utils/ql
@@ -48,6 +49,8 @@
                                          (make-instance ',(type-of source)
                                                         :project-name ,(source-project-name source)
                                                         ,@(source-initargs source)
+                                                        ,@(and (slot-boundp source 'qlot/source/base::version)
+                                                               `(:version ,(source-version source)))
                                                         ,@(source-frozen-slots source))
                                          ,destination
                                          :distinfo-only ,distinfo-only)))

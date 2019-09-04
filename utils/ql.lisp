@@ -4,6 +4,7 @@
                 #:split-with
                 #:octets-stream-to-string)
   (:export #:quicklisp-distinfo-url
+           #:make-versioned-distinfo-url
            #:parse-distinfo-stream
            #:parse-distinfo-file
            #:parse-space-delimited-stream
@@ -14,19 +15,14 @@
 (defparameter *quicklisp-distinfo*
   "http://beta.quicklisp.org/dist/quicklisp.txt")
 
-(defparameter *quicklisp-versioned-distinfo*
-  "http://beta.quicklisp.org/dist/quicklisp/{{version}}/distinfo.txt")
-
-(defun replace-version (value version)
-  (check-type value string)
-  (with-output-to-string (*standard-output*)
-    (loop with i = 0
-          for pos = (search "{{version}}" value :start2 i)
-          do (princ (subseq value i pos))
-          if pos
-            do (princ version)
-               (setf i (+ pos (length "{{version}}")))
-          while pos)))
+(defun make-versioned-distinfo-url (distinfo-url version)
+  (let ((pos (search ".txt" distinfo-url :from-end t
+                     :start2 (- (length distinfo-url) 4))))
+    (concatenate 'string
+                 (subseq distinfo-url 0 pos)
+                 "/"
+                 version
+                 "/distinfo.txt")))
 
 (defun check-version (version-string)
   (or (null version-string)
@@ -46,7 +42,7 @@
 (defun quicklisp-distinfo-url (&optional version)
   (assert (check-version version))
   (if version
-      (replace-version *quicklisp-versioned-distinfo* version)
+      (make-versioned-distinfo-url *quicklisp-distinfo* version)
       *quicklisp-distinfo*))
 
 (defun parse-distinfo-stream (stream)

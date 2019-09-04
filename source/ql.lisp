@@ -19,21 +19,17 @@
 (defclass source-ql-all (source-dist)
   ()
   (:default-initargs
+    :project-name "quicklisp"
     :distribution (quicklisp-distinfo-url)))
 
-(defmethod make-source ((source (eql :ql)) &rest args
-                        &key distribution
-                          &allow-other-keys)
-  (remf args :distribution)
+(defmethod make-source ((source (eql :ql)) &rest initargs)
 
-  (destructuring-bind (project-name version) args
+  (destructuring-bind (project-name version &key distribution) initargs
     (check-type project-name (or string (eql :all)))
     (check-type version (or string (eql :latest)))
 
     (let ((distribution (or distribution
-                            (if (eq version :latest)
-                                (quicklisp-distinfo-url)
-                                (quicklisp-distinfo-url version)))))
+                            (quicklisp-distinfo-url))))
       (if (eq project-name :all)
           (make-instance 'source-ql-all
                          :project-name "quicklisp"
@@ -46,3 +42,6 @@
 
 (defmethod source-distinfo-url ((source source-ql))
   (format nil "qlot://localhost/~A.txt" (source-project-name source)))
+
+(defmethod source-version-prefix ((source source-ql-all))
+  "")

@@ -2,6 +2,8 @@
   (:nicknames #:qlot/source/dist)
   (:use #:cl
         #:qlot/source/base)
+  (:import-from #:qlot/utils/ql
+                #:make-versioned-distinfo-url)
   (:export #:source-dist
            #:source-distribution
            #:source-distinfo
@@ -10,11 +12,21 @@
 
 (defclass source-dist-base (source)
   ((%version :initarg :%version)
-   (distribution :initarg :distribution
-                 :reader source-distribution)
+   (distribution :initarg :distribution)
    (%distinfo :accessor source-distinfo)))
 
 (defclass source-dist (source-dist-base) ())
+
+(defmethod source-distribution ((source source-dist-base))
+  (cond
+    ((slot-boundp source 'qlot/source/base::version)
+     (make-versioned-distinfo-url (slot-value source 'distribution)
+                                  (subseq (source-version source) (length (source-version-prefix source)))))
+    ((eq (slot-value source '%version) :latest)
+     (slot-value source 'distribution))
+    (t
+     (make-versioned-distinfo-url (slot-value source 'distribution)
+                                  (slot-value source '%version)))))
 
 (defmethod source-distinfo-url ((source source-dist))
   (source-distribution source))
@@ -38,7 +50,7 @@
 (defmethod source= ((source1 source-dist) (source2 source-dist))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
-       (string= (source-distribution source1)
-                (source-distribution source2))
+       (string= (slot-value source1 'distribution)
+                (slot-value source2 'distribution))
        (string= (slot-value source1 '%version)
                 (slot-value source2 '%version))))
