@@ -16,7 +16,7 @@
            :initarg :stderr))
   (:report
    (lambda (condition stream)
-     (format stream "Error while executing a shell command: ~{~A~^ ~} (Code=~D)~2%  ~A"
+     (format stream "Error while executing a shell command: ~{~S~^ ~} (Code=~D)~2%  ~A"
              (slot-value condition 'command)
              (slot-value condition 'code)
              (slot-value condition 'stderr)))))
