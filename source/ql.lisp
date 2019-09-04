@@ -42,6 +42,3 @@
 
 (defmethod source-distinfo-url ((source source-ql))
   (format nil "qlot://localhost/~A.txt" (source-project-name source)))
-
-(defmethod source-version-prefix ((source source-ql-all))
-  "")

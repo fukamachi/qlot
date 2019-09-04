@@ -59,3 +59,6 @@
                 (slot-value source2 'distribution))
        (string= (slot-value source1 '%version)
                 (slot-value source2 '%version))))
+
+(defmethod source-version-prefix ((source source-dist))
+  "")
