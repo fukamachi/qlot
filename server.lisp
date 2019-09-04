@@ -47,7 +47,6 @@
                            (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
                 (list `(uiop:symbol-call :qlot/distify :distify
                                          (make-instance ',(type-of source)
-                                                        :project-name ,(source-project-name source)
                                                         ,@(source-initargs source)
                                                         ,@(and (slot-boundp source 'qlot/source/base::version)
                                                                `(:version ,(source-version source)))
