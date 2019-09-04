@@ -195,6 +195,13 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (cond
             ((not (already-installed-p source qlhome))
              (install-source source tmp-dir))
+            ((and (slot-boundp source 'qlot/source/base::version)
+                  (equal (uiop:symbol-call '#:ql-dist '#:version
+                                           (uiop:symbol-call '#:ql-dist '#:find-dist (source-dist-name source)))
+                         (source-version source)))
+             (message "Already have dist ~S version ~S."
+                      (source-dist-name source)
+                      (source-version source)))
             ((string= (source-dist-name source) "quicklisp")
              (with-package-functions #:ql-dist (uninstall dist)
                (uninstall (dist "quicklisp"))
