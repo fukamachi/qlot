@@ -50,7 +50,7 @@
                    :branch branch
                    :tag tag)))
 
-(defmethod source-frozen-slots ((source source-http))
+(defmethod source-frozen-slots ((source source-github))
   `(:repos ,(source-github-repos source)
     :url ,(source-github-url source)
     :ref ,(source-github-ref source)))

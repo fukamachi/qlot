@@ -28,7 +28,7 @@
      (make-versioned-distinfo-url (slot-value source 'distribution)
                                   (slot-value source '%version)))))
 
-(defmethod source-distinfo-url ((source source-dist))
+(defmethod source-distinfo-url ((source source-dist-base))
   (source-distribution source))
 
 (defmethod make-source ((source (eql :dist)) &rest initargs)
@@ -38,7 +38,7 @@
                    :distribution distribution
                    :%version version)))
 
-(defmethod print-object ((source source-dist) stream)
+(defmethod print-object ((source source-dist-base) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A ~A"
             (source-project-name source)
@@ -47,7 +47,7 @@
                 (source-version source)
                 (slot-value source '%version)))))
 
-(defmethod source= ((source1 source-dist) (source2 source-dist))
+(defmethod source= ((source1 source-dist-base) (source2 source-dist-base))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
        (string= (slot-value source1 'distribution)
