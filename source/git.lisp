@@ -31,9 +31,10 @@
            :remote-url remote-url
            args)))
 
-(defmethod source-frozen-slots ((source source-git))
-  `(:remote-url ,(source-git-remote-url source)
-    :ref ,(source-git-ref source)))
+(defmethod defrost-source :after ((source source-git))
+  (setf (source-git-ref source)
+        (subseq (source-version source)
+                (length (source-version-prefix source)))))
 
 (defmethod source= ((source1 source-git) (source2 source-git))
   (and (string= (source-project-name source1)

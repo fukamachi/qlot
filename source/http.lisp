@@ -23,9 +23,10 @@
                    :url url
                    :archive-md5 archive-md5)))
 
-(defmethod source-frozen-slots ((source source-http))
-  `(:url ,(source-http-url source)
-    :archive-md5 ,(source-http-archive-md5 source)))
+(defmethod defrost-source :after ((source source-http))
+  (setf (source-http-archive-md5 source)
+        (subseq (source-version source)
+                (length (source-version-prefix source)))))
 
 (defmethod print-object ((source source-http) stream)
   (print-unreadable-object (source stream :type t :identity t)

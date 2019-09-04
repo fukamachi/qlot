@@ -38,6 +38,11 @@
                    :distribution distribution
                    :%version version)))
 
+(defmethod defrost-source :after ((source source-dist-base))
+  (setf (slot-value source '%version)
+        (subseq (source-version source)
+                (length (source-version-prefix source)))))
+
 (defmethod print-object ((source source-dist-base) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A ~A"

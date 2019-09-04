@@ -50,11 +50,6 @@
                    :branch branch
                    :tag tag)))
 
-(defmethod source-frozen-slots ((source source-github))
-  `(:repos ,(source-github-repos source)
-    :url ,(source-github-url source)
-    :ref ,(source-github-ref source)))
-
 (defmethod source= ((source1 source-github) (source2 source-github))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
