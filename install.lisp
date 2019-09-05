@@ -49,7 +49,7 @@
         (with-autoload-on-missing
           (let ((*package* (find-package :asdf-user))
                 (*error-output* (make-broadcast-stream)))
-            (load file)))))))
+            (asdf:load-asd file)))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home)
   (unless quicklisp-home

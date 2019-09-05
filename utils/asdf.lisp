@@ -14,20 +14,16 @@
   (let ((retrying (gensym))
         (e (gensym)))
     `(let ((,retrying (make-hash-table :test 'equal)))
-       (tagbody retry
+       (asdf/session:with-asdf-session (:override t)
          (handler-bind ((asdf:missing-component
                           (lambda (,e)
                             (unless (gethash (asdf::missing-requires ,e) ,retrying)
                               (setf (gethash (asdf::missing-requires ,e) ,retrying) t)
-                              (asdf:clear-source-registry)
-                              (if (find :quicklisp *features*)
-                                  (uiop:symbol-call '#:ql '#:quickload
-                                                    (asdf::missing-requires ,e)
-                                                    :silent t)
-                                  (let ((*standard-output* (make-broadcast-stream))
-                                        (*trace-output* (make-broadcast-stream)))
-                                    (asdf:load-system (asdf::missing-requires ,e))))
-                              (go retry)))))
+                              (when (find :quicklisp *features*)
+                                (uiop:symbol-call '#:ql-dist '#:ensure-installed
+                                                  (uiop:symbol-call '#:ql-dist '#:find-system
+                                                                    (asdf::missing-requires ,e)))
+                                (invoke-restart (find-restart 'asdf:clear-configuration-and-retry ,e)))))))
            ,@body)))))
 
 (defun directory-system-files (directory)
