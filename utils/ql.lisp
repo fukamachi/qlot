@@ -5,6 +5,7 @@
                 #:octets-stream-to-string)
   (:export #:quicklisp-distinfo-url
            #:make-versioned-distinfo-url
+           #:make-versioned-distinfo-url-with-template
            #:parse-distinfo-stream
            #:parse-distinfo-file
            #:parse-space-delimited-stream
@@ -23,6 +24,20 @@
                  "/"
                  version
                  "/distinfo.txt")))
+
+(defun replace-version (value version)
+  (check-type value string)
+  (with-output-to-string (*standard-output*)
+    (loop with i = 0
+          for pos = (search "{{version}}" value :start2 i)
+          do (princ (subseq value i pos))
+          if pos
+          do (princ version)
+          (setf i (+ pos (length "{{version}}")))
+          while pos)))
+
+(defun make-versioned-distinfo-url-with-template (distinfo-template-url version)
+  (replace-version distinfo-template-url version))
 
 (defun check-version (version-string)
   (or (null version-string)

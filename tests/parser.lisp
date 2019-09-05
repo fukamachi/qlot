@@ -35,7 +35,7 @@
     (let ((source (parse-qlfile-line "ql log4cl 2014-03-17")))
       (ok (typep source 'source-ql))
       (ok (equal (source-project-name source) "log4cl"))
-      (ok (equal (source-distribution source) "http://beta.quicklisp.org/dist/quicklisp/2014-03-17/distinfo.txt"))))
+      (ok (equal (source-distribution source) "http://beta.quicklisp.org/dist/quicklisp.txt"))))
 
   (ok (signals
         (parse-qlfile-line "source"))

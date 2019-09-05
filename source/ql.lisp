@@ -45,6 +45,3 @@
                          :project-name project-name
                          :distribution distribution
                          :%version version)))))
-
-(defmethod source-install-url ((source source-ql))
-  (format nil "qlot://localhost/~A.txt" (source-project-name source)))

@@ -4,7 +4,8 @@
                 #:source-project-name
                 #:source-version
                 #:source-initargs
-                #:source-frozen-slots)
+                #:source-frozen-slots
+                #:defrost-source)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/shell
@@ -46,11 +47,13 @@
                   (list `(let ((*error-output* (make-broadcast-stream)))
                            (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
                 (list `(uiop:symbol-call :qlot/distify :distify
-                                         (make-instance ',(type-of source)
-                                                        ,@(source-initargs source)
-                                                        ,@(and (slot-boundp source 'qlot/source/base::version)
-                                                               `(:version ,(source-version source)))
-                                                        ,@(source-frozen-slots source))
+                                         ;; Call defrost-source to set '%version' from 'source-version'.
+                                         (defrost-source
+                                           (make-instance ',(type-of source)
+                                                          ,@(source-initargs source)
+                                                          ,@(and (slot-boundp source 'qlot/source/base::version)
+                                                                 `(:version ,(source-version source)))
+                                                          ,@(source-frozen-slots source)))
                                          ,destination
                                          :distinfo-only ,distinfo-only)))
               :systems '("qlot/distify")

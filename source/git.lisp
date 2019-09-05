@@ -32,9 +32,10 @@
            args)))
 
 (defmethod defrost-source :after ((source source-git))
-  (setf (source-git-ref source)
-        (subseq (source-version source)
-                (length (source-version-prefix source)))))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (setf (source-git-ref source)
+          (subseq (source-version source)
+                  (length (source-version-prefix source))))))
 
 (defmethod source= ((source1 source-git) (source2 source-git))
   (and (string= (source-project-name source1)

@@ -6,10 +6,10 @@
         #:qlot/distify/github
         #:qlot/distify/dist)
   (:import-from #:qlot/source
-                #:source-ql
                 #:source-git
                 #:source-http
-                #:source-dist)
+                #:source-dist
+                #:source-dist-project)
   (:export #:distify))
 (in-package #:qlot/distify)
 
@@ -19,10 +19,10 @@
                       source-or-sources
                       (list source-or-sources)))
     (funcall (etypecase source
-               (source-ql #'distify-ql)
+               (source-dist #'distify-dist)
+               (source-dist-project #'distify-ql)
                (source-git #'distify-git)
-               (source-http #'distify-http)
-               (source-dist #'distify-dist))
+               (source-http #'distify-http))
              source
              destination
              :distinfo-only distinfo-only))

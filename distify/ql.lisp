@@ -1,17 +1,19 @@
 (defpackage #:qlot/distify/ql
   (:use #:cl)
   (:import-from #:qlot/source
-                #:source-ql
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
                 #:source-distinfo-url
+                #:source-distribution
                 #:write-distinfo)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
+  (:import-from #:qlot/utils/distify
+                #:get-distinfo-url)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
@@ -25,8 +27,8 @@
                         (dex:http-request-failed (e)
                           (error 'qlot-simple-error
                                  :format-control "Not available dist: ~A (~A)"
-                                 :format-control (list (source-distinfo-url source)
-                                                       (type-of e))))))
+                                 :format-arguments (list (source-distinfo-url source)
+                                                         (type-of e))))))
          (distinfo (parse-distinfo-stream body-stream))
          (release-index-url (cdr (assoc "release-index-url" distinfo :test 'equal)))
          (version
@@ -53,7 +55,10 @@
                   version))))
 
 (defun distify-ql (source destination &key distinfo-only)
-  (check-type source source-ql)
+  (unless (source-distinfo-url source)
+    (setf (source-distinfo-url source)
+          (get-distinfo-url (source-distribution source)
+                            (slot-value source 'qlot/source/dist::%version))))
   (load-source-ql-version source)
 
   (let ((destination (truename destination)))

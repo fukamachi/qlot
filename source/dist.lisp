@@ -14,26 +14,12 @@
   ((%version :initarg :%version)
    (distribution :initarg :distribution
                  :accessor source-distribution)
-   (distinfo :initarg :distinfo)))
+   (distinfo :initarg :distinfo
+             :initform nil
+             :accessor source-distinfo-url)))
 
 (defclass source-dist (source-dist-project)
   ())
-
-(defmethod source-distinfo-url ((source source-dist-project))
-  (cond
-    ((slot-boundp source 'distinfo)
-     (slot-value source 'distinfo))
-    ((slot-boundp source 'qlot/source/base::version)
-     (make-versioned-distinfo-url (slot-value source 'distribution)
-                                  (subseq (source-version source) (length (source-version-prefix source)))))
-    ((eq (slot-value source '%version) :latest)
-     (slot-value source 'distribution))
-    (t
-     (make-versioned-distinfo-url (slot-value source 'distribution)
-                                  (slot-value source '%version)))))
-
-(defmethod source-install-url ((source source-dist-project))
-  (source-distinfo-url source))
 
 (defmethod make-source ((source (eql :dist)) &rest initargs)
   (destructuring-bind (project-name distribution &optional (version :latest)) initargs
@@ -46,9 +32,10 @@
   `(:distinfo ,(source-distinfo-url source)))
 
 (defmethod defrost-source :after ((source source-dist-project))
-  (setf (slot-value source '%version)
-        (subseq (source-version source)
-                (length (source-version-prefix source)))))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (setf (slot-value source '%version)
+          (subseq (source-version source)
+                  (length (source-version-prefix source))))))
 
 (defmethod print-object ((source source-dist-project) stream)
   (print-unreadable-object (source stream :type t :identity t)

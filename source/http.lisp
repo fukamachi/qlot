@@ -24,9 +24,10 @@
                    :archive-md5 archive-md5)))
 
 (defmethod defrost-source :after ((source source-http))
-  (setf (source-http-archive-md5 source)
-        (subseq (source-version source)
-                (length (source-version-prefix source)))))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (setf (source-http-archive-md5 source)
+          (subseq (source-version source)
+                  (length (source-version-prefix source))))))
 
 (defmethod print-object ((source source-http) stream)
   (print-unreadable-object (source stream :type t :identity t)
