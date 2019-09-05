@@ -93,12 +93,6 @@
 
     (message "Successfully installed.")))
 
-(defun already-installed-p (source qlhome)
-  (with-quicklisp-home qlhome
-    (with-package-functions #:ql-dist (find-dist)
-      (and (find-dist (source-dist-name source))
-           t))))
-
 (defun install-release (release)
   (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
 
@@ -188,26 +182,37 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
-    (let ((preference (get-universal-time)))
+    (let ((preference (get-universal-time))
+          (system-qlhome (and (find :quicklisp *features*)
+                              (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
       (dolist (source sources)
-        (with-qlot-server (source qlhome tmp-dir)
-          (debug-log "Using temporary directory '~A'" tmp-dir)
-          (cond
-            ((not (already-installed-p source qlhome))
-             (install-source source tmp-dir))
-            ((and (slot-boundp source 'qlot/source/base::version)
-                  (equal (uiop:symbol-call '#:ql-dist '#:version
-                                           (uiop:symbol-call '#:ql-dist '#:find-dist (source-dist-name source)))
-                         (source-version source)))
-             (message "Already have dist ~S version ~S."
-                      (source-dist-name source)
-                      (source-version source)))
-            ((string= (source-dist-name source) "quicklisp")
-             (with-package-functions #:ql-dist (uninstall dist)
-               (uninstall (dist "quicklisp"))
-               (install-source source qlhome)))
-            (t
-             (update-source source tmp-dir))))
+        (with-quicklisp-home qlhome
+          (with-package-functions #:ql-dist (find-dist version)
+            (let ((dist (find-dist (source-dist-name source))))
+              (cond
+                ((not dist)
+                 (with-quicklisp-home system-qlhome
+                   (with-qlot-server (source qlhome tmp-dir)
+                     (debug-log "Using temporary directory '~A'" tmp-dir)
+                     (install-source source tmp-dir))))
+                ((and (slot-boundp source 'qlot/source/base::version)
+                      (equal (version dist)
+                             (source-version source)))
+                 (message "Already have dist ~S version ~S."
+                          (source-dist-name source)
+                          (source-version source)))
+                ((string= (source-dist-name source) "quicklisp")
+                 (with-package-functions #:ql-dist (uninstall)
+                   (uninstall (find-dist "quicklisp")))
+                 (with-quicklisp-home system-qlhome
+                   (with-qlot-server (source qlhome tmp-dir)
+                     (debug-log "Using temporary directory '~A'" tmp-dir)
+                     (install-source source qlhome))))
+                (t
+                 (with-quicklisp-home system-qlhome
+                   (with-qlot-server (source qlhome tmp-dir)
+                     (debug-log "Using temporary directory '~A'" tmp-dir)
+                     (update-source source tmp-dir))))))))
         (with-quicklisp-home qlhome
           (with-package-functions #:ql-dist (dist (setf preference))
             (setf (preference (dist (source-dist-name source)))
