@@ -28,9 +28,6 @@
                    :distribution distribution
                    :%version version)))
 
-(defmethod source-frozen-slots ((source source-dist-project))
-  `(:distinfo ,(source-distinfo-url source)))
-
 (defmethod defrost-source :after ((source source-dist-project))
   (when (slot-boundp source 'qlot/source/base::version)
     (setf (slot-value source '%version)
