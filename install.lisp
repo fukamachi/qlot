@@ -151,7 +151,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       new-dist)))
 
 (defun update-source (source tmp-dir)
-  (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases distinfo-subscription-url (setf distinfo-subscription-url))
+  (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
         (if new-dist
