@@ -22,6 +22,9 @@
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
+  (:import-from #:qlot/utils/asdf
+                #:directory-system-files
+                #:with-autoload-on-missing)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:export #:install-qlfile
@@ -38,6 +41,15 @@
   (if (uiop:absolute-pathname-p qlhome)
       qlhome
       (merge-pathnames qlhome base)))
+
+(defun install-defsystem-dependencies (directory qlhome)
+  (let ((system-files (directory-system-files directory)))
+    (with-quicklisp-home qlhome
+      (dolist (file system-files)
+        (with-autoload-on-missing
+          (let ((*package* (find-package :asdf-user))
+                (*error-output* (make-broadcast-stream)))
+            (load file)))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home)
   (unless quicklisp-home
@@ -62,7 +74,8 @@
         (list *proxy*)
       (apply-qlfile-to-qlhome qlfile qlhome))
 
-    ;; TODO: Quickload project systems
+    ;; Install project defsystem dependencies
+    (install-defsystem-dependencies (uiop:pathname-directory-pathname qlfile) qlhome)
 
     (message "Successfully installed.")))
 
@@ -89,7 +102,8 @@
         (list *proxy*)
       (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects))
 
-    ;; TODO: Quickload project systems
+    ;; Install project defsystem dependencies
+    (install-defsystem-dependencies (uiop:pathname-directory-pathname qlfile) qlhome)
 
     (message "Successfully installed.")))
 

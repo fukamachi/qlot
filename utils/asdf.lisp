@@ -20,8 +20,13 @@
                             (unless (gethash (asdf::missing-requires ,e) ,retrying)
                               (setf (gethash (asdf::missing-requires ,e) ,retrying) t)
                               (asdf:clear-source-registry)
-                              #+quicklisp (ql:quickload (asdf::missing-requires ,e) :silent t)
-                              #-quicklisp (asdf:load-system (asdf::missing-requires ,e))
+                              (if (find :quicklisp *features*)
+                                  (uiop:symbol-call '#:ql '#:quickload
+                                                    (asdf::missing-requires ,e)
+                                                    :silent t)
+                                  (let ((*standard-output* (make-broadcast-stream))
+                                        (*trace-output* (make-broadcast-stream)))
+                                    (asdf:load-system (asdf::missing-requires ,e))))
                               (go retry)))))
            ,@body)))))
 
