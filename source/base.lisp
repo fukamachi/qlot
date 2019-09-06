@@ -3,7 +3,7 @@
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/errors
-                #:no-source-type)
+                #:unknown-source)
   (:export #:source
            #:source-project-name
            #:source-version
@@ -39,7 +39,7 @@
   (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")
   (:method (source &rest args)
     (declare (ignore args))
-    (error 'no-source-type :name source)))
+    (error 'unknown-source :name source)))
 
 (defgeneric source-frozen-slots (source)
   (:method ((source source))

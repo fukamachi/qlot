@@ -2,6 +2,8 @@
   (:nicknames #:qlot/source/http)
   (:use #:cl
         #:qlot/source/base)
+  (:import-from #:qlot/errors
+                #:invalid-definition)
   (:export #:source-http
            #:source-http-url
            #:source-http-archive-md5))
@@ -15,13 +17,18 @@
                 :accessor source-http-archive-md5)))
 
 (defmethod make-source ((source (eql :http)) &rest initargs)
-  (destructuring-bind (project-name url &optional archive-md5) initargs
-    (check-type project-name string)
-    (check-type url string)
-    (make-instance 'source-http
-                   :project-name project-name
-                   :url url
-                   :archive-md5 archive-md5)))
+  (handler-case
+      (destructuring-bind (project-name url &optional archive-md5) initargs
+        (check-type project-name string)
+        (check-type url string)
+        (make-instance 'source-http
+                       :project-name project-name
+                       :url url
+                       :archive-md5 archive-md5))
+    (error ()
+      (error 'invalid-definition
+             :source :http
+             :usage "http <project name> <tarball URL> [<archive MD5>]"))))
 
 (defmethod defrost-source :after ((source source-http))
   (when (slot-boundp source 'qlot/source/base::version)

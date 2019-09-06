@@ -2,6 +2,8 @@
   (:nicknames #:qlot/source/git)
   (:use #:cl
         #:qlot/source/base)
+  (:import-from #:qlot/errors
+                #:invalid-definition)
   (:export #:source-git
            #:source-git-remote-url
            #:source-git-ref
@@ -23,13 +25,18 @@
         :accessor source-git-tag)))
 
 (defmethod make-source ((source (eql :git)) &rest initargs)
-  (destructuring-bind (project-name remote-url &rest args) initargs
-    (check-type project-name string)
-    (check-type remote-url string)
-    (apply #'make-instance 'source-git
-           :project-name project-name
-           :remote-url remote-url
-           args)))
+  (handler-case
+      (destructuring-bind (project-name remote-url &rest args) initargs
+        (check-type project-name string)
+        (check-type remote-url string)
+        (apply #'make-instance 'source-git
+               :project-name project-name
+               :remote-url remote-url
+               args))
+    (error ()
+      (error 'invalid-definition
+             :source :git
+             :usage "git <project name> <remote URL> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]"))))
 
 (defmethod defrost-source :after ((source source-git))
   (when (slot-boundp source 'qlot/source/base::version)

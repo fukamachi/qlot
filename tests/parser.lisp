@@ -12,7 +12,9 @@
                 #:source-dist
                 #:source-distribution)
   (:import-from #:qlot/errors
-                #:qlfile-parse-failed))
+                #:qlfile-parse-failed
+                #:unknown-source
+                #:invalid-definition))
 (in-package #:qlot/tests/parser)
 
 (defun test-qlfile (name)
@@ -38,8 +40,10 @@
       (ok (equal (source-distribution source) "http://beta.quicklisp.org/dist/quicklisp.txt"))))
 
   (ok (signals
-        (parse-qlfile-line "source"))
+        (parse-qlfile-line "source")
+        'unknown-source)
       "invalid source")
+
   (ok (equal (parse-qlfile-line "# This is a comment.") nil)
       "# comment")
   (ok (equal (parse-qlfile-line " # This is a comment.") nil)

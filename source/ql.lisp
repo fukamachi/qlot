@@ -4,7 +4,10 @@
         #:qlot/source/base)
   (:import-from #:qlot/source/dist
                 #:source-dist
-                #:source-dist-project)
+                #:source-dist-project
+                #:source-distribution)
+  (:import-from #:qlot/errors
+                #:invalid-definition)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
   (:export #:source-ql
@@ -12,9 +15,10 @@
 (in-package #:qlot/source/ql)
 
 (defclass source-ql (source-dist-project)
-  ()
-  (:default-initargs
-    :distribution (quicklisp-distinfo-url)))
+  ())
+
+(defmethod source-distribution ((source source-ql))
+  (quicklisp-distinfo-url))
 
 (defclass source-ql-all (source-dist)
   ()
@@ -30,18 +34,22 @@
     source))
 
 (defmethod make-source ((source (eql :ql)) &rest initargs)
-  (destructuring-bind (project-name version &key distribution) initargs
-    (check-type project-name (or string (eql :all)))
-    (check-type version (or string (eql :latest)))
+  (handler-case
+      (destructuring-bind (project-name version &key distribution) initargs
+        (check-type project-name (or string (eql :all)))
+        (check-type version (or string (eql :latest)))
 
-    (let ((distribution (or distribution
-                            (quicklisp-distinfo-url))))
-      (if (eq project-name :all)
-          (make-instance 'source-dist
-                         :project-name "quicklisp"
-                         :distribution distribution
-                         :%version version)
-          (make-instance 'source-ql
-                         :project-name project-name
-                         :distribution distribution
-                         :%version version)))))
+        (let ((distribution (or distribution
+                                (quicklisp-distinfo-url))))
+          (if (eq project-name :all)
+              (make-instance 'source-dist
+                             :project-name "quicklisp"
+                             :distribution distribution
+                             :%version version)
+              (make-instance 'source-ql
+                             :project-name project-name
+                             :%version version))))
+    (error ()
+      (error 'invalid-definition
+             :source :ql
+             :usage "ql <project name> <version>"))))

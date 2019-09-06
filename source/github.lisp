@@ -3,6 +3,8 @@
   (:use #:cl
         #:qlot/source/base
         #:qlot/source/http)
+  (:import-from #:qlot/errors
+                #:invalid-definition)
   (:export #:source-github
            #:source-github-repos
            #:source-github-ref
@@ -42,13 +44,18 @@
           (source-github-url source))))
 
 (defmethod make-source ((source (eql :github)) &rest initargs)
-  (destructuring-bind (project-name repos &key ref branch tag) initargs
-    (make-instance 'source-github
-                   :project-name project-name
-                   :repos repos
-                   :ref ref
-                   :branch branch
-                   :tag tag)))
+  (handler-case
+      (destructuring-bind (project-name repos &key ref branch tag) initargs
+        (make-instance 'source-github
+                       :project-name project-name
+                       :repos repos
+                       :ref ref
+                       :branch branch
+                       :tag tag))
+    (error ()
+      (error 'invalid-definition
+             :source :github
+             :usage "github <project name> <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]"))))
 
 (defmethod source= ((source1 source-github) (source2 source-github))
   (and (string= (source-project-name source1)

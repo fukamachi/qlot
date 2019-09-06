@@ -2,7 +2,8 @@
   (:use #:cl)
   (:export #:qlot-error
            #:qlot-simple-error
-           #:no-source-type
+           #:unknown-source
+           #:invalid-definition
            #:qlfile-parse-failed
            #:ros-command-error
            #:command-not-found))
@@ -12,20 +13,31 @@
 
 (define-condition qlot-simple-error (qlot-error simple-error) ())
 
-(define-condition no-source-type (qlot-error)
+(define-condition qlot-syntax-error (qlot-error) ())
+
+(define-condition unknown-source (qlot-syntax-error)
   ((name :initarg :name))
   (:report (lambda (condition stream)
-             (format stream "Unknown source type: ~A"
+             (format stream "Unknown source: ~A"
                      (slot-value condition 'name)))))
+
+(define-condition invalid-definition (qlot-syntax-error)
+  ((source :initarg :source)
+   (usage :initarg :usage))
+  (:report (lambda (condition stream)
+             (format stream "Invalid definition of '~(~A~)'.~%[usage] ~A"
+                     (slot-value condition 'source)
+                     (slot-value condition 'usage)))))
 
 (define-condition qlfile-parse-failed (qlot-error)
   ((file :initarg :file)
    (lineno :initarg :lineno)
+   (line :initarg :line)
    (error :initarg :error))
   (:report (lambda (condition stream)
-             (with-slots (file lineno error) condition
-               (format stream "Error raised while parsing '~A' at line ~A:~%  ~A"
-                       file lineno error)))))
+             (with-slots (file lineno line error) condition
+               (format stream "Error raised while parsing '~A' at line ~A:~2%  ~A~2%~A"
+                       file lineno line error)))))
 
 (define-condition ros-command-error (qlot-error)
   ((message :initarg :message))

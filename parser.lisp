@@ -44,20 +44,13 @@
 
     (destructuring-bind (source-type &rest args)
         (split-with #\Space line)
-      (cond
-        ((string-equal source-type
-                       "dist")
-         (unless (= (length args) 2)
-           (error "Distribution's definition should contain it's name and url, like that: dist ultralisp http://dist.ultralisp.org/"))
-         (apply #'make-source (make-keyword source-type) args))
-        (t
-         (apply #'make-source
-                (make-keyword source-type)
-                (mapcar (lambda (arg)
-                          (if (char= (aref arg 0) #\:)
-                              (make-keyword (subseq arg 1))
-                              arg))
-                        args)))))))
+      (apply #'make-source
+             (make-keyword source-type)
+             (mapcar (lambda (arg)
+                       (if (char= (aref arg 0) #\:)
+                           (make-keyword (subseq arg 1))
+                           arg))
+                     args)))))
 
 (defun parse-qlfile (file)
   (with-open-file (in file)
@@ -69,6 +62,7 @@
                                           (error 'qlfile-parse-failed
                                                  :file file
                                                  :lineno lineno
+                                                 :line line
                                                  :error e))))
                          (parse-qlfile-line line))
           when source

@@ -1,5 +1,5 @@
 ("quicklisp" .
- (:class qlot.source.ql:source-ql-all
+ (:class qlot.source.dist:source-dist
   :initargs (:project-name "quicklisp" :distribution "http://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
   :version "2019-08-13"))
 ("clack" .
@@ -22,5 +22,5 @@
   :ref "54928984e5756e92ba298aae51de8b95a6b0cf4b"))
 ("log4cl" .
  (:class qlot.source.ql:source-ql
-  :initargs (:project-name "log4cl" :distribution "http://beta.quicklisp.org/dist/quicklisp/2014-03-17/distinfo.txt" :%version "2014-03-17")
+  :initargs (:project-name "log4cl" :%version "2014-03-17")
   :version "ql-2014-03-17"))
