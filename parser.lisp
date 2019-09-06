@@ -10,7 +10,8 @@
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
-                #:qlfile-parse-failed)
+                #:qlfile-parse-failed
+                #:duplicate-project)
   (:import-from #:qlot/utils
                 #:make-keyword
                 #:split-with)
@@ -66,7 +67,20 @@
                                                  :error e))))
                          (parse-qlfile-line line))
           when source
-            collect source)))
+            collect
+              (if (find (source-project-name source) sources
+                        :test #'string=
+                        :key #'source-project-name)
+                  (error 'qlfile-parse-failed
+                         :file file
+                         :lineno lineno
+                         :line line
+                         :error
+                         (make-condition 'duplicate-project
+                                         :name (source-project-name source)))
+                  source)
+            into sources
+          finally (return sources))))
 
 (defmacro with-handling-parse-error ((file lineno) &body body)
   `(handler-bind ((error

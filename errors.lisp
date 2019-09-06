@@ -4,6 +4,7 @@
            #:qlot-simple-error
            #:unknown-source
            #:invalid-definition
+           #:duplicate-project
            #:qlfile-parse-failed
            #:ros-command-error
            #:command-not-found))
@@ -28,6 +29,12 @@
              (format stream "Invalid definition of '~(~A~)'.~%[usage] ~A"
                      (slot-value condition 'source)
                      (slot-value condition 'usage)))))
+
+(define-condition duplicate-project (qlot-syntax-error)
+  ((name :initarg :name))
+  (:report (lambda (condition stream)
+             (format stream "Duplicate project: ~A"
+                     (slot-value condition 'name)))))
 
 (define-condition qlfile-parse-failed (qlot-error)
   ((file :initarg :file)
