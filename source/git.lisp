@@ -1,5 +1,5 @@
-(defpackage #:qlot.source.git
-  (:nicknames #:qlot/source/git)
+(defpackage #:qlot/source/git
+  (:nicknames #:qlot.source.git)
   (:use #:cl
         #:qlot/source/base)
   (:import-from #:qlot/errors

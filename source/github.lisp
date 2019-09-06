@@ -1,5 +1,5 @@
-(defpackage #:qlot.source.github
-  (:nicknames #:qlot/source/github)
+(defpackage #:qlot/source/github
+  (:nicknames #:qlot.source.github)
   (:use #:cl
         #:qlot/source/base
         #:qlot/source/http)

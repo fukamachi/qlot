@@ -1,5 +1,5 @@
-(defpackage #:qlot.source.http
-  (:nicknames #:qlot/source/http)
+(defpackage #:qlot/source/http
+  (:nicknames #:qlot.source.http)
   (:use #:cl
         #:qlot/source/base)
   (:import-from #:qlot/errors

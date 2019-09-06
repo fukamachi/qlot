@@ -1,5 +1,5 @@
-(defpackage #:qlot.source.dist
-  (:nicknames #:qlot/source/dist)
+(defpackage #:qlot/source/dist
+  (:nicknames #:qlot.source.dist)
   (:use #:cl
         #:qlot/source/base)
   (:import-from #:qlot/utils/ql
