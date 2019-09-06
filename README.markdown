@@ -48,6 +48,12 @@ This is what Qlot is trying to solve.
 
 ## Installation
 
+### via Quicklisp
+
+```common-lisp
+(ql:quickload :qlot)
+```
+
 ### via Roswell
 
 It also can be installed with [Roswell](https://github.com/roswell/roswell).
@@ -120,22 +126,13 @@ You can update the content of `.qlot/` directory via:
 
 ```
 $ qlot update
+
+# Update a specific project
+$ qlot update --project mito
+$ qlot update --project mito,sxql
 ```
 
 It will also overwrite `qlfile.lock`.
-
-### Bundling libraries
-
-You can bundle all depending libraries into `bundle-libs/` via:
-
-```common-lisp
-$ qlot bundle
-```
-
-```
-$ git add bundle-libs/
-$ git commit -m 'Bundle dependencies.'
-```
 
 ## Commands
 
@@ -154,14 +151,10 @@ $ qlot install /path/to/myapp/qlfile
 
 ```
 $ qlot update
-```
 
-### bundle
-
-`qlot bundle` will bundle dependencies into `bundle-libs/` by using `ql:bundle-systems`.
-
-```common-lisp
-$ qlot bundle
+# Update a specific project
+$ qlot update --project mito
+$ qlot update --project mito,sxql
 ```
 
 ### exec
@@ -179,11 +172,11 @@ Here are few usefull commands:
   current and `./.qlot/`, then set `CL_SOURCE_REGISTRY` variable before starting `qlot`.
   This can be useful in case, if you have development versions of some systems, for example,
   in `~/common-lisp/` directory and want to use them during project development:
-  
+
   ```
   CL_SOURCE_REGISTRY=~/common-lisp// qlot exec ros emacs
   ```
-  
+
   Read more about `CL_SOURCE_REGISTRY` in
   [asdf's documentation](https://common-lisp.net/project/asdf/asdf/Shell_002dfriendly-syntax-for-configuration.html).
 * `qlot exec ros build some-app.ros` - another command, useful, to build a binary
@@ -197,17 +190,16 @@ Here are few usefull commands:
 <source> <project name> [arg1, arg2..]
 ```
 
-Currently, `<source>` must be one of `ql`, `http`, `git` or `github`.
+Currently, `<source>` must be one of `dist`, `ql`, `ultralisp`, `http`, `git` or `github`.
 
 ### ql
 
 ```
 ql <project name> <version>
 ql <project name> :latest
-ql :all <version>
 ```
 
-`ql` source will download libraries from Quicklisp official dist, but you can specify the version.
+`ql` source will download libraries from Quicklisp official dist.
 
 If you want to use Clack in Quicklisp dist of January 13, 2014, qlfile would be like this.
 
@@ -215,12 +207,14 @@ If you want to use Clack in Quicklisp dist of January 13, 2014, qlfile would be 
 ql clack 2014-01-13
 ```
 
-`ql` source also allows `:all` as `<dist name>` and `:latest` as the version.
+### ultralisp
 
 ```
-ql :all 2014-01-13
-ql clack :latest
+ultralisp <project name> <version>
+ultralisp <project name> :latest
 ```
+
+`ultralisp` is same as `ql` except downloading from Ultralisp.
 
 ### http
 
@@ -290,6 +284,7 @@ dist <dist name> <distribution URL> [<dist version>]
 `dist` allows to use a custom Quicklisp dist, like Ultralisp.
 
 ```
+dist quicklisp http://beta.quicklisp.org/dist/quicklisp.txt
 dist ultralisp http://dist.ultralisp.org/
 ```
 
