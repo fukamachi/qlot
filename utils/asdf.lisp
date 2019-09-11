@@ -2,8 +2,14 @@
   (:use #:cl)
   (:export #:with-autoload-on-missing
            #:directory-system-files
-           #:with-directory))
+           #:with-directory
+           #:directory-lisp-files
+           #:lisp-file-dependencies))
 (in-package #:qlot/utils/asdf)
+
+(defparameter *exclude-directories*
+  (append (list "quicklisp" ".qlot" "bundle-libs")
+          asdf::*default-source-registry-exclusions*))
 
 (defun sbcl-contrib-p (name)
   (let ((name (princ-to-string name)))
@@ -27,22 +33,20 @@
            ,@body)))))
 
 (defun directory-system-files (directory)
-  (let ((exclude-dirs (append (list "bundle-libs" "quicklisp" ".qlot")
-                              asdf::*default-source-registry-exclusions*)))
-    (labels ((asd-file-p (path)
-               (and (equal (pathname-type path) "asd")
-                    ;; KLUDGE: Ignore skeleton.asd of CL-Project
-                    (not (search "skeleton" (pathname-name path)))))
-             (collect-asd-files-in-directory (dir)
-               (unless (find (car (last (pathname-directory dir)))
-                             exclude-dirs
-                             :test #'string=)
-                 (nconc
-                   (mapcar #'truename
-                           (remove-if-not #'asd-file-p
-                                          (uiop:directory-files dir)))
-                   (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir))))))
-      (collect-asd-files-in-directory directory))))
+  (labels ((asd-file-p (path)
+             (and (equal (pathname-type path) "asd")
+                  ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                  (not (search "skeleton" (pathname-name path)))))
+           (collect-asd-files-in-directory (dir)
+             (unless (find (car (last (pathname-directory dir)))
+                           *exclude-directories*
+                           :test #'string=)
+               (nconc
+                 (mapcar #'truename
+                         (remove-if-not #'asd-file-p
+                                        (uiop:directory-files dir)))
+                 (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir))))))
+    (collect-asd-files-in-directory directory)))
 
 (defvar *registry*)
 (defvar *load-asd-file*)
@@ -122,3 +126,15 @@
                       (declare (ignorable ,system-name ,dependencies))
                       ,@body)))
                 *registry*))))
+
+(defun directory-lisp-files (directory)
+  (append (uiop:directory-files directory "*.lisp")
+          (loop for subdir in (uiop:subdirectories directory)
+                when (not (member (car (last (pathname-directory subdir)))
+                                  *exclude-directories*
+                                  :test 'equal))
+                append (directory-lisp-files subdir))))
+
+(defun lisp-file-dependencies (file)
+  (when (asdf/package-inferred-system::file-defpackage-form file)
+    (asdf/package-inferred-system::package-inferred-system-file-dependencies file)))

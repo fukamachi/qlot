@@ -23,7 +23,9 @@
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
-                #:with-directory)
+                #:with-directory
+                #:directory-lisp-files
+                #:lisp-file-dependencies)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:export #:install-qlfile
@@ -42,22 +44,33 @@
       (merge-pathnames qlhome base)))
 
 (defun install-dependencies (project-root qlhome)
-  (with-quicklisp-home qlhome
-    (let ((all-dependencies '()))
-      (with-directory (system-file system-name dependencies) project-root
-        (debug-log "'~A' requires ~S" system-name dependencies)
+  (with-package-functions #:ql-dist (find-system)
+    (with-quicklisp-home qlhome
+      (let ((all-dependencies '()))
+        (with-directory (system-file system-name dependencies) project-root
+          (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
+            (let ((pis-dependencies
+                    (loop for file in (directory-lisp-files project-root)
+                          append (lisp-file-dependencies file))))
+              (setf dependencies
+                    (delete-duplicates
+                      (nconc dependencies pis-dependencies)
+                      :test 'equal))))
+          (let ((dependencies (remove-if-not #'find-system dependencies)))
+            (debug-log "'~A' requires ~S" system-name dependencies)
+            (setf all-dependencies
+                  (nconc all-dependencies
+                         (remove-if-not #'find-system dependencies)))))
         (setf all-dependencies
-              (nconc all-dependencies dependencies)))
-      (setf all-dependencies
-            (delete-duplicates all-dependencies :test #'string=))
+              (delete-duplicates all-dependencies :test #'string=))
 
-      (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
-      (with-package-functions #:ql-dist (ensure-installed find-system)
-        (flet ((find-system-with-fallback (system-name)
-                 (or (find-system system-name)
-                     (find-system (asdf:primary-system-name system-name)))))
-          (mapc #'ensure-installed
-                (mapcar #'find-system-with-fallback all-dependencies)))))))
+        (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
+        (with-package-functions #:ql-dist (ensure-installed)
+          (flet ((find-system-with-fallback (system-name)
+                   (or (find-system system-name)
+                       (find-system (asdf:primary-system-name system-name)))))
+            (mapc #'ensure-installed
+                  (mapcar #'find-system-with-fallback all-dependencies))))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home)
   (unless quicklisp-home
