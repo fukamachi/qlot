@@ -242,6 +242,14 @@
   (when (asdf/package-inferred-system::file-defpackage-form file)
     (asdf/package-inferred-system::package-inferred-system-file-dependencies file)))
 
+(defun install-defsystem-dependencies (system-files qlhome)
+  (with-quicklisp-home qlhome
+    (dolist (file system-files)
+      (with-retrying
+        (let ((*package* (find-package :asdf-user))
+              (*error-output* (make-broadcast-stream)))
+          (asdf:load-asd file))))))
+
 (defun apply-qlfile-to-qlhome (file qlhome &key ignore-lock projects)
   (let ((*tmp-directory* (uiop:ensure-directory-pathname (merge-pathnames (generate-random-string)
                                                                           (merge-pathnames #P"tmp/qlot/" qlhome))))
@@ -353,24 +361,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (find-system-with-fallback (system-name)
                          (or (find-system system-name)
                              (find-system (asdf:primary-system-name system-name)))))
-                (let ((*dependencies* (make-hash-table :test 'equal)))
-                  (let ((*macroexpand-hook* (lambda (&rest args)
-                                              (declare (ignore args)))))
-                    (mapcan #'system-file-systems systems))
-                  (let ((deps '()))
-                    (maphash (lambda (system dependencies)
-                               (declare (ignore system))
-                               (setf deps (append deps dependencies)))
-                             *dependencies*)
-                    (let ((defsystem-dependencies (delete-if-not #'find-system (delete-duplicates (mapcan #'system-dependencies deps) :test 'equal))))
-                      (format t "~&Ensuring ~D defsystem ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length defsystem-dependencies))
-                      (when defsystem-dependencies
-                        ;; XXX: Re-installing UIOP for preventing errors in case that bundled version is loaded and conflicts.
-                        (when (find "uiop" defsystem-dependencies :test 'equal)
-                          (unless (ignore-errors (asdf:find-system "uiop"))
-                            (asdf:clear-system "uiop")
-                            (quickload "uiop" :silent t)))
-                        (quickload defsystem-dependencies :silent t)))))
+                (format t "~&Ensuring defsystem dependencies installed.~%")
+                (install-defsystem-dependencies systems qlhome)
                 (let* ((systems (let ((*dependencies* (make-hash-table :test 'equal)))
                                   (mapcan #'system-file-systems systems)))
                        (dependencies
