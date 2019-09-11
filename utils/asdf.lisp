@@ -27,20 +27,22 @@
            ,@body)))))
 
 (defun directory-system-files (directory)
-  (labels ((asd-file-p (path)
-             (and (equal (pathname-type path) "asd")
-                  ;; KLUDGE: Ignore skeleton.asd of CL-Project
-                  (not (search "skeleton" (pathname-name path)))))
-           (collect-asd-files-in-directory (dir)
-             (unless (find (car (last (pathname-directory dir)))
-                           asdf::*default-source-registry-exclusions*
-                           :test #'string=)
-               (nconc
-                 (mapcar #'truename
-                         (remove-if-not #'asd-file-p
-                                        (uiop:directory-files dir)))
-                 (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir))))))
-    (collect-asd-files-in-directory directory)))
+  (let ((exclude-dirs (append (list "bundle-libs" "quicklisp" ".qlot")
+                              asdf::*default-source-registry-exclusions*)))
+    (labels ((asd-file-p (path)
+               (and (equal (pathname-type path) "asd")
+                    ;; KLUDGE: Ignore skeleton.asd of CL-Project
+                    (not (search "skeleton" (pathname-name path)))))
+             (collect-asd-files-in-directory (dir)
+               (unless (find (car (last (pathname-directory dir)))
+                             exclude-dirs
+                             :test #'string=)
+                 (nconc
+                   (mapcar #'truename
+                           (remove-if-not #'asd-file-p
+                                          (uiop:directory-files dir)))
+                   (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir))))))
+      (collect-asd-files-in-directory directory))))
 
 (defvar *registry*)
 (defvar *load-asd-file*)
