@@ -114,7 +114,9 @@
              (with-autoload-on-missing
                (load ,system-file)))))
        (maphash (lambda (,system-file ,value)
+                  (declare (ignorable ,system-file))
                   (dolist (,value ,value)
                     (destructuring-bind (,system-name &rest ,dependencies) ,value
+                      (declare (ignorable ,system-name ,dependencies))
                       ,@body)))
                 *registry*))))

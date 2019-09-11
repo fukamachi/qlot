@@ -23,8 +23,7 @@
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
-                #:directory-system-files
-                #:with-autoload-on-missing)
+                #:with-directory)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:export #:install-qlfile
@@ -42,14 +41,23 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-defsystem-dependencies (directory qlhome)
-  (let ((system-files (directory-system-files directory)))
-    (with-quicklisp-home qlhome
-      (dolist (file system-files)
-        (with-autoload-on-missing
-          (let ((*package* (find-package :asdf-user))
-                (*error-output* (make-broadcast-stream)))
-            (asdf:load-asd file)))))))
+(defun install-dependencies (project-root qlhome)
+  (with-quicklisp-home qlhome
+    (let ((all-dependencies '()))
+      (with-directory (system-file system-name dependencies) project-root
+        (debug-log "'~A' requires ~S" system-name dependencies)
+        (setf all-dependencies
+              (nconc all-dependencies dependencies)))
+      (setf all-dependencies
+            (delete-duplicates all-dependencies :test #'string=))
+
+      (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
+      (with-package-functions #:ql-dist (ensure-installed find-system)
+        (flet ((find-system-with-fallback (system-name)
+                 (or (find-system system-name)
+                     (find-system (asdf:primary-system-name system-name)))))
+          (mapc #'ensure-installed
+                (mapcar #'find-system-with-fallback all-dependencies)))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home)
   (unless quicklisp-home
@@ -74,8 +82,9 @@
         (list *proxy*)
       (apply-qlfile-to-qlhome qlfile qlhome))
 
-    ;; Install project defsystem dependencies
-    (install-defsystem-dependencies (uiop:pathname-directory-pathname qlfile) qlhome)
+    ;; Install project dependencies
+    (let ((project-root (uiop:pathname-directory-pathname qlfile)))
+      (install-dependencies project-root qlhome))
 
     (message "Successfully installed.")))
 
@@ -102,8 +111,9 @@
         (list *proxy*)
       (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects))
 
-    ;; Install project defsystem dependencies
-    (install-defsystem-dependencies (uiop:pathname-directory-pathname qlfile) qlhome)
+    ;; Install project dependencies
+    (let ((project-root (uiop:pathname-directory-pathname qlfile)))
+      (install-dependencies project-root qlhome))
 
     (message "Successfully installed.")))
 
