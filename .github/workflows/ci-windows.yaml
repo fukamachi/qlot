@@ -24,6 +24,9 @@ jobs:
       - name: Install Rove
         shell: bash
         run: /c/roswell/bin/ros install fukamachi/rove
+      - name: Install dependencies
+        shell: bash
+        run: /c/roswell/bin/ros install fukamachi/dexador
       - name: Run tests
         shell: bash
         run: |
