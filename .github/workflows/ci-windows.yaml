@@ -1,0 +1,31 @@
+name: CI (Windows)
+
+on: [push]
+
+jobs:
+  test:
+    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin]
+        os: [windows-latest]
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Roswell
+        env:
+          LISP: ${{ matrix.lisp }}
+          ROSWELL_INSTALL_DIR: /c/roswell
+        shell: bash
+        run: |
+          PATH="/c/roswell/bin:$PATH"
+          curl -L https://raw.githubusercontent.com/fukamachi/roswell/windows-source-registry-settings/scripts/install-for-ci.sh | sh
+      - name: Install Rove
+        shell: bash
+        run: /c/roswell/bin/ros install fukamachi/rove
+      - name: Run tests
+        shell: bash
+        run: |
+          PATH="~/.roswell/bin:/c/roswell/bin:$PATH"
+          rove qlot.asd
