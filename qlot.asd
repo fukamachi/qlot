@@ -10,7 +10,6 @@
 (defsystem "qlot/tests"
   :class :package-inferred-system
   :depends-on ("rove"
-               "trivial-features"
                "qlot/tests/parser"
                "qlot/tests/distify/ql"
                "qlot/tests/distify/git"

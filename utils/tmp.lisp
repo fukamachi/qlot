@@ -15,7 +15,7 @@
 (defmacro with-tmp-directory ((tmp-dir &key (prefix "qlot-")) &body body)
   `(let ((,tmp-dir (tmp-directory ,prefix)))
      (unwind-protect (progn ,@body)
-       #+windows
+       #+(or mswindows win32)
        (uiop:run-program (list "attrib"
                                "-r" "-h"
                                (format nil "~A*.*" (uiop:native-namestring ,tmp-dir))

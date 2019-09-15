@@ -14,6 +14,13 @@
 (defun git-clone (remote-url destination &key (checkout-to "master") ref)
   (tagbody git-cloning
     (when (uiop:directory-exists-p destination)
+      #+(or mswindows win32)
+      (uiop:run-program (list "attrib"
+                              "-r" "-h"
+                              (format nil "~A*.*" (uiop:native-namestring destination))
+                              "/s" "/d")
+                        :error-output *error-output*
+                        :ignore-error-status t)
       (uiop:delete-directory-tree destination :validate t))
     (restart-case
         (safety-shell-command "git"
