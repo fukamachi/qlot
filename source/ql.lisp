@@ -17,6 +17,11 @@
 (defclass source-ql (source-dist-project)
   ())
 
+(defmethod initialize-instance ((source source-ql) &rest initargs &key distribution)
+  ;; Just to ignore :distribution
+  (declare (ignore initargs distribution))
+  (call-next-method))
+
 (defmethod source-distribution ((source source-ql))
   (quicklisp-distinfo-url))
 
