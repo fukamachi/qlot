@@ -61,16 +61,28 @@
             (setf all-dependencies
                   (nconc all-dependencies
                          (remove-if-not #'find-system dependencies)))))
-        (setf all-dependencies
-              (delete-duplicates all-dependencies :test #'string=))
+        (with-package-functions #:ql-dist (required-systems name)
+          (let ((already-seen (make-hash-table :test 'equal)))
+            (labels ((find-system-with-fallback (system-name)
+                       (or (find-system system-name)
+                           (find-system (asdf:primary-system-name system-name))))
+                     (system-dependencies (system-name)
+                       (unless (gethash system-name already-seen)
+                         (setf (gethash system-name already-seen) t)
+                         (let ((system (find-system-with-fallback system-name)))
+                           (when system
+                             (cons system
+                                   (mapcan #'system-dependencies (copy-seq (required-systems system)))))))))
+              (setf all-dependencies
+                    (delete-duplicates
+                      (loop for dependency in all-dependencies
+                            append (system-dependencies dependency))
+                      :key #'name
+                      :test 'string=)))))
 
         (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
         (with-package-functions #:ql-dist (ensure-installed)
-          (flet ((find-system-with-fallback (system-name)
-                   (or (find-system system-name)
-                       (find-system (asdf:primary-system-name system-name)))))
-            (mapc #'ensure-installed
-                  (mapcar #'find-system-with-fallback all-dependencies))))))))
+          (mapc #'ensure-installed all-dependencies))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home)
   (unless quicklisp-home
