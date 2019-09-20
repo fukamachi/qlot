@@ -19,7 +19,7 @@
 
 (defmethod make-source ((source (eql :ultralisp)) &rest initargs)
   (handler-case
-      (destructuring-bind (project-name version)
+      (destructuring-bind (project-name &optional (version :latest))
           initargs
         (check-type project-name string)
         (check-type version (or string (eql :latest)))
@@ -30,4 +30,4 @@
     (error ()
       (error 'invalid-definition
              :source :ultralisp
-             :usage "ultralisp <project name> <version>"))))
+             :usage "ultralisp <project name> [<version>]"))))

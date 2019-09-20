@@ -196,7 +196,7 @@ Currently, `<source>` must be one of `dist`, `ql`, `ultralisp`, `http`, `git` or
 
 ```
 ql <project name> <version>
-ql <project name> :latest
+ql <project name>
 ```
 
 `ql` source will download libraries from Quicklisp official dist.
@@ -211,7 +211,7 @@ ql clack 2014-01-13
 
 ```
 ultralisp <project name> <version>
-ultralisp <project name> :latest
+ultralisp <project name>
 ```
 
 `ultralisp` is same as `ql` except downloading from Ultralisp.

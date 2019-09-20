@@ -38,23 +38,26 @@
     (setf (slot-value source 'qlot/source/base::initargs) initargs)
     source))
 
-(defmethod make-source ((source (eql :ql)) &rest initargs)
+(defmethod make-source ((source (eql :ql)) &rest args)
   (handler-case
-      (destructuring-bind (project-name version &key distribution) initargs
+      (destructuring-bind (project-name &rest initargs) args
         (check-type project-name (or string (eql :all)))
-        (check-type version (or string (eql :latest)))
+        ;; Assuming :latest if there's no arguments
+        (let ((initargs (or initargs '(:latest))))
+          (destructuring-bind (version &key distribution) initargs
+            (check-type version (or string (eql :latest)))
 
-        (let ((distribution (or distribution
-                                (quicklisp-distinfo-url))))
-          (if (eq project-name :all)
-              (make-instance 'source-dist
-                             :project-name "quicklisp"
-                             :distribution distribution
-                             :%version version)
-              (make-instance 'source-ql
-                             :project-name project-name
-                             :%version version))))
+            (let ((distribution (or distribution
+                                    (quicklisp-distinfo-url))))
+              (if (eq project-name :all)
+                  (make-instance 'source-dist
+                                 :project-name "quicklisp"
+                                 :distribution distribution
+                                 :%version version)
+                  (make-instance 'source-ql
+                                 :project-name project-name
+                                 :%version version))))))
     (error ()
       (error 'invalid-definition
              :source :ql
-             :usage "ql <project name> <version>"))))
+             :usage "ql <project name> [<version>]"))))
