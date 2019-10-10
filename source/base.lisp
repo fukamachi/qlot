@@ -33,6 +33,7 @@
   (:documentation "A representation of each lines of qlfile"))
 
 (defmethod initialize-instance :after ((source source) &rest initargs)
+  (remf initargs :project-name)
   (setf (slot-value source 'initargs) initargs))
 
 (defgeneric make-source (source &rest args)

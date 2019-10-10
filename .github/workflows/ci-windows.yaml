@@ -1,6 +1,10 @@
 name: CI (Windows)
 
-on: [push]
+on:
+  push:
+    paths: ['*']
+  schedule:
+    - cron: '0 15 * * *'
 
 jobs:
   test:
@@ -24,6 +28,9 @@ jobs:
       - name: Install Rove
         shell: bash
         run: /c/roswell/bin/ros install fukamachi/rove
+      - name: Install dependencies
+        shell: bash
+        run: /c/roswell/bin/ros install fukamachi/dexador
       - name: Run tests
         shell: bash
         run: |

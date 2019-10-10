@@ -23,8 +23,9 @@
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
-                #:directory-system-files
-                #:with-autoload-on-missing)
+                #:with-directory
+                #:directory-lisp-files
+                #:lisp-file-dependencies)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:export #:install-qlfile
@@ -42,14 +43,46 @@
       qlhome
       (merge-pathnames qlhome base)))
 
-(defun install-defsystem-dependencies (directory qlhome)
-  (let ((system-files (directory-system-files directory)))
+(defun install-dependencies (project-root qlhome)
+  (with-package-functions #:ql-dist (find-system)
     (with-quicklisp-home qlhome
-      (dolist (file system-files)
-        (with-autoload-on-missing
-          (let ((*package* (find-package :asdf-user))
-                (*error-output* (make-broadcast-stream)))
-            (asdf:load-asd file)))))))
+      (let ((all-dependencies '()))
+        (with-directory (system-file system-name dependencies) project-root
+          (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
+            (let ((pis-dependencies
+                    (loop for file in (directory-lisp-files project-root)
+                          append (lisp-file-dependencies file))))
+              (setf dependencies
+                    (delete-duplicates
+                      (nconc dependencies pis-dependencies)
+                      :test 'equal))))
+          (let ((dependencies (remove-if-not #'find-system dependencies)))
+            (debug-log "'~A' requires ~S" system-name dependencies)
+            (setf all-dependencies
+                  (nconc all-dependencies
+                         (remove-if-not #'find-system dependencies)))))
+        (with-package-functions #:ql-dist (required-systems name)
+          (let ((already-seen (make-hash-table :test 'equal)))
+            (labels ((find-system-with-fallback (system-name)
+                       (or (find-system system-name)
+                           (find-system (asdf:primary-system-name system-name))))
+                     (system-dependencies (system-name)
+                       (unless (gethash system-name already-seen)
+                         (setf (gethash system-name already-seen) t)
+                         (let ((system (find-system-with-fallback system-name)))
+                           (when system
+                             (cons system
+                                   (mapcan #'system-dependencies (copy-seq (required-systems system)))))))))
+              (setf all-dependencies
+                    (delete-duplicates
+                      (loop for dependency in all-dependencies
+                            append (system-dependencies dependency))
+                      :key #'name
+                      :test 'string=)))))
+
+        (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
+        (with-package-functions #:ql-dist (ensure-installed)
+          (mapc #'ensure-installed all-dependencies))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home)
   (unless quicklisp-home
@@ -74,8 +107,9 @@
         (list *proxy*)
       (apply-qlfile-to-qlhome qlfile qlhome))
 
-    ;; Install project defsystem dependencies
-    (install-defsystem-dependencies (uiop:pathname-directory-pathname qlfile) qlhome)
+    ;; Install project dependencies
+    (let ((project-root (uiop:pathname-directory-pathname qlfile)))
+      (install-dependencies project-root qlhome))
 
     (message "Successfully installed.")))
 
@@ -102,8 +136,9 @@
         (list *proxy*)
       (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects))
 
-    ;; Install project defsystem dependencies
-    (install-defsystem-dependencies (uiop:pathname-directory-pathname qlfile) qlhome)
+    ;; Install project dependencies
+    (let ((project-root (uiop:pathname-directory-pathname qlfile)))
+      (install-dependencies project-root qlhome))
 
     (message "Successfully installed.")))
 

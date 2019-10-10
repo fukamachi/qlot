@@ -2,8 +2,14 @@
   (:use #:cl)
   (:export #:with-autoload-on-missing
            #:directory-system-files
-           #:with-directory))
+           #:with-directory
+           #:directory-lisp-files
+           #:lisp-file-dependencies))
 (in-package #:qlot/utils/asdf)
+
+(defparameter *exclude-directories*
+  (append (list "quicklisp" ".qlot" "bundle-libs")
+          asdf::*default-source-registry-exclusions*))
 
 (defun sbcl-contrib-p (name)
   (let ((name (princ-to-string name)))
@@ -33,7 +39,7 @@
                   (not (search "skeleton" (pathname-name path)))))
            (collect-asd-files-in-directory (dir)
              (unless (find (car (last (pathname-directory dir)))
-                           asdf::*default-source-registry-exclusions*
+                           *exclude-directories*
                            :test #'string=)
                (nconc
                  (mapcar #'truename
@@ -114,7 +120,21 @@
              (with-autoload-on-missing
                (load ,system-file)))))
        (maphash (lambda (,system-file ,value)
+                  (declare (ignorable ,system-file))
                   (dolist (,value ,value)
                     (destructuring-bind (,system-name &rest ,dependencies) ,value
+                      (declare (ignorable ,system-name ,dependencies))
                       ,@body)))
                 *registry*))))
+
+(defun directory-lisp-files (directory)
+  (append (uiop:directory-files directory "*.lisp")
+          (loop for subdir in (uiop:subdirectories directory)
+                when (not (member (car (last (pathname-directory subdir)))
+                                  *exclude-directories*
+                                  :test 'equal))
+                append (directory-lisp-files subdir))))
+
+(defun lisp-file-dependencies (file)
+  (when (asdf/package-inferred-system::file-defpackage-form file)
+    (asdf/package-inferred-system::package-inferred-system-file-dependencies file)))

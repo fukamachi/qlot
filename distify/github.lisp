@@ -24,14 +24,15 @@
 (in-package #:qlot/distify/github)
 
 (defun retrieve-from-github (repos action)
-  (let ((github-access-token (uiop:getenv "GITHUB_ACCESS_TOKEN")))
+  (let ((github-token (uiop:getenv "GITHUB_TOKEN")))
     (yason:parse
      (apply #'dex:get
             (format nil "https://api.github.com/repos/~A/~A" repos action)
             :want-stream t
             :proxy *proxy*
-            (if github-access-token
-                (list :basic-auth (cons github-access-token "x-oauth-basic"))
+            (if (and (stringp github-token)
+                     (not (string= github-access-token "")))
+                (list :basic-auth (cons github-token "x-oauth-basic"))
                 '())))))
 
 (defun retrieve-source-git-ref-from-github (source)

@@ -61,7 +61,7 @@
       *quicklisp-distinfo*))
 
 (defun parse-distinfo-stream (stream)
-  (if (equal (stream-element-type stream) '(unsigned-byte 8))
+  (if (subtypep (stream-element-type stream) '(unsigned-byte 8))
       (with-input-from-string (stream (octets-stream-to-string stream))
         (parse-distinfo-stream stream))
       (loop for line = (read-line stream nil nil)
@@ -74,7 +74,7 @@
     (parse-distinfo-stream in)))
 
 (defun parse-space-delimited-stream (stream &key (test #'identity) include-header)
-  (if (equal (stream-element-type stream) '(unsigned-byte 8))
+  (if (subtypep (stream-element-type stream) '(unsigned-byte 8))
       (with-input-from-string (stream (octets-stream-to-string stream))
         (parse-space-delimited-stream stream :test test :include-header include-header))
       (let ((header-line (read-line stream)))

@@ -6,6 +6,10 @@
 
 (deftest with-in-directory-tests
   (let ((cwd (uiop:getcwd)))
+    #+(or mswindows win32)
+    (with-in-directory #P"C:/"
+      (ok (equal (uiop:native-namestring (uiop:getcwd)) "C:\\\\")))
+    #-(or mswindows win32)
     (with-in-directory #P"/"
       (ok (equal (uiop:getcwd) #P"/")))
     (ok (equal (uiop:getcwd) cwd))))

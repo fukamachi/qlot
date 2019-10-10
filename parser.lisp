@@ -98,7 +98,9 @@
         when (funcall test project-name)
         collect
         (let ((source (with-handling-parse-error (file lineno)
-                        (apply #'make-instance (getf args :class) (getf args :initargs)))))
+                        (apply #'make-instance (getf args :class)
+                               :project-name project-name
+                               (getf args :initargs)))))
           (setf (source-defrost-args source)
                 (loop for (k v) on args by #'cddr
                       unless (member k '(:class :initargs))

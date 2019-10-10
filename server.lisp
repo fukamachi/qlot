@@ -50,6 +50,7 @@
                                          ;; Call defrost-source to set '%version' from 'source-version'.
                                          (defrost-source
                                            (make-instance ',(type-of source)
+                                                          :project-name ,(source-project-name source)
                                                           ,@(source-initargs source)
                                                           ,@(and (slot-boundp source 'qlot/source/base::version)
                                                                  `(:version ,(source-version source)))
