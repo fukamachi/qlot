@@ -46,6 +46,10 @@ However, what only you can specify is the month of distribution. Which means you
 
 This is what Qlot is trying to solve.
 
+## Requirements
+
+* ASDF 3.2 or above
+
 ## Installation
 
 ### via Quicklisp
