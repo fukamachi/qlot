@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        lisp: [sbcl-bin]
+        lisp: [sbcl-bin, sbcl/1.4.1]
         os: [ubuntu-latest, macOS-latest]
 
     steps:
