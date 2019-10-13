@@ -224,6 +224,7 @@ See https://github.com/fukamachi/qlot/pull/78 for the details.")
                       asdf::*default-source-registry-exclusions*))
     systems))
 
+#+asdf3.3
 (defmacro with-retrying (&body body)
   (let ((retrying (gensym))
         (e (gensym)))
@@ -238,6 +239,21 @@ See https://github.com/fukamachi/qlot/pull/78 for the details.")
                                                   (uiop:symbol-call '#:ql-dist '#:find-system
                                                                     (asdf::missing-requires ,e)))
                                 (invoke-restart (find-restart 'asdf:clear-configuration-and-retry ,e)))))))
+           ,@body)))))
+#-asdf3.3
+(defmacro with-retrying (&body body)
+  (let ((retrying (gensym))
+        (e (gensym)))
+    `(let ((,retrying (make-hash-table :test 'equal)))
+       (tagbody retry
+         (handler-bind ((asdf:missing-component
+                          (lambda (,e)
+                            (unless (gethash (asdf::missing-requires ,e) ,retrying)
+                              (setf (gethash (asdf::missing-requires ,e) ,retrying) t)
+                              (asdf:clear-source-registry)
+                              #+quicklisp (ql:quickload (asdf::missing-requires ,e) :silent t)
+                              #-quicklisp (asdf:load-system (asdf::missing-requires ,e))
+                              (go retry)))))
            ,@body)))))
 
 (defun make-keyword (text)
