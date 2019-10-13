@@ -65,6 +65,16 @@
     (setf (slot-value instance 'project-name)
           (retrieve-quicklisp-metadata-item instance :name))))
 
+(defmethod defrost-source :after ((source source-ql))
+  (when (slot-boundp source 'version)
+    (setf (slot-value source 'distribution)
+          (let ((*standard-output* (make-broadcast-stream))
+                (*error-output* (make-broadcast-stream))
+                (*trace-output* (make-broadcast-stream)))
+            (get-versioned-distribution-url source (source-ql-version source))))
+    ;; KLUDGE: Delete the wrong cached distinfo because of the above function call.
+    (slot-makunbound source '%distinfo)))
+
 (defmethod defrost-source :after ((source source-ql-all))
   (when (slot-boundp source 'version)
     (setf (slot-value source 'distribution)
