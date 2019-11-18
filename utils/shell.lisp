@@ -100,7 +100,7 @@
       (loop for system in systems
             append (-e
                      (if qlhome
-                         `(ql:quickload ,system :silent t)
+                         `(uiop:symbol-call :ql :quickload ,system :silent t)
                          `(let ((*standard-output* (make-broadcast-stream))
                                 (*trace-output* (make-broadcast-stream)))
                             (asdf:load-system ,system)))))
