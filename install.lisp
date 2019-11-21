@@ -28,6 +28,8 @@
                 #:lisp-file-dependencies)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
+  #+sbcl
+  (:import-from #:sb-posix)
   (:export #:install-qlfile
            #:update-qlfile
            #:install-project
