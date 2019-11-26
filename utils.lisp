@@ -1,4 +1,7 @@
 (defpackage #:qlot/utils
+  ;; QLOT/UTIL package is refered by some packages
+  ;; ex. https://github.com/inaimathi/cl-notebook/issues/71
+  (:nicknames #:qlot/util)
   (:use #:cl)
   (:export #:with-in-directory
            #:make-keyword
