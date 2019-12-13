@@ -86,7 +86,8 @@
         (with-package-functions #:ql-dist (ensure-installed)
           (mapc #'ensure-installed all-dependencies))))))
 
-(defun install-qlfile (qlfile &key quicklisp-home)
+(defun install-qlfile (qlfile &key quicklisp-home
+                                   (install-deps t))
   (unless quicklisp-home
     (setf quicklisp-home
           (merge-pathnames *qlot-directory*
@@ -110,12 +111,15 @@
       (apply-qlfile-to-qlhome qlfile qlhome))
 
     ;; Install project dependencies
-    (let ((project-root (uiop:pathname-directory-pathname qlfile)))
-      (install-dependencies project-root qlhome))
+    (when install-deps
+      (let ((project-root (uiop:pathname-directory-pathname qlfile)))
+        (install-dependencies project-root qlhome)))
 
     (message "Successfully installed.")))
 
-(defun update-qlfile (qlfile &key quicklisp-home projects)
+(defun update-qlfile (qlfile &key quicklisp-home
+                                  projects
+                                  (install-deps t))
   (unless quicklisp-home
     (setf quicklisp-home
           (merge-pathnames *qlot-directory*
@@ -139,8 +143,9 @@
       (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects))
 
     ;; Install project dependencies
-    (let ((project-root (uiop:pathname-directory-pathname qlfile)))
-      (install-dependencies project-root qlhome))
+    (when install-deps
+      (let ((project-root (uiop:pathname-directory-pathname qlfile)))
+        (install-dependencies project-root qlhome)))
 
     (message "Successfully installed.")))
 
@@ -290,24 +295,30 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
      (merge-pathnames *default-qlfile* (uiop:ensure-directory-pathname object)))
     (t object)))
 
-(defun install-project (object)
+(defun install-project (object &key (install-deps t))
   (etypecase object
     ((or symbol string)
      (install-project (asdf:find-system object)))
     (asdf:system
       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
-                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)))
+                      :quicklisp-home (asdf:system-relative-pathname
+                                       object *qlot-directory*)
+                      :install-deps install-deps))
     (pathname
-      (install-qlfile (ensure-qlfile-pathname object)))))
+      (install-qlfile (ensure-qlfile-pathname object)
+                      :install-deps install-deps))))
 
-(defun update-project (object &key projects)
+(defun update-project (object &key projects
+                                   (install-deps t))
   (etypecase object
     ((or symbol string)
      (update-project (asdf:find-system object) :projects projects))
     (asdf:system
       (update-qlfile (asdf:system-relative-pathname object)
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
-                     :projects projects))
+                     :projects projects
+                     :install-deps install-deps))
     (pathname
       (update-qlfile (ensure-qlfile-pathname object)
-                     :projects projects))))
+                     :projects projects
+                     :install-deps install-deps))))

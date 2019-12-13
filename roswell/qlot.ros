@@ -47,6 +47,8 @@ OPTIONS:
         Show the Qlot version
     --debug
         A flag to enable debug logging. (Only for 'install' or 'update')
+    --no-deps
+        Don't install dependencies of all systems from the current directory.
 "
           (file-namestring *load-pathname*)))
 
@@ -104,31 +106,37 @@ OPTIONS:
         (list sequence))))
 
 (defun parse-argv (argv)
-  (let ((target nil)
-        (projects '()))
-    (loop for option = (pop argv)
-          while option
-          do (case-equal option
-               ("--project"
-                 (unless argv
-                   (qlot/errors:ros-command-error "--project requires a project name"))
-                 (setf projects
-                       (append projects
-                               (remove ""
-                                       (split #\, (pop argv))
-                                       :test 'equal))))
-               ("--version"
-                 (print-version)
-                 (ros:quit))
-               ("--debug"
-                 (setf qlot/logger:*debug* t))
-               (otherwise
-                 (if target
-                     (qlot/errors:ros-command-error "'~A' is unknown option" option)
-                     (setf target option))))
-          finally
-          (return
-           (cons target (and projects (list :projects projects)))))))
+  (loop with target = nil
+        with projects = '()
+        with install-deps = t
+        for option = (pop argv)
+        while option
+        do (case-equal option
+             ("--project"
+              (unless argv
+                (qlot/errors:ros-command-error "--project requires a project name"))
+              (setf projects
+                    (append projects
+                            (remove ""
+                                    (split #\, (pop argv))
+                                    :test 'equal))))
+             ("--version"
+              (print-version)
+              (ros:quit))
+             ("--debug"
+              (setf qlot/logger:*debug* t))
+             ("--no-deps"
+              (setf install-deps nil))
+             (otherwise
+              (if target
+                  (qlot/errors:ros-command-error "'~A' is unknown option" option)
+                  (setf target option))))
+        finally
+           (return
+             (append (list target
+                           :install-deps install-deps)
+                     (when projects
+                       (list :projects projects))))))
 
 (defun main (&optional $1 &rest argv)
   (declare (ignorable argv))

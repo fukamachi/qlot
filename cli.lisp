@@ -6,21 +6,24 @@
            #:extend-source-registry))
 (in-package #:qlot/cli)
 
-(defun install (&optional (object *default-pathname-defaults*))
+(defun install (&optional (object *default-pathname-defaults*) &rest args)
   (let ((*standard-output* (make-broadcast-stream))
         (*trace-output* (make-broadcast-stream)))
     (asdf:load-system :qlot/install))
-  (uiop:symbol-call '#:qlot/install '#:install-project
-                    (pathname (or object *default-pathname-defaults*))))
+  (destructuring-bind (&key install-deps) args
+    (uiop:symbol-call '#:qlot/install '#:install-project
+                      (pathname (or object *default-pathname-defaults*))
+                      :install-deps install-deps)))
 
 (defun update (&optional (object *default-pathname-defaults*) &rest args)
   (let ((*standard-output* (make-broadcast-stream))
         (*trace-output* (make-broadcast-stream)))
     (asdf:load-system :qlot/install))
-  (destructuring-bind (&key projects) args
+  (destructuring-bind (&key projects install-deps) args
     (uiop:symbol-call '#:qlot/install '#:update-project
                       (pathname (or object *default-pathname-defaults*))
-                      :projects projects)))
+                      :projects projects
+                      :install-deps install-deps)))
 
 (defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
   (fresh-line *error-output*)
