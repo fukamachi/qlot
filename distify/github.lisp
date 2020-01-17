@@ -31,7 +31,7 @@
             :want-stream t
             :proxy *proxy*
             (if (and (stringp github-token)
-                     (not (string= github-access-token "")))
+                     (not (string= github-token "")))
                 (list :basic-auth (cons github-token "x-oauth-basic"))
                 '())))))
 
