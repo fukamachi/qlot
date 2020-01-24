@@ -140,5 +140,5 @@
                 append (directory-lisp-files subdir))))
 
 (defun lisp-file-dependencies (file)
-  (when (asdf/package-inferred-system::file-defpackage-form file)
+  (when (ignore-errors (asdf/package-inferred-system::file-defpackage-form file))
     (asdf/package-inferred-system::package-inferred-system-file-dependencies file)))
