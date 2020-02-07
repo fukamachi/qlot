@@ -21,7 +21,7 @@
         (e (gensym)))
     `(let ((,retrying (make-hash-table :test 'equal)))
        (#+asdf3.3 asdf/session:with-asdf-session #+asdf3.3 (:override t)
-        #-asdf3.3 tagbody #-asdf3.3 retry
+        #-asdf3.3 progn
          (handler-bind ((asdf:missing-component
                           (lambda (,e)
                             (unless (gethash (asdf::missing-requires ,e) ,retrying)
@@ -30,10 +30,7 @@
                                 (uiop:symbol-call '#:ql-dist '#:ensure-installed
                                                   (uiop:symbol-call '#:ql-dist '#:find-system
                                                                     (asdf::missing-requires ,e)))
-                                #+asdf3.3
-                                (invoke-restart (find-restart 'asdf:clear-configuration-and-retry ,e))
-                                #-asdf3.3
-                                (go retry))))))
+                                (invoke-restart (find-restart 'asdf:retry ,e)))))))
            ,@body)))))
 
 (defun directory-system-files (directory)
