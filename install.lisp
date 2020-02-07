@@ -24,6 +24,7 @@
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
                 #:with-directory
+                #:with-autoload-on-missing
                 #:directory-lisp-files
                 #:lisp-file-dependencies)
   (:import-from #:qlot/errors
@@ -50,6 +51,12 @@
     (with-quicklisp-home qlhome
       (let ((all-dependencies '()))
         (with-directory (system-file system-name dependencies) project-root
+          (message "Loading '~A'..." system-file)
+          (let ((*standard-output* (make-broadcast-stream))
+                (*trace-output* (make-broadcast-stream))
+                (*error-output* (make-broadcast-stream)))
+            (with-autoload-on-missing
+              (asdf:load-asd system-file)))
           (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
             (let ((pis-dependencies
                     (loop for file in (directory-lisp-files project-root)

@@ -52,74 +52,66 @@
 (defvar *registry*)
 (defvar *load-asd-file*)
 
-(defun make-hook (old-hook)
+(defun read-asd-form (form)
   (labels ((dep-list-name (dep)
-             (ecase (first dep)
-               ((:version :require) (second dep))
-               (:feature (third dep))))
+                          (ecase (first dep)
+                            ((:version :require) (second dep))
+                            (:feature (third dep))))
            (normalize (dep)
-             (real-system-name
-               (cond
-                 ((and (consp dep)
-                       (keywordp (car dep)))
-                  (let ((name (dep-list-name dep)))
-                    (etypecase name
-                      ((or symbol string) (string-downcase name))
-                      (list (ecase (first name)
-                              (:require (normalize (second name))))))))
-                 ((or (symbolp dep)
-                      (stringp dep))
-                  (string-downcase dep))
-                 (t (error "Can't normalize dependency: ~S" dep)))))
+                      (real-system-name
+                        (cond
+                          ((and (consp dep)
+                                (keywordp (car dep)))
+                           (let ((name (dep-list-name dep)))
+                             (etypecase name
+                               ((or symbol string) (string-downcase name))
+                               (list (ecase (first name)
+                                       (:require (normalize (second name))))))))
+                          ((or (symbolp dep)
+                               (stringp dep))
+                           (string-downcase dep))
+                          (t (error "Can't normalize dependency: ~S" dep)))))
            (real-system-name (name)
-             (subseq name 0 (position #\/ name))))
-    (lambda (fun form env)
-      (when (and (consp form)
-                 (eq (first form) 'asdf:defsystem)
-                 (equalp *load-asd-file* *load-pathname*))
-        (destructuring-bind (system-name &rest system-form) (cdr form)
-          (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
-                (depends-on (getf system-form :depends-on))
-                (weakly-depends-on (getf system-form :weakly-depends-on))
-                (system-name (asdf::coerce-name system-name)))
-            #+quicklisp
-            (when defsystem-depends-on
-              (let ((map (make-hash-table :test 'equal)))
-                (labels ((get-deps (name)
-                           (when (gethash name map)
-                             (return-from get-deps nil))
-                           (setf (gethash name map) t)
-                           (let ((system (ql-dist:find-system name)))
-                             (when system
-                               (cons system
-                                     (loop for system-name in (ql-dist:required-systems system)
-                                           append (get-deps system-name)))))))
-                  (mapc #'ql-dist:ensure-installed
-                        (mapcan #'get-deps
-                                (copy-seq defsystem-depends-on))))))
-            (push (cons system-name
-                        (sort
-                          (remove system-name
-                                  (remove-if #'sbcl-contrib-p
-                                             (remove-duplicates
-                                               (mapcar #'normalize
-                                                       (append defsystem-depends-on depends-on weakly-depends-on))
-                                               :test #'equalp))
-                                  :test #'string=)
-                          #'string<))
-                  (gethash *load-asd-file* *registry*)))))
-      (funcall old-hook fun form env))))
+                             (subseq name 0 (position #\/ name))))
+    (cond
+      ((not (consp form)) nil)
+      ((eq (first form) 'asdf:defsystem)
+       (destructuring-bind (system-name &rest system-form) (cdr form)
+         (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
+               (depends-on (getf system-form :depends-on))
+               (weakly-depends-on (getf system-form :weakly-depends-on))
+               (system-name (asdf::coerce-name system-name)))
+           (push (cons system-name
+                       (sort
+                         (remove system-name
+                                 (remove-if #'sbcl-contrib-p
+                                            (remove-duplicates
+                                              (mapcar #'normalize
+                                                      (append defsystem-depends-on depends-on weakly-depends-on))
+                                              :test #'equalp))
+                                 :test #'string=)
+                         #'string<))
+                 (gethash *load-asd-file* *registry*)))))
+      ((macro-function (first form))
+       (read-asd-form (macroexpand-1 form))))))
+
+(defun read-asd-file (file)
+  (uiop:with-input-file (in file)
+    (let ((*load-pathname* file))
+      (uiop:with-safe-io-syntax (:package :asdf-user)
+        (let ((*read-eval* t))
+          (loop with eof = '#:eof
+                for form = (read-preserving-whitespace in nil eof)
+                until (eq form eof)
+                do (read-asd-form form)))))))
 
 (defmacro with-directory ((system-file system-name dependencies) directory &body body)
   (let ((value (gensym "VALUE")))
     `(let ((*registry* (make-hash-table :test 'equal)))
        (dolist (,system-file (directory-system-files ,directory))
          (handler-bind ((style-warning #'muffle-warning))
-           (let ((*macroexpand-hook* (make-hook *macroexpand-hook*))
-                 (*package* (find-package :asdf-user))
-                 (*load-asd-file* ,system-file))
-             (with-autoload-on-missing
-               (load ,system-file)))))
+           (let ((*load-asd-file* ,system-file))
+             (read-asd-file ,system-file))))
        (maphash (lambda (,system-file ,value)
                   (declare (ignorable ,system-file))
                   (dolist (,value ,value)
