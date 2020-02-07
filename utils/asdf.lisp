@@ -39,14 +39,16 @@
                   ;; KLUDGE: Ignore skeleton.asd of CL-Project
                   (not (search "skeleton" (pathname-name path)))))
            (collect-asd-files-in-directory (dir)
-             (unless (find (car (last (pathname-directory dir)))
-                           *exclude-directories*
-                           :test #'string=)
-               (nconc
-                 (mapcar #'truename
-                         (remove-if-not #'asd-file-p
-                                        (uiop:directory-files dir)))
-                 (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir))))))
+             (let ((dir-name (car (last (pathname-directory dir)))))
+               (unless (or (find dir-name
+                                 *exclude-directories*
+                                 :test #'string=)
+                           (char= (aref dir-name 0) #\.))
+                 (nconc
+                   (mapcar #'truename
+                           (remove-if-not #'asd-file-p
+                                          (uiop:directory-files dir)))
+                   (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir)))))))
     (collect-asd-files-in-directory directory)))
 
 (defvar *registry*)
@@ -123,9 +125,11 @@
 (defun directory-lisp-files (directory)
   (append (uiop:directory-files directory "*.lisp")
           (loop for subdir in (uiop:subdirectories directory)
-                when (not (member (car (last (pathname-directory subdir)))
-                                  *exclude-directories*
-                                  :test 'equal))
+                for dir-name = (car (last (pathname-directory subdir)))
+                unless (or (find dir-name
+                                 *exclude-directories*
+                                 :test 'string=)
+                           (char= (aref dir-name 0) #\.))
                 append (directory-lisp-files subdir))))
 
 (defun lisp-file-dependencies (file)
