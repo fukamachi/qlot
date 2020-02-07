@@ -321,7 +321,7 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     ((or symbol string)
      (update-project (asdf:find-system object) :projects projects))
     (asdf:system
-      (update-qlfile (asdf:system-relative-pathname object)
+      (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
                      :projects projects
                      :install-deps install-deps))
