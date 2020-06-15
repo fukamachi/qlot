@@ -277,8 +277,8 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      (debug-log "Using temporary directory '~A'" tmp-dir)
                      (update-source source tmp-dir))))))))
         (with-quicklisp-home qlhome
-          (with-package-functions #:ql-dist (dist (setf preference))
-            (setf (preference (dist (source-dist-name source)))
+          (with-package-functions #:ql-dist (find-dist (setf preference))
+            (setf (preference (find-dist (source-dist-name source)))
                   (incf preference)))))
       (with-quicklisp-home qlhome
         (with-package-functions #:ql-dist (uninstall name all-dists)
