@@ -105,6 +105,13 @@ OPTIONS:
                (split div (subseq sequence (1+ pos))))
         (list sequence))))
 
+(defun join (div sequence)
+  (with-output-to-string (s)
+    (when sequence
+      (format s "~A" (first sequence))
+      (dolist (element (rest sequence))
+        (format s "~A~A" div element)))))
+
 (defun parse-argv (argv)
   (loop with target = nil
         with projects = '()
@@ -160,9 +167,9 @@ OPTIONS:
 
              ;; Add ~/.roswell/bin to $PATH
              (setenv "PATH"
-                     (format nil "~A:~A"
-                             (merge-pathnames "bin/" (homedir))
-                             (ros:getenv "PATH")))
+                     (join (uiop/filesystem:inter-directory-separator)
+                           (cons (merge-pathnames "bin/" (homedir))
+                                 (uiop/filesystem:split-native-pathnames-string (ros:getenv "PATH")))))
 
              (let ((command (which (first argv))))
                (unless command
