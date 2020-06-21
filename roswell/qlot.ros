@@ -63,7 +63,10 @@ OPTIONS:
                (uiop:directory-exists-p #P"quicklisp/")
                (uiop:file-exists-p #P"quicklisp/setup.lisp"))
       (qlot/cli:rename-quicklisp-to-dot-qlot nil t))
-    (setenv "QUICKLISP_HOME" ".qlot/"))
+    (setenv "QUICKLISP_HOME"
+            (format nil "~A" (or (probe-file ".qlot/")
+                                 (merge-pathnames ".qlot/"
+                                                  (make-pathname :defaults *load-pathname* :name nil :type nil))))))
   (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
                   (merge-pathnames (ros:getenv "QUICKLISP_HOME")
                                    (make-pathname :defaults *load-pathname* :name nil :type nil)))))
