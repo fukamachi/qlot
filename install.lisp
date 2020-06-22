@@ -277,9 +277,9 @@ qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      (debug-log "Using temporary directory '~A'" tmp-dir)
                      (update-source source tmp-dir))))))))
         (with-quicklisp-home qlhome
-          (with-package-functions #:ql-dist (dist name all-dists (setf preference))
+          (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
             (let* ((dist-name (source-dist-name source))
-                   (dist (dist dist-name)))
+                   (dist (find-dist dist-name)))
               (unless dist
                 (error "Unable to find dist with name ~S. You should use one of these names in the qlfile: ~A"
                        dist-name
