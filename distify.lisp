@@ -8,6 +8,7 @@
   (:import-from #:qlot/source
                 #:source-git
                 #:source-http
+                #:source-github
                 #:source-dist
                 #:source-dist-project)
   (:export #:distify))
@@ -22,6 +23,7 @@
                (source-dist #'distify-dist)
                (source-dist-project #'distify-ql)
                (source-git #'distify-git)
+               (source-github #'distify-github)
                (source-http #'distify-http))
              source
              destination
