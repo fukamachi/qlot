@@ -58,14 +58,7 @@
 
 (defgeneric defrost-source (source)
   (:method ((source source))
-    (let ((class-pkg (symbol-package (type-of source))))
-      (loop for (k v) on (source-defrost-args source) by #'cddr
-            for slot-name = (case k
-                              (:version 'version)
-                              (:project-name 'project-name)
-                              (otherwise (intern (string k) class-pkg)))
-            when (slot-exists-p source slot-name)
-            do (setf (slot-value source slot-name) v)))
+    (apply #'reinitialize-instance source :allow-other-keys t (source-defrost-args source))
     source))
 
 (defun source-locked-p (source)
