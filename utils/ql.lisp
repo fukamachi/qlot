@@ -3,6 +3,9 @@
   (:import-from #:qlot/utils
                 #:split-with
                 #:octets-stream-to-string)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
+  (:import-from #:dexador)
   (:export #:quicklisp-distinfo-url
            #:make-versioned-distinfo-url
            #:make-versioned-distinfo-url-with-template
@@ -10,6 +13,7 @@
            #:parse-distinfo-file
            #:parse-space-delimited-stream
            #:parse-space-delimited-file
+           #:get-distinfo-url
            #:with-quicklisp-home))
 (in-package #:qlot/utils/ql)
 
@@ -91,6 +95,30 @@
 (defun parse-space-delimited-file (file &key (test #'identity) include-header)
   (uiop:with-input-file (in file)
     (parse-space-delimited-stream in :test test :include-header include-header)))
+
+(defun get-distinfo-url (distribution version)
+  (let* ((distinfo-data
+           (parse-distinfo-stream (dex:get distribution
+                                           :want-stream t
+                                           :proxy *proxy*)))
+         (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
+                                            :test #'string=)))
+         (distinfo-url (or (cdr (assoc "canonical-distinfo-url" distinfo-data
+                                       :test #'string=))
+                           (cdr (assoc "distinfo-subscription-url" distinfo-data
+                                       :test #'string=))
+                           distribution)))
+    (cond
+      ((eq :latest version)
+       distinfo-url)
+      (distinfo-template-url
+       (make-versioned-distinfo-url-with-template
+         distinfo-template-url
+         version))
+      (t
+       (make-versioned-distinfo-url
+         distribution
+         version)))))
 
 (defmacro with-quicklisp-home (qlhome &body body)
   `(progv (list (intern #.(string :*quicklisp-home*) :ql))

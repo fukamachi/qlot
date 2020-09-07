@@ -3,19 +3,9 @@
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:directory-system-files)
-  (:import-from #:qlot/utils/ql
-                #:parse-distinfo-stream
-                #:make-versioned-distinfo-url
-                #:make-versioned-distinfo-url-with-template)
-  (:import-from #:qlot/source
-                #:source-distinfo-url)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
   (:import-from #:ironclad)
-  (:import-from #:dexador)
   (:export #:releases.txt
-           #:systems.txt
-           #:get-distinfo-url))
+           #:systems.txt))
 (in-package #:qlot/utils/distify)
 
 (defun normalize-pathname (path)
@@ -59,27 +49,3 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
               (pathname-name system-file)
               system-name
               dependencies))))
-
-(defun get-distinfo-url (distribution version)
-  (let* ((distinfo-data
-           (parse-distinfo-stream (dex:get distribution
-                                           :want-stream t
-                                           :proxy *proxy*)))
-         (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
-                                            :test #'string=)))
-         (distinfo-url (or (cdr (assoc "canonical-distinfo-url" distinfo-data
-                                       :test #'string=))
-                           (cdr (assoc "distinfo-subscription-url" distinfo-data
-                                       :test #'string=))
-                           distribution)))
-    (cond
-      ((eq :latest version)
-       distinfo-url)
-      (distinfo-template-url
-       (make-versioned-distinfo-url-with-template
-         distinfo-template-url
-         version))
-      (t
-       (make-versioned-distinfo-url
-         distribution
-         version)))))

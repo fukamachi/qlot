@@ -11,8 +11,7 @@
                 #:*proxy*)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
-                #:parse-space-delimited-stream)
-  (:import-from #:qlot/utils/distify
+                #:parse-space-delimited-stream
                 #:get-distinfo-url)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)

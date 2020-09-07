@@ -7,7 +7,7 @@
                 #:source-project-name)
   (:import-from #:qlot/proxy
                 #:*proxy*)
-  (:import-from #:qlot/utils/distify
+  (:import-from #:qlot/utils/ql
                 #:get-distinfo-url)
   (:import-from #:dexador)
   (:export #:distify-dist))
