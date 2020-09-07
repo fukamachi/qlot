@@ -14,8 +14,7 @@
                 #:source-git-ref
                 #:source-git-identifier)
   (:import-from #:qlot/utils/distify
-                #:releases.txt
-                #:systems.txt)
+                #:write-standard-metadata)
   (:import-from #:qlot/utils/git
                 #:git-clone
                 #:git-ref
@@ -77,10 +76,8 @@
         (let ((tarball (create-git-tarball source-directory
                                            archives
                                            (source-git-ref source))))
-          (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata))
-            (princ (systems.txt (source-project-name source) source-directory) out))
-
-          (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata))
-            (princ (releases.txt (source-project-name source) source-directory tarball) out)))))
+          (write-standard-metadata (source-project-name source)
+                                   source-directory
+                                   tarball metadata))))
 
     *default-pathname-defaults*))

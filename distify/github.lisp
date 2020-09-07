@@ -14,8 +14,7 @@
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils/distify
-                #:releases.txt
-                #:systems.txt)
+                #:write-standard-metadata)
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:dexador)
@@ -97,16 +96,9 @@
                                                          (source-github-identifier source))
                                                  softwares-dir)))
           (rename-file extracted-source-directory source-directory)
-          (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata-dir)
-                                      :if-exists :supersede)
-            (princ (systems.txt (source-project-name source)
-                                source-directory)
-                   out))
-          (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata-dir)
-                                      :if-exists :supersede)
-            (princ (releases.txt (source-project-name source)
-                                 source-directory
-                                 archive)
-                   out)))))
+          (write-standard-metadata (source-project-name source)
+                                   source-directory
+                                   archive
+                                   metadata-dir))))
 
     destination))

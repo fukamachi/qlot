@@ -4,8 +4,10 @@
                 #:with-directory
                 #:directory-system-files)
   (:import-from #:ironclad)
+  (:import-from #:uiop)
   (:export #:releases.txt
-           #:systems.txt))
+           #:systems.txt
+           #:write-standard-metadta))
 (in-package #:qlot/utils/distify)
 
 (defun normalize-pathname (path)
@@ -49,3 +51,12 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
               (pathname-name system-file)
               system-name
               dependencies))))
+
+(defun write-standard-metadata (project-name source-directory tarball-file metadata-dir)
+  (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata-dir))
+    (princ (systems.txt project-name source-directory)
+           out))
+  (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata-dir))
+    (princ (releases.txt project-name source-directory tarball-file)
+           out))
+  (values))
