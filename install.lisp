@@ -10,9 +10,10 @@
                 #:freeze-source)
   (:import-from #:qlot/parser
                 #:read-qlfile-for-install)
+  (:import-from #:qlot/distify
+                #:distify)
   (:import-from #:qlot/server
-                #:with-qlot-server
-                #:run-distify-source-process)
+                #:with-qlot-server)
   (:import-from #:qlot/logger
                 #:message
                 #:debug-log)
@@ -197,8 +198,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             (install-release release)))))))
 
 (defun install-source (source tmp-dir)
-  (run-distify-source-process source tmp-dir
-                              :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
+  (distify source tmp-dir)
   (with-package-functions #:ql-dist (install-dist version)
     (let ((new-dist (install-dist (source-install-url source)
                                   :prompt nil
@@ -218,8 +218,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (version dist)
                        (version new-dist))
               (map nil #'uninstall (installed-releases dist))
-              (run-distify-source-process source tmp-dir
-                                          :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
+              (distify source tmp-dir)
               (setf dist (find-dist (source-dist-name source))
                     new-dist (available-update dist))
               (let ((*trace-output* (make-broadcast-stream)))

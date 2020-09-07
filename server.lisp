@@ -6,14 +6,17 @@
                 #:source-initargs
                 #:source-frozen-slots
                 #:defrost-source)
+  (:import-from #:qlot/distify
+                #:distify)
   (:import-from #:qlot/utils/ql
-                #:with-quicklisp-home)
+                #:with-quicklisp-home
+                #:*system-quicklisp-home*)
   (:import-from #:qlot/utils/shell
                 #:run-lisp)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:export #:with-qlot-server
-           #:run-distify-source-process))
+           #:*system-quicklisp-home*))
 (in-package #:qlot/server)
 
 (defvar *handler*)
@@ -38,28 +41,6 @@
         (when (uiop:file-exists-p file)
           file)))))
 
-(defvar *system-quicklisp-home*)
-
-(defun run-distify-source-process (source destination &key quicklisp-home distinfo-only)
-  (let (#+quicklisp (ql:*quicklisp-home* *system-quicklisp-home*))
-    (run-lisp (append
-                (when quicklisp-home
-                  (list `(let ((*error-output* (make-broadcast-stream)))
-                           (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
-                (list `(uiop:symbol-call :qlot/distify :distify
-                                         ;; Call defrost-source to set '%version' from 'source-version'.
-                                         (defrost-source
-                                           (make-instance ',(type-of source)
-                                                          :project-name ,(source-project-name source)
-                                                          ,@(source-initargs source)
-                                                          ,@(and (slot-boundp source 'qlot/source/base::version)
-                                                                 `(:version ,(source-version source)))
-                                                          ,@(source-frozen-slots source)))
-                                         ,destination
-                                         :distinfo-only ,distinfo-only)))
-              :systems '("qlot/distify")
-              :source-registry (asdf:system-source-directory :qlot))))
-
 (defmacro with-qlot-server ((source &optional qlhome destination) &body body)
   (let ((g-source (gensym "SOURCE"))
         (g-qlhome (gensym "QLHOME"))
@@ -72,9 +53,7 @@
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
        (with-tmp-directory (,destination)
          ;; Run distify in another Lisp process
-         (run-distify-source-process ,g-source ,destination
-                                     :quicklisp-home ,g-qlhome
-                                     :distinfo-only t)
+         (distify ,g-source ,destination :distinfo-only t)
          (progv (list ,fetch-scheme-functions '*handler*)
              (list (cons '("qlot" . qlot-fetch)
                          (symbol-value ,fetch-scheme-functions))

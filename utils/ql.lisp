@@ -124,3 +124,6 @@
   `(progv (list (intern #.(string :*quicklisp-home*) :ql))
        (list ,qlhome)
      ,@body))
+
+;; This is bound by WITH-QLOT-SERVER, not here.
+(defvar *system-quicklisp-home*)

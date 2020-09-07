@@ -1,9 +1,12 @@
 (defpackage #:qlot/distify/github
-  (:use #:cl)
+  (:use #:cl #:qlot/distify-protocol)
+  (:import-from #:qlot/source/github
+                #:source-github)
   (:import-from #:qlot/source
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
+                #:source-locked-p
                 #:source-github-url
                 #:source-github-repos
                 #:source-github-ref
@@ -18,8 +21,7 @@
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:dexador)
-  (:import-from #:yason)
-  (:export #:distify-github))
+  (:import-from #:yason))
 (in-package #:qlot/distify/github)
 
 (defun retrieve-from-github (repos action)
@@ -52,53 +54,70 @@
        (get-ref "tags" (source-github-tag source)))
       (t (get-ref "branches" "master")))))
 
-(defun load-source-github-version (source)
+
+;; Version-locking drives which archive we download later, rather than
+;; fetching the archive and reading the version from it, so prepare is
+;; a no-op.
+(defmethod prepare-source-for-dist ((source source-github) destination)
+  (declare (ignore source destination))
+  (values))
+
+(defmethod lock-version ((source source-github) prep-dir)
+  (declare (ignore prep-dir))
+  (unless (source-locked-p source)
+    (let ((ref (retrieve-source-git-ref-from-github source)))
+      (setf (source-version source)
+            (format nil "~A~A"
+                    (source-version-prefix source)
+                    ref))))
+
   (setf (source-github-ref source)
-        (retrieve-source-git-ref-from-github source))
-  (setf (source-version source)
-        (format nil "~A~A"
-                (source-version-prefix source)
-                (source-github-ref source))))
+        (subseq (source-version source) (length (source-version-prefix source))))
 
-(defun distify-github (source destination &key distinfo-only)
-  (load-source-github-version source)
+  (source-version source))
 
-  (let ((destination (truename destination)))
+(defun distify-github-source (source prep-dir)
+  (check-type source source-github)
+  (let* ((destination (truename prep-dir))
+         (softwares-dir (merge-pathnames #P"softwares/" destination))
+         (archives-dir (merge-pathnames #P"archives/" destination))
+         (metadata-dir (merge-pathnames (format nil "~A/~A/"
+                                                (source-project-name source)
+                                                (source-version source))
+                                        destination))
+         (archive (merge-pathnames (format nil "~A-~A.tar.gz"
+                                           (source-project-name source)
+                                           (source-github-identifier source))
+                                   archives-dir)))
+    (mapc #'ensure-directories-exist (list softwares-dir archives-dir metadata-dir))
+
+    (dex:fetch (source-github-url source) archive
+               :if-exists :supersede
+               :proxy *proxy*)
+
+    (let ((extracted-source-directory (extract-tarball archive softwares-dir))
+          (source-directory (merge-pathnames (format nil "~A-~A/"
+                                                     (source-project-name source)
+                                                     (source-github-identifier source))
+                                             softwares-dir)))
+      (rename-file extracted-source-directory source-directory)
+      (run-func-process 'write-standard-metadata
+                        (source-project-name source)
+                        source-directory
+                        archive
+                        metadata-dir))))
+
+(defmethod distify-source ((source source-github) prep-dir &key distinfo-only)
+  ;; Write distinfo.
+  (let ((destination (truename prep-dir)))
     (uiop:with-output-file (out (make-pathname :name (source-project-name source)
                                                :type "txt"
                                                :defaults destination)
                                 :if-exists :supersede)
       (write-distinfo source out))
-
     (when distinfo-only
-      (return-from distify-github destination))
+      (return-from distify-source destination)))
 
-    (let ((softwares-dir (merge-pathnames #P"softwares/" destination))
-          (archives-dir (merge-pathnames #P"archives/" destination))
-          (metadata-dir (merge-pathnames (format nil "~A/~A/"
-                                                 (source-project-name source)
-                                                 (source-version source))
-                                         destination)))
-      (mapc #'ensure-directories-exist (list softwares-dir archives-dir metadata-dir))
-
-      (let ((archive (merge-pathnames
-                       (format nil "~A-~A.tar.gz"
-                               (source-project-name source)
-                               (source-github-identifier source))
-                       archives-dir)))
-        (dex:fetch (source-github-url source) archive
-                   :if-exists :supersede
-                   :proxy *proxy*)
-
-        (let ((extracted-source-directory (extract-tarball archive softwares-dir))
-              (source-directory (merge-pathnames (format nil "~A-~A/"
-                                                         (source-project-name source)
-                                                         (source-github-identifier source))
-                                                 softwares-dir)))
-          (rename-file extracted-source-directory source-directory)
-          (write-standard-metadata (source-project-name source)
-                                   source-directory
-                                   archive
-                                   metadata-dir))))
-
-    destination))
+  ;; If not distinfo-only, construct the rest of the dist.
+  (distify-github-source source prep-dir)
+  (values))

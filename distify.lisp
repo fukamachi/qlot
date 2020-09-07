@@ -1,16 +1,12 @@
 (defpackage #:qlot/distify
   (:use #:cl
-        #:qlot/distify/ql
-        #:qlot/distify/git
-        #:qlot/distify/http
-        #:qlot/distify/github
-        #:qlot/distify/dist)
-  (:import-from #:qlot/source
-                #:source-git
-                #:source-http
-                #:source-github
-                #:source-dist
-                #:source-dist-project)
+        #:qlot/distify-protocol)
+  ;; Require the various source distification modules.
+  (:import-from #:qlot/distify/dist)
+  (:import-from #:qlot/distify/ql)
+  (:import-from #:qlot/distify/git)
+  (:import-from #:qlot/distify/github)
+  (:import-from #:qlot/distify/http)
   (:export #:distify))
 (in-package #:qlot/distify)
 
@@ -19,13 +15,7 @@
   (dolist (source (if (listp source-or-sources)
                       source-or-sources
                       (list source-or-sources)))
-    (funcall (etypecase source
-               (source-dist #'distify-dist)
-               (source-dist-project #'distify-ql)
-               (source-git #'distify-git)
-               (source-github #'distify-github)
-               (source-http #'distify-http))
-             source
-             destination
-             :distinfo-only distinfo-only))
+    (prepare-source-for-dist source destination)
+    (lock-version source destination)
+    (distify-source source destination :distinfo-only distinfo-only))
   destination)

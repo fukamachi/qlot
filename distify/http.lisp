@@ -1,5 +1,7 @@
 (defpackage #:qlot/distify/http
-  (:use #:cl)
+  (:use #:cl #:qlot/distify-protocol)
+  (:import-from #:qlot/source/http
+                #:source-http)
   (:import-from #:qlot/source
                 #:source-project-name
                 #:source-http-url
@@ -16,56 +18,71 @@
   (:import-from #:dexador)
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
-                #:digest-file)
-  (:export #:distify-http))
+                #:digest-file))
 (in-package #:qlot/distify/http)
 
-(defun distify-http (source destination &key distinfo-only)
-  (let* ((destination (truename destination))
-         (archives-dir (merge-pathnames #P"archives/" destination))
-         (softwares-dir (merge-pathnames #P"softwares/" destination)))
-    (let ((archive (merge-pathnames (format nil "~A.tar.gz" (source-project-name source))
-                                    archives-dir)))
-      (unless (uiop:file-exists-p archive)
-        (ensure-directories-exist archive)
-        (dex:fetch (source-http-url source) archive
-                   :if-exists :supersede
-                   :proxy *proxy*))
+(defun archive-path (source prep-dir)
+  (let* ((destination (truename prep-dir))
+         (archives (merge-pathnames #P"archives/" destination)))
+    (merge-pathnames (format nil "~A.tar.gz" (source-project-name source))
+                     archives)))
 
-      (let ((archive-md5 (byte-array-to-hex-string
-                           (digest-file :md5 archive))))
-        (when (and (source-http-archive-md5 source)
-                   (not (string= (source-http-archive-md5 source) archive-md5)))
-          (cerror "Ignore and continue."
-                  "File MD5 of ~S is different from ~S.~%The content seems to have changed."
-                  (source-http-url source)
-                  archive-md5))
+(defmethod prepare-source-for-dist ((source source-http) destination)
+  (let* ((archive (archive-path source destination)))
+    (unless (uiop:file-exists-p archive)
+      (ensure-directories-exist archive)
+      (dex:fetch (source-http-url source) archive
+                 :if-exists :supersede
+                 :proxy *proxy*))
+    (values)))
 
-        (setf (source-http-archive-md5 source) archive-md5)
-        (setf (source-version source)
-              (format nil "~A~A"
-                      (source-version-prefix source)
-                      archive-md5)))
+(defmethod lock-version ((source source-http) prep-dir)
+  (let* ((archive (archive-path source prep-dir))
+         (archive-md5 (byte-array-to-hex-string
+                       (digest-file :md5 archive))))
+    (when (and (source-http-archive-md5 source)
+               (not (string= (source-http-archive-md5 source) archive-md5)))
+      (cerror "Ignore and continue."
+              "File MD5 of ~S is different from ~S.~%The content seems to have changed."
+              (source-http-url source)
+              archive-md5))
 
-      (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                                 :type "txt"
-                                                 :defaults destination)
-                                  :if-exists :supersede)
-        (write-distinfo source out))
+    (setf (source-http-archive-md5 source) archive-md5)
+    (setf (source-version source)
+          (format nil "~A~A"
+                  (source-version-prefix source)
+                  archive-md5))))
 
-      (when distinfo-only
-        (return-from distify-http destination))
+(defun distify-http-source (source prep-dir)
+  (check-type source source-http)
+  (let* ((destination (truename prep-dir))
+         (softwares-dir (merge-pathnames #P"softwares/" destination))
+         (archive (archive-path source destination))
+         (metadata (merge-pathnames (format nil "~A/~A/"
+                                            (source-project-name source)
+                                            (source-version source))
+                                    destination))
+         (source-directory (extract-tarball archive softwares-dir)))
 
-      (let ((metadata (merge-pathnames (format nil "~A/~A/"
-                                               (source-project-name source)
-                                               (source-version source))
-                                       destination))
-            (source-directory (extract-tarball archive softwares-dir)))
-        (ensure-directories-exist metadata)
+    (ensure-directories-exist metadata)
 
-        (write-standard-metadata (source-project-name source)
-                                 source-directory
-                                 archive
-                                 metadata)))
+    (run-func-process 'write-standard-metadata
+                      (source-project-name source)
+                      source-directory
+                      archive
+                      metadata)))
 
-    destination))
+(defmethod distify-source ((source source-http) prep-dir &key distinfo-only)
+  ;; Write distinfo.
+  (let ((destination (truename prep-dir)))
+    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
+                                               :type "txt"
+                                               :defaults destination)
+                                :if-exists :supersede)
+      (write-distinfo source out))
+    (when distinfo-only
+      (return-from distify-source destination)))
+
+  ;; If not distinfo-only, construct the rest of the dist.
+  (distify-http-source source prep-dir)
+  (values))
