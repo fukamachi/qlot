@@ -51,7 +51,7 @@
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/cl-ppcre/distinfo.txt") qlhome))))
         (ok (equal (aget data "version") "ql-2018-08-31")))
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/lsx/distinfo.txt") qlhome))))
-        (ok (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
+        (ok (equal (aget data "version") "github-39f71f91dec8cce81b730dab21dbf4d905acb2a1")))
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/fukamachi-lack/distinfo.txt") qlhome))))
         (ok (equal (aget data "version") "ultralisp-20190904101505")))
 
