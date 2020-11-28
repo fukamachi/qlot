@@ -18,7 +18,6 @@
                "qlot/tests/distify/github"
                "qlot/tests/distify/dist"
                "qlot/tests/distify/ultralisp"
-               "qlot/tests/distify"
                "qlot/tests/server"
                "qlot/tests/install/quicklisp"
                "qlot/tests/install"
