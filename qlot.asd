@@ -11,6 +11,7 @@
   :class :package-inferred-system
   :depends-on ("rove"
                "qlot/tests/parser"
+               "qlot/tests/sources/github"
                "qlot/tests/distify/ql"
                "qlot/tests/distify/git"
                "qlot/tests/distify/http"
