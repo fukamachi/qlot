@@ -1,8 +1,7 @@
 (defpackage #:qlot/source/github
   (:nicknames #:qlot.source.github)
   (:use #:cl
-        #:qlot/source/base
-        #:qlot/source/http)
+        #:qlot/source/base)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:export #:source-github
@@ -14,7 +13,7 @@
            #:source-github-url))
 (in-package #:qlot/source/github)
 
-(defclass source-github (source-http)
+(defclass source-github (source)
   ((repos :initarg :repos
           :accessor source-github-repos)
    (ref :initarg :ref
@@ -42,11 +41,6 @@
                       (length (source-version-prefix source)))
               ;; Otherwise use a ref name from the args.
               (source-github-identifier source))))
-
-(defmethod initialize-instance :after ((source source-github) &key)
-  (unless (slot-boundp source 'qlot/source/http::url)
-    (setf (source-http-url source)
-          (source-github-url source))))
 
 (defmethod make-source ((source (eql :github)) &rest initargs)
   (handler-case

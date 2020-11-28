@@ -4,7 +4,7 @@
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
-                #:source-http-url
+                #:source-github-url
                 #:source-github-repos
                 #:source-github-ref
                 #:source-github-branch
@@ -87,7 +87,7 @@
                                (source-project-name source)
                                (source-github-identifier source))
                        archives-dir)))
-        (dex:fetch (source-http-url source) archive
+        (dex:fetch (source-github-url source) archive
                    :if-exists :supersede
                    :proxy *proxy*)
 
