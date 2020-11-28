@@ -7,6 +7,7 @@
   (:export #:source
            #:source-project-name
            #:source-version
+           #:source-locked-p
            #:source-initargs
            #:source-defrost-args
            #:make-source
@@ -67,11 +68,15 @@
             do (setf (slot-value source slot-name) v)))
     source))
 
+(defun source-locked-p (source)
+  (check-type source source)
+  (slot-boundp source 'version))
+
 (defmethod print-object ((source source) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A"
             (source-project-name source)
-            (if (slot-boundp source 'version)
+            (if (source-locked-p source)
                 (source-version source)
                 "<no version>"))))
 

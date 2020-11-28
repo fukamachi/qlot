@@ -36,7 +36,12 @@
 (defun source-github-url (source)
   (format nil "https://github.com/~A/archive/~A.tar.gz"
           (source-github-repos source)
-          (source-github-identifier source)))
+          (if (source-locked-p source)
+              ;; If locked, get a ref out of the version.
+              (subseq (source-version source)
+                      (length (source-version-prefix source)))
+              ;; Otherwise use a ref name from the args.
+              (source-github-identifier source))))
 
 (defmethod initialize-instance :after ((source source-github) &key)
   (unless (slot-boundp source 'qlot/source/http::url)
