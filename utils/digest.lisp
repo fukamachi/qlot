@@ -30,7 +30,7 @@
       (first
         (split-with #\Space
                     (safety-shell-command "sha1sum" (list (uiop:native-namestring file)))
-                    :limit 1))
+                    :limit 2))
     (shell-command-error ()
       (warn "Command 'sha1sum' not found")
       "ffffffffffffffffffffffffffffffffffffffff")))
