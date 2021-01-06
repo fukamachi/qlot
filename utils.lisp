@@ -10,7 +10,8 @@
            #:with-package-functions
            #:pathname-in-directory-p
            #:merge-hash-tables
-           #:octets-stream-to-string))
+           #:octets-stream-to-string
+           #:slurp-file))
 (in-package #:qlot/utils)
 
 (defmacro with-in-directory (dir &body body)
@@ -92,3 +93,9 @@ with the same key."
       (loop for read-bytes = (read-sequence buffer stream)
             do (write-string (map 'string #'code-char buffer) s)
             while (= read-bytes 1024)))))
+
+(defun slurp-file (file)
+  (with-open-file (in file :element-type '(unsigned-byte 8))
+    (let ((out (make-array (file-length in) :element-type '(unsigned-byte 8))))
+      (read-sequence out in)
+      out)))
