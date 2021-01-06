@@ -7,7 +7,6 @@
                 #:split-with
                 #:slurp-file)
   (:import-from #:md5)
-  (:import-from #:sha1)
   (:export #:md5
            #:sha1sum))
 (in-package #:qlot/utils/digest)
@@ -33,5 +32,5 @@
                     (safety-shell-command "sha1sum" (list (uiop:native-namestring file)))
                     :limit 1))
     (shell-command-error ()
-      (string-downcase
-        (sha1:sha1-hex (slurp-file file))))))
+      (warn "Command 'sha1sum' not found")
+      "ffffffffffffffffffffffffffffffffffffffff")))
