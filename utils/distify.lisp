@@ -11,6 +11,8 @@
                 #:source-distinfo-url)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:debug-log)
   (:import-from #:ironclad)
   (:import-from #:dexador)
   (:export #:releases.txt
@@ -26,6 +28,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
   (first (uiop:directory* path)))
 
 (defun releases.txt (project-name source-directory tarball-file)
+  (debug-log "releases.txt of '~A'" project-name)
   (let* ((source-directory (normalize-pathname source-directory))
          (prefix (car (last (pathname-directory source-directory)))))
     (multiple-value-bind (size file-md5 content-sha1)
@@ -54,6 +57,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                 result)))))
 
 (defun systems.txt (project-name source-directory)
+  (debug-log "systems.txt of '~A'" project-name)
   (with-output-to-string (s)
     (format s "# project system-file system-name [dependency1..dependencyN]~%")
     (with-directory (system-file system-name dependencies) source-directory

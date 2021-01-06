@@ -9,7 +9,10 @@
                 #:source-git
                 #:source-http
                 #:source-dist
-                #:source-dist-project)
+                #:source-dist-project
+                #:source-project-name)
+  (:import-from #:qlot/logger
+                #:debug-log)
   (:export #:distify))
 (in-package #:qlot/distify)
 
@@ -18,6 +21,7 @@
   (dolist (source (if (listp source-or-sources)
                       source-or-sources
                       (list source-or-sources)))
+    (debug-log "distify '~A'" (source-project-name source))
     (funcall (etypecase source
                (source-dist #'distify-dist)
                (source-dist-project #'distify-ql)
