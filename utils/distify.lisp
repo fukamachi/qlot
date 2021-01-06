@@ -37,7 +37,10 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                   (ironclad:byte-array-to-hex-string
                     (ironclad:digest-file :md5 tarball-file))
                   (ironclad:byte-array-to-hex-string
-                    (ironclad:digest-stream :sha1 in))))
+                    (ironclad:digest-sequence :sha1
+                                              (let ((out (make-array (file-length in) :element-type '(unsigned-byte 8))))
+                                                (read-sequence out in)
+                                                out)))))
       (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
               project-name
               (format nil "qlot://localhost/archives/~A"
