@@ -8,8 +8,8 @@
                 #:with-qlot-server)
   (:import-from #:qlot/source
                 #:make-source)
-  (:import-from #:ironclad
-                #:digest-file))
+  (:import-from #:qlot/utils/digest
+                #:md5))
 (in-package #:qlot/tests/server)
 
 (deftest make-handler-tests
@@ -30,8 +30,8 @@
   (let ((*handler* (make-handler (asdf:system-source-directory :qlot))))
     (uiop:with-temporary-file (:pathname file)
       (qlot-fetch "qlot://localhost/server.lisp" file)
-      (ok (equalp (ironclad:digest-file :md5 file)
-                  (ironclad:digest-file :md5 (asdf:system-relative-pathname :qlot #P"server.lisp")))))
+      (ok (equalp (md5 file)
+                  (md5 (asdf:system-relative-pathname :qlot #P"server.lisp")))))
     (uiop:with-temporary-file (:pathname file)
       (qlot-fetch "qlot://localhost/not-found-file" file)
       (ok (equal (uiop:read-file-string file)

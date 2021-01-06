@@ -15,9 +15,8 @@
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:dexador)
-  (:import-from #:ironclad
-                #:byte-array-to-hex-string
-                #:digest-file)
+  (:import-from #:qlot/utils/digest
+                #:md5)
   (:export #:distify-http))
 (in-package #:qlot/distify/http)
 
@@ -33,8 +32,7 @@
                    :if-exists :supersede
                    :proxy *proxy*))
 
-      (let ((archive-md5 (byte-array-to-hex-string
-                           (digest-file :md5 archive))))
+      (let ((archive-md5 (md5 archive)))
         (when (and (source-http-archive-md5 source)
                    (not (string= (source-http-archive-md5 source) archive-md5)))
           (cerror "Ignore and continue."

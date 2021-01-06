@@ -23,10 +23,6 @@
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:directory-system-files)
-  (:import-from #:ironclad
-                #:byte-array-to-hex-string
-                #:digest-file
-                #:digest-sequence)
   (:export #:distify-git))
 (in-package #:qlot/distify/git)
 
