@@ -7,15 +7,13 @@
                 #:parse-distinfo-stream
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
-  (:import-from #:qlot/utils/digest
-                #:md5
-                #:sha1sum)
   (:import-from #:qlot/source
                 #:source-distinfo-url)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/logger
                 #:debug-log)
+  (:import-from #:ironclad)
   (:import-from #:dexador)
   (:export #:releases.txt
            #:systems.txt
@@ -36,8 +34,13 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
     (multiple-value-bind (size file-md5 content-sha1)
         (with-open-file (in tarball-file :element-type '(unsigned-byte 8))
           (values (file-length in)
-                  (md5 tarball-file)
-                  (sha1sum tarball-file)))
+                  (ironclad:byte-array-to-hex-string
+                    (ironclad:digest-file :md5 tarball-file))
+                  (ironclad:byte-array-to-hex-string
+                    (ironclad:digest-sequence :sha1
+                                              (let ((out (make-array (file-length in) :element-type '(unsigned-byte 8))))
+                                                (read-sequence out in)
+                                                out)))))
       (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
               project-name
               (format nil "qlot://localhost/archives/~A"
