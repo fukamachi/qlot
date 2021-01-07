@@ -99,7 +99,8 @@
       *default-args*
 
       (when use-core
-        (-m use-core))
+        #+ros.init (list "-m" use-core)
+        #-ros.init (-m use-core))
 
       (when source-registry
         (-e `(push ,source-registry asdf:*central-registry*)))
