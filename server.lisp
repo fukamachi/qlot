@@ -58,7 +58,8 @@
                                          ,destination
                                          :distinfo-only ,distinfo-only)))
               :systems '("qlot/distify")
-              :source-registry (asdf:system-source-directory :qlot))))
+              :source-registry (asdf:system-source-directory :qlot)
+              :use-core "qlot")))
 
 (defmacro with-qlot-server ((source &optional qlhome destination) &body body)
   (let ((g-source (gensym "SOURCE"))

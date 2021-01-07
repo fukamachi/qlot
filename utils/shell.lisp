@@ -58,6 +58,14 @@
     #+cmu "-eval"
     #+ecl "-eval"))
 
+(defvar *core-option*
+  (or
+    #+ccl "--image-name"
+    #+sbcl "--core"
+    #+allegro "-I"
+    #+clisp "-M"
+    #+cmu "-core"))
+
 (defun str (form)
   (let ((*package* (find-package :cl-user)))
     (if (stringp form)
@@ -67,6 +75,10 @@
 
 (defun -e (form)
   (list *eval-option* (str form)))
+
+(defun -m (name)
+  (when *core-option*
+    (list *core-option* name)))
 
 (defvar *default-args*
   (append
@@ -79,12 +91,15 @@
                (uiop:print-backtrace :condition cl-user::c)
                (uiop:quit -1))))))
 
-(defun build-command-args (forms &key systems source-registry without-quicklisp)
+(defun build-command-args (forms &key systems source-registry without-quicklisp use-core)
   (let ((qlhome (if without-quicklisp
                     nil
                     (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
     (append
       *default-args*
+
+      (when use-core
+        (-m use-core))
 
       (when source-registry
         (-e `(push ,source-registry asdf:*central-registry*)))
@@ -112,18 +127,17 @@
                          form))))))
 
 #+ros.init
-(defun run-roswell (forms &rest args &key systems source-registry without-quicklisp)
-  (declare (ignore systems source-registry without-quicklisp))
+(defun run-roswell (forms &rest args &key systems source-registry without-quicklisp use-core)
+  (declare (ignore systems source-registry without-quicklisp use-core))
   (let ((ros (or (ros:opt "wargv0")
                  (ros:opt "argv0"))))
     (safety-shell-command ros
                           (list* "+Q"
                                  "-L" "sbcl-bin"
-                                 "-m" "qlot"
                                  (apply #'build-command-args forms args)))))
 
-(defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
-  (declare (ignore systems source-registry without-quicklisp))
+(defun run-lisp (forms &rest args &key systems source-registry without-quicklisp use-core)
+  (declare (ignore systems source-registry without-quicklisp use-core))
   #+ros.init
   (apply #'run-roswell forms args)
   #-ros.init
