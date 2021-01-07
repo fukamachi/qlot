@@ -119,6 +119,7 @@
     (safety-shell-command ros
                           (list* "+Q"
                                  "-L" "sbcl-bin"
+                                 "-m" "qlot"
                                  (apply #'build-command-args forms args)))))
 
 (defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
