@@ -3,7 +3,8 @@ FROM fukamachi/sbcl:${SBCL_VERSION}
 
 RUN set -x; \
   apt-get update && apt-get -y install --no-install-recommends \
-    git && \
+    git \
+    openssh-client && \
   rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
