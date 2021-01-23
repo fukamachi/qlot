@@ -273,7 +273,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                  (with-quicklisp-home system-qlhome
                    (with-qlot-server (source qlhome tmp-dir)
                      (debug-log "Using temporary directory '~A'" tmp-dir)
-                     (install-source source qlhome))))
+                     (install-source source tmp-dir))))
                 (t
                  (with-quicklisp-home system-qlhome
                    (with-qlot-server (source qlhome tmp-dir)
