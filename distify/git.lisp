@@ -52,8 +52,7 @@
 
   (source-version source))
 
-(defun distify-git-source (source prep-dir)
-  (check-type source source-git)
+(defmethod finalize-dist ((source source-git) prep-dir)
   (let* ((*default-pathname-defaults* (truename prep-dir))
          (softwares (merge-pathnames #P"softwares/"))
          (archives (merge-pathnames #P"archives/"))
@@ -82,18 +81,3 @@
                           source-directory
                           tarball
                           metadata)))))
-
-(defmethod distify-source ((source source-git) prep-dir &key distinfo-only)
-  ;; Write distinfo
-  (let ((destination (truename prep-dir)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt"
-                                               :defaults destination)
-                                :if-exists :supersede)
-      (write-distinfo source out))
-    (when distinfo-only
-      (return-from distify-source destination)))
-
-  ;; If not distinfo-only, construct the rest of the dist.
-  (distify-git-source source prep-dir)
-  (values))

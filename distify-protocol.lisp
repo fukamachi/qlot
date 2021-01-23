@@ -1,18 +1,23 @@
 (defpackage #:qlot/distify-protocol
   (:use #:cl)
   (:import-from #:qlot/source
+                #:source
                 #:source-project-name
                 #:source-version
                 #:source-frozen-slots
                 #:source-initargs
-                #:defrost-source)
+                #:defrost-source
+                #:write-distinfo)
   (:import-from #:qlot/utils/ql
                 #:*system-quicklisp-home*)
   (:import-from #:qlot/utils/shell
                 #:run-lisp)
+  (:import-from #:uiop
+                #:with-output-file)
   (:export #:prepare-source-for-dist
-           #:lock-version
-           #:distify-source)
+           #:lock-version)
+  (:export #:write-source-distinfo
+           #:finalize-dist)
   (:export #:run-func-process))
 (in-package #:qlot/distify-protocol)
 
@@ -36,11 +41,14 @@ the lockfile to be stable.
 
 Returns the version that has been set by locking."))
 
-(defgeneric distify-source (source prep-dir &key distinfo-only)
-  (:documentation "Convert SOURCE, prepared into PREP-DIR, into an
-ql-installable dist. SOURCE will have had LOCK-VERSION called on it
-before this method is called, although this method may be called on a
-defrosted copy of the source, and not the original object."))
+(defgeneric write-dist-metadata (source destination)
+  (:method ((source source) destination)
+    (let ((destinatioon (truename destination)))
+      (uiop:with-output-file (out (make-pathname :name (source-project-name source)
+                                                 :type "txt"
+                                                 :defaults destination)
+                                  :if-exists :supersede)
+        (write-distinfo source out)))))
 
 (defun run-func-process (operation &rest args)
   "Apply the function named by OPERATION to ARGS in an isolated
@@ -53,3 +61,29 @@ sub-process."
                                         ,@args)))
               :systems (list (package-name (symbol-package operation)))
               :source-registry (asdf:system-source-directory :qlot))))
+
+(defgeneric write-source-distinfo (source prep-dir)
+  (:documentation "Write a distinfo file for SOURCE into
+PREP-DIR. This involves determining the current version of the source,
+which may in turn require dist data or code to be downloaded. This
+must be called before FINALIZE-DIST in order to produce a complete
+dist for SOURCE in PREP-DIR.")
+  (:method ((source source) prep-dir)
+    (prepare-source-for-dist source prep-dir)
+    (lock-version source prep-dir)
+    (write-dist-metadata source prep-dir)))
+
+(defgeneric finalize-dist (source prep-dir)
+  (:documentation "Finish constructing a complete installable dist for
+SOURCE at PREP-DIR, after the distinfo metadata has been written by
+calling WRITE-DISTINFO.
+
+If the source version can be fetched remotely, and specific versions
+of the source archive can be fetched, nearly all of the work of
+producing a dist can be done here. This has performance benefits by
+allowing a source to be checked for updates without WRITE-DISTINFO
+having to construct a full dist.
+
+For sources where this is not possible, like the HTTP source, this
+method must perform any work not already done by WRITE-DISTINFO; as
+much work as possible should be deferred to this method."))

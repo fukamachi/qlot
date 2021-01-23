@@ -10,12 +10,16 @@
   (:export #:distify))
 (in-package #:qlot/distify)
 
+;; :DISTINFO-ONLY is an old option formerly used for a performance
+;; optimization now done more cleanly by using CREATE-VERSIONED-DIST
+;; on its own. It's still here for backwards compatibility, but
+;; there's not much reason to use it.
 (defun distify (source-or-sources destination &key distinfo-only)
   (check-type destination pathname)
   (dolist (source (if (listp source-or-sources)
                       source-or-sources
                       (list source-or-sources)))
-    (prepare-source-for-dist source destination)
-    (lock-version source destination)
-    (distify-source source destination :distinfo-only distinfo-only))
+    (write-source-distinfo source destination)
+    (unless distinfo-only
+      (finalize-dist source destination)))
   destination)

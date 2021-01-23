@@ -28,9 +28,10 @@
                             (slot-value source 'qlot/source/dist::%version))))
   (source-distinfo-url source))
 
-(defmethod distify-source ((source source-dist) prep-dir &key distinfo-only)
-  (declare (ignore distinfo-only))
+(defmethod write-source-distinfo ((source source-dist) prep-dir)
   (let ((destination (truename prep-dir)))
+    (prepare-source-for-dist source destination)
+    (lock-version source destination)
     (dex:fetch (source-distinfo-url source)
                (make-pathname :name (source-project-name source)
                               :type "txt"
@@ -38,3 +39,7 @@
                :if-exists :supersede
                :proxy *proxy*)
     destination))
+
+(defmethod finalize-dist ((source source-dist) prep-dir)
+  ;; We do not need to generate system or release data for a dist source.
+  (values))

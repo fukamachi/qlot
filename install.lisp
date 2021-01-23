@@ -10,6 +10,9 @@
                 #:freeze-source)
   (:import-from #:qlot/parser
                 #:read-qlfile-for-install)
+  (:import-from #:qlot/distify-protocol
+                #:write-source-distinfo
+                #:finalize-dist)
   (:import-from #:qlot/distify
                 #:distify)
   (:import-from #:qlot/server
@@ -208,6 +211,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       new-dist)))
 
 (defun update-source (source tmp-dir)
+  (write-source-distinfo source tmp-dir)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
@@ -218,7 +222,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (version dist)
                        (version new-dist))
               (map nil #'uninstall (installed-releases dist))
-              (distify source tmp-dir)
+              (finalize-dist source tmp-dir)
               (setf dist (find-dist (source-dist-name source))
                     new-dist (available-update dist))
               (let ((*trace-output* (make-broadcast-stream)))

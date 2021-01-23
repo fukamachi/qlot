@@ -68,33 +68,25 @@
                   (source-version-prefix source)
                   version))))
 
-(defmethod distify-source ((source source-dist-project) prep-dir &key distinfo-only)
-  (let ((destination (truename prep-dir)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt"
-                                               :defaults destination)
-                                :if-exists :supersede)
-      (write-distinfo source out))
-    (when distinfo-only
-      (return-from distify-source destination))
-
-    (let ((metadata (merge-pathnames (format nil "~A/~A/"
-                                             (source-project-name source)
-                                             (source-version source))
-                                     destination)))
-      (ensure-directories-exist metadata)
-      (let ((original-distinfo
-              (parse-distinfo-stream (dex:get (source-distinfo-url source)
-                                              :want-stream t
-                                              :proxy *proxy*))))
-        (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
-                                 ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
-          (destructuring-bind (file . url) metadata-pair
-            (check-type url string)
-            (let ((data (parse-space-delimited-stream (dex:get url :want-stream t :proxy *proxy*)
-                                                      :test (lambda (data)
-                                                              (equal (first data) (source-project-name source)))
-                                                      :include-header t)))
-              (uiop:with-output-file (out (merge-pathnames file metadata))
-                (format out "~{~{~A~^ ~}~%~}" data)))))))
-    (values)))
+(defmethod finalize-dist ((source source-dist-project) prep-dir)
+  (let* ((destination (truename prep-dir))
+         (metadata (merge-pathnames (format nil "~A/~A/"
+                                            (source-project-name source)
+                                            (source-version source))
+                                    destination)))
+    (ensure-directories-exist metadata)
+    (let ((original-distinfo
+           (parse-distinfo-stream (dex:get (source-distinfo-url source)
+                                           :want-stream t
+                                           :proxy *proxy*))))
+      (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
+                               ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
+        (destructuring-bind (file . url) metadata-pair
+          (check-type url string)
+          (let ((data (parse-space-delimited-stream (dex:get url :want-stream t :proxy *proxy*)
+                                                    :test (lambda (data)
+                                                            (equal (first data) (source-project-name source)))
+                                                    :include-header t)))
+            (uiop:with-output-file (out (merge-pathnames file metadata))
+              (format out "~{~{~A~^ ~}~%~}" data)))))))
+  (values))

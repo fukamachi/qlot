@@ -53,8 +53,7 @@
                   (source-version-prefix source)
                   archive-md5))))
 
-(defun distify-http-source (source prep-dir)
-  (check-type source source-http)
+(defmethod finalize-dist ((source source-http) prep-dir)
   (let* ((destination (truename prep-dir))
          (softwares-dir (merge-pathnames #P"softwares/" destination))
          (archive (archive-path source destination))
@@ -71,18 +70,3 @@
                       source-directory
                       archive
                       metadata)))
-
-(defmethod distify-source ((source source-http) prep-dir &key distinfo-only)
-  ;; Write distinfo.
-  (let ((destination (truename prep-dir)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt"
-                                               :defaults destination)
-                                :if-exists :supersede)
-      (write-distinfo source out))
-    (when distinfo-only
-      (return-from distify-source destination)))
-
-  ;; If not distinfo-only, construct the rest of the dist.
-  (distify-http-source source prep-dir)
-  (values))

@@ -51,9 +51,8 @@
            (*system-quicklisp-home* #+quicklisp ql:*quicklisp-home*
                                     #-quicklisp nil)
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
+       (declare (ignore ,g-source))
        (with-tmp-directory (,destination)
-         ;; Run distify in another Lisp process
-         (distify ,g-source ,destination :distinfo-only t)
          (progv (list ,fetch-scheme-functions '*handler*)
              (list (cons '("qlot" . qlot-fetch)
                          (symbol-value ,fetch-scheme-functions))

@@ -8,6 +8,8 @@
                 #:with-qlot-server)
   (:import-from #:qlot/source
                 #:make-source)
+  (:import-from #:qlot/distify-protocol
+                #:write-source-distinfo)
   (:import-from #:ironclad
                 #:digest-file))
 (in-package #:qlot/tests/server)
@@ -38,12 +40,15 @@
                  "")))))
 
 (deftest with-qlot-server-tests
-  (with-qlot-server ((make-source :git "lsx" "https://github.com/fukamachi/lsx"))
-    (uiop:with-temporary-file (:pathname file)
-      (ql-http:fetch "qlot://localhost/lsx.txt" file)
-      (ok (not (equal (uiop:read-file-string file)
-                      ""))))
-    (uiop:with-temporary-file (:pathname file)
-      (ql-http:fetch "qlot://localhost/not-found-file" file)
-      (ok (equal (uiop:read-file-string file)
-                 "")))))
+  (let ((source (make-source :git "lsx" "https://github.com/fukamachi/lsx")))
+    (with-qlot-server (source nil *default-pathname-defaults*)
+      (write-source-distinfo source *default-pathname-defaults*)
+
+      (uiop:with-temporary-file (:pathname file)
+        (ql-http:fetch "qlot://localhost/lsx.txt" file)
+        (ok (not (equal (uiop:read-file-string file)
+                        ""))))
+      (uiop:with-temporary-file (:pathname file)
+        (ql-http:fetch "qlot://localhost/not-found-file" file)
+        (ok (equal (uiop:read-file-string file)
+                   ""))))))
