@@ -48,8 +48,10 @@
         (destination (or destination (gensym "DESTINATION"))))
     `(let ((,g-source ,source)
            (,g-qlhome ,qlhome)
-           (*system-quicklisp-home* #+quicklisp ql:*quicklisp-home*
-                                    #-quicklisp nil)
+           (*system-quicklisp-home* (if (boundp '*system-quicklisp-home*)
+                                        *system-quicklisp-home*
+                                        #+quicklisp ql:*quicklisp-home*
+                                        #-quicklisp nil))
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
        (declare (ignore ,g-source))
        (with-tmp-directory (,destination)
