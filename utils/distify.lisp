@@ -3,19 +3,11 @@
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:directory-system-files)
-  (:import-from #:qlot/utils/ql
-                #:parse-distinfo-stream
-                #:make-versioned-distinfo-url
-                #:make-versioned-distinfo-url-with-template)
-  (:import-from #:qlot/source
-                #:source-distinfo-url)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
   (:import-from #:ironclad)
-  (:import-from #:dexador)
+  (:import-from #:uiop)
   (:export #:releases.txt
            #:systems.txt
-           #:get-distinfo-url))
+           #:write-standard-metadta))
 (in-package #:qlot/utils/distify)
 
 (defun normalize-pathname (path)
@@ -60,26 +52,11 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
               system-name
               dependencies))))
 
-(defun get-distinfo-url (distribution version)
-  (let* ((distinfo-data
-           (parse-distinfo-stream (dex:get distribution
-                                           :want-stream t
-                                           :proxy *proxy*)))
-         (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
-                                            :test #'string=)))
-         (distinfo-url (or (cdr (assoc "canonical-distinfo-url" distinfo-data
-                                       :test #'string=))
-                           (cdr (assoc "distinfo-subscription-url" distinfo-data
-                                       :test #'string=))
-                           distribution)))
-    (cond
-      ((eq :latest version)
-       distinfo-url)
-      (distinfo-template-url
-       (make-versioned-distinfo-url-with-template
-         distinfo-template-url
-         version))
-      (t
-       (make-versioned-distinfo-url
-         distribution
-         version)))))
+(defun write-standard-metadata (project-name source-directory tarball-file metadata-dir)
+  (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata-dir))
+    (princ (systems.txt project-name source-directory)
+           out))
+  (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata-dir))
+    (princ (releases.txt project-name source-directory tarball-file)
+           out))
+  (values))

@@ -1,8 +1,7 @@
 (defpackage #:qlot/tests/distify/ql
   (:use #:cl
         #:rove
-        #:qlot/distify/ql
-        #:qlot/distify/dist)
+        #:qlot/distify)
   (:import-from #:qlot/source
                 #:make-source
                 #:source-project-name
@@ -26,7 +25,7 @@
 
 (deftest distify-ql-tests
   (let ((source (make-source :ql "log4cl" "2014-03-17")))
-    (distify-ql source *tmp-directory*)
+    (distify source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "log4cl"
                                        :type "txt"
@@ -54,7 +53,7 @@
                    releases)))))
 
   (let ((source (make-source :ql "not-found-project" "2014-03-17")))
-    (ok (signals (distify-ql source *tmp-directory*)
+    (ok (signals (distify source *tmp-directory*)
                  'qlot-error))
 
     (ng (uiop:file-exists-p (make-pathname :name "not-found-project"
@@ -62,7 +61,7 @@
                                            :defaults *tmp-directory*))))
 
   (let ((source (make-source :ql "hunchentoot" "2000-01-01")))
-    (ok (signals (distify-ql source *tmp-directory*)
+    (ok (signals (distify source *tmp-directory*)
                  'qlot-error))
 
     (ng (uiop:file-exists-p (make-pathname :name "hunchentoot"
@@ -70,7 +69,7 @@
                                            :defaults *tmp-directory*))))
 
   (let ((source (make-source :ql :all :latest)))
-    (distify-dist source *tmp-directory*)
+    (distify source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "quicklisp"
                                        :type "txt"
@@ -80,7 +79,7 @@
         (ok (equal (aget data "name") "quicklisp")))))
 
   (let ((source (make-source :ql :all "2019-08-13")))
-    (distify-dist source *tmp-directory*)
+    (distify source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "quicklisp"
                                        :type "txt"

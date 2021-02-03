@@ -9,6 +9,11 @@
            #:source-http-archive-md5))
 (in-package #:qlot/source/http)
 
+;; Note: the HTTP source only supports retrieving gzipped tarballs,
+;; and those must have a specific structure (one directory of code,
+;; with the root directory entry coming first in the tarball). See
+;; also the note with QLOT/UTILS/ARCHIVE:EXTRACT-TARBALL.
+
 (defclass source-http (source)
   ((url :initarg :url
         :accessor source-http-url)

@@ -1,10 +1,11 @@
 (defpackage #:qlot/distify/git
-  (:use #:cl)
+  (:use #:cl #:qlot/distify-protocol)
   (:import-from #:qlot/source/base
                 #:source-project-name
                 #:source-dist-name
                 #:source-version
                 #:source-version-prefix
+                #:source-locked-p
                 #:write-distinfo)
   (:import-from #:qlot/source/git
                 #:source-git
@@ -14,8 +15,7 @@
                 #:source-git-ref
                 #:source-git-identifier)
   (:import-from #:qlot/utils/distify
-                #:releases.txt
-                #:systems.txt)
+                #:write-standard-metadata)
   (:import-from #:qlot/utils/git
                 #:git-clone
                 #:git-ref
@@ -26,61 +26,58 @@
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
                 #:digest-file
-                #:digest-sequence)
-  (:export #:distify-git))
+                #:digest-sequence))
 (in-package #:qlot/distify/git)
 
-(defun load-source-git-version (source)
-  (unless (ignore-errors (source-git-ref source))
+;; Version-locking drives the clone, rather than cloning and
+;; determining the version afterwards, so prepare is a no-op.
+(defmethod prepare-source-for-dist ((source source-git) destination)
+  (declare (ignore source destination))
+  (values))
+
+(defmethod lock-version ((source source-git) prep-dir)
+  (declare (ignore prep-dir))
+  (unless (source-locked-p source)
     (let ((ref (git-ref (source-git-remote-url source)
                         (or (source-git-tag source)
                             (source-git-branch source)
                             "HEAD"))))
-      (setf (source-git-ref source) ref)))
-  (unless (ignore-errors (source-version source))
-    (setf (source-version source)
-          (format nil "~A~A"
-                  (source-version-prefix source)
-                  (source-git-ref source)))))
+      (setf (source-version source)
+            (format nil "~A~A"
+                    (source-version-prefix source)
+                    ref))))
 
-(defun distify-git (source destination &key distinfo-only)
-  (check-type source source-git)
-  (load-source-git-version source)
+  (setf (source-git-ref source)
+        (subseq (source-version source) (length (source-version-prefix source))))
 
-  (let ((*default-pathname-defaults* (truename destination)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt")
-                                :if-exists :supersede)
-      (write-distinfo source out))
-    (when distinfo-only
-      (return-from distify-git destination))
+  (source-version source))
 
-    (let ((softwares (merge-pathnames #P"softwares/"))
-          (archives (merge-pathnames #P"archives/"))
-          (metadata (merge-pathnames (format nil "~A/~A/"
-                                             (source-project-name source)
-                                             (source-version source)))))
-      (ensure-directories-exist softwares)
-      (ensure-directories-exist archives)
-      (ensure-directories-exist metadata)
-      (let ((source-directory (merge-pathnames (format nil "~A-~A/"
-                                                       (source-project-name source)
-                                                       (source-git-identifier source))
-                                               softwares)))
-        (git-clone (source-git-remote-url source)
-                   source-directory
-                   :checkout-to (or (source-git-branch source)
-                                    (source-git-tag source)
-                                    "master")
-                   :ref (source-git-ref source))
+(defmethod finalize-dist ((source source-git) prep-dir)
+  (let* ((*default-pathname-defaults* (truename prep-dir))
+         (softwares (merge-pathnames #P"softwares/"))
+         (archives (merge-pathnames #P"archives/"))
+         (metadata (merge-pathnames (format nil "~A/~A/"
+                                            (source-project-name source)
+                                            (source-version source)))))
+    (ensure-directories-exist softwares)
+    (ensure-directories-exist archives)
+    (ensure-directories-exist metadata)
+    (let ((source-directory (merge-pathnames (format nil "~A-~A/"
+                                                     (source-project-name source)
+                                                     (source-git-identifier source))
+                                             softwares)))
+      (git-clone (source-git-remote-url source)
+                 source-directory
+                 :checkout-to (or (source-git-branch source)
+                                  (source-git-tag source)
+                                  "master")
+                 :ref (source-git-ref source))
 
-        (let ((tarball (create-git-tarball source-directory
-                                           archives
-                                           (source-git-ref source))))
-          (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata))
-            (princ (systems.txt (source-project-name source) source-directory) out))
-
-          (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata))
-            (princ (releases.txt (source-project-name source) source-directory tarball) out)))))
-
-    *default-pathname-defaults*))
+      (let ((tarball (create-git-tarball source-directory
+                                         archives
+                                         (source-git-ref source))))
+        (run-func-process 'write-standard-metadata
+                          (source-project-name source)
+                          source-directory
+                          tarball
+                          metadata)))))
