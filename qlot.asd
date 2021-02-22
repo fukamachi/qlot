@@ -5,7 +5,18 @@
   :license "MIT"
   :description "A project-local library installer"
   :depends-on ("qlot/main")
-  :in-order-to ((test-op (test-op "qlot/tests"))))
+  :output-files (image-op (o c)
+                  (output-files o :qlot/command))
+  :in-order-to ((test-op (test-op "qlot/tests"))
+                (build-op (program-op "qlot/command"))))
+
+(defsystem "qlot/command"
+  :depends-on ("qlot/cli"
+               "qlot/main"
+               "qlot/install")
+  :build-operation "program-op"
+  :build-pathname "qlot"
+  :entry-point "qlot/cli::main")
 
 (defsystem "qlot/tests"
   :class :package-inferred-system

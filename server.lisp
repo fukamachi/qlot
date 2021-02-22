@@ -9,7 +9,8 @@
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/shell
-                #:run-lisp)
+                #:run-lisp
+                #:*qlot-source-directory*)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:export #:with-qlot-server
@@ -58,7 +59,8 @@
                                          ,destination
                                          :distinfo-only ,distinfo-only)))
               :systems '("qlot/distify")
-              :source-registry (asdf:system-source-directory :qlot))))
+              :source-registry (or *qlot-source-directory*
+                                   (asdf:system-source-directory :qlot)))))
 
 (defmacro with-qlot-server ((source &optional qlhome destination) &body body)
   (let ((g-source (gensym "SOURCE"))

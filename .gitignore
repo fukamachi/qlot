@@ -11,3 +11,5 @@ t/tmp
 t/data/qlfile2.lock
 
 tests/tmp
+
+qlot

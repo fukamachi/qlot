@@ -4,8 +4,12 @@
                 #:debug-log)
   (:export #:safety-shell-command
            #:shell-command-error
-           #:run-lisp))
+           #:run-lisp
+           #:*qlot-source-directory*))
 (in-package #:qlot/utils/shell)
+
+(defparameter *qlot-source-directory*
+  (asdf:system-source-directory :qlot))
 
 (define-condition shell-command-error (simple-error)
   ((command :type cons

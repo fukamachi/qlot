@@ -1,24 +1,31 @@
 (defpackage #:qlot/cli
   (:use #:cl)
+  (:import-from #:qlot/logger)
+  (:import-from #:qlot/errors)
+  (:import-from #:qlot/utils/cli
+                #:exec
+                #:which
+                #:command-line-arguments)
   (:export #:install
            #:update
-           #:rename-quicklisp-to-dot-qlot
-           #:extend-source-registry))
+           #:main))
 (in-package #:qlot/cli)
 
 (defun install (&optional (object *default-pathname-defaults*) &rest args)
-  (let ((*standard-output* (make-broadcast-stream))
-        (*trace-output* (make-broadcast-stream)))
-    (asdf:load-system :qlot/install))
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
   (destructuring-bind (&key install-deps) args
     (uiop:symbol-call '#:qlot/install '#:install-project
                       (pathname (or object *default-pathname-defaults*))
                       :install-deps install-deps)))
 
 (defun update (&optional (object *default-pathname-defaults*) &rest args)
-  (let ((*standard-output* (make-broadcast-stream))
-        (*trace-output* (make-broadcast-stream)))
-    (asdf:load-system :qlot/install))
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
   (destructuring-bind (&key projects install-deps) args
     (uiop:symbol-call '#:qlot/install '#:update-project
                       (pathname (or object *default-pathname-defaults*))
@@ -83,3 +90,155 @@ in CL_SOURCE_REGISTRY environment variable."
                            ":")
                        current-value)))
       dir-to-add))
+
+(defmacro case-equal (keyform &body cases)
+  (let ((g-keyform (gensym "KEYFORM")))
+    `(let ((,g-keyform ,keyform))
+       (cond
+         ,@(loop for (case . body) in cases
+                 if (eq case 'otherwise)
+                   collect `(t ,@body)
+                 else
+                   collect `((find ,g-keyform ',(if (listp case)
+                                                    case
+                                                    (list case))
+                                   :test #'equal)
+                             ,@body))))))
+
+(defun split (div sequence)
+  (let ((pos (position div sequence)))
+    (if pos
+        (list* (subseq sequence 0 pos)
+               (split div (subseq sequence (1+ pos))))
+        (list sequence))))
+
+(defun print-usage ()
+  (format *error-output*
+          "~&Usage: ~A COMMAND [ARGS..]
+
+COMMANDS:
+    install
+        Installs libraries to './.qlot'.
+
+    update
+        Makes './.qlot' up-to-date and update 'qlfile.lock'.
+        Possible to update specific projects with --project option.
+        ex) qlot update --project mito
+
+    bundle
+        Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
+
+    run
+        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
+
+    exec [shell-args..]
+        Invokes the following shell-command with the project local Quicklisp.
+
+OPTIONS:
+    --version
+        Show the Qlot version
+    --debug
+        A flag to enable debug logging. (Only for 'install' or 'update')
+    --no-deps
+        Don't install dependencies of all systems from the current directory.
+"
+          "qlot"))
+
+(defun print-version ()
+  (format t "~&Qlot ~A~%"
+          (asdf:component-version (asdf:find-system :qlot))))
+
+(defun parse-argv (argv)
+  (loop with target = nil
+        with projects = '()
+        with install-deps = t
+        for option = (pop argv)
+        while option
+        do (case-equal option
+             ("--project"
+              (unless argv
+                (qlot/errors:ros-command-error "--project requires a project name"))
+              (setf projects
+                    (append projects
+                            (remove ""
+                                    (split #\, (pop argv))
+                                    :test 'equal))))
+             ("--version"
+              (print-version)
+              (uiop:quit -1))
+             ("--debug"
+              (setf qlot/logger:*debug* t))
+             ("--no-deps"
+              (setf install-deps nil))
+             (otherwise
+              (if target
+                  (qlot/errors:ros-command-error "'~A' is unknown option" option)
+                  (setf target option))))
+        finally
+           (return
+             (append (list target
+                           :install-deps install-deps)
+                     (when projects
+                       (list :projects projects))))))
+
+(defun use-local-quicklisp ()
+  ;; Set QUICKLISP_HOME ./.qlot/
+  (unless (uiop:getenv "QUICKLISP_HOME")
+    (when (and (not (uiop:directory-exists-p #P".qlot/"))
+               (uiop:directory-exists-p #P"quicklisp/")
+               (uiop:file-exists-p #P"quicklisp/setup.lisp"))
+      (rename-quicklisp-to-dot-qlot nil t))
+    (setf (uiop:getenv "QUICKLISP_HOME") ".qlot/"))
+  (let ((path (or (probe-file (uiop:getenv "QUICKLISP_HOME"))
+                  (merge-pathnames (uiop:getenv "QUICKLISP_HOME")
+                                   (make-pathname :defaults *default-pathname-defaults* :name nil :type nil)))))
+    (unless (probe-file path)
+      (qlot/errors:ros-command-error "'~A~A' does not exist."
+                                     *default-pathname-defaults*
+                                     (uiop:getenv "QUICKLISP_HOME")))
+    (unless (probe-file (merge-pathnames "setup.lisp" path))
+      (qlot/errors:ros-command-error "Invalid Quicklisp directory: '~A'"
+                                     (uiop:getenv "QUICKLISP_HOME"))))
+
+  ;; Overwrite CL_SOURCE_REGISTRY to the current directory
+  (setf (uiop:getenv "CL_SOURCE_REGISTRY")
+        (extend-source-registry
+          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
+          (uiop:native-namestring (asdf:system-source-directory :qlot))
+          (extend-source-registry
+            (uiop:getenv "CL_SOURCE_REGISTRY")
+            (uiop:native-namestring (truename *default-pathname-defaults*))))))
+
+(defun qlot-command (&optional $1 &rest argv)
+  (handler-case
+      (cond ((equal "install" $1)
+             (apply #'install (parse-argv argv)))
+            ((equal "update" $1)
+             (apply #'qlot/cli:update (parse-argv argv)))
+            ((equal "exec" $1)
+             (use-local-quicklisp)
+
+             (let ((command (or (which (first argv))
+                                (first argv))))
+               (exec (cons command (rest argv)))))
+            ((equal "--version" $1)
+             (print-version)
+             (uiop:quit -1))
+            ((null $1)
+             (print-usage)
+             (uiop:quit -1))
+            (t (error 'qlot/errors:command-not-found :command $1)))
+    #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
+    (qlot/errors:command-not-found (e)
+      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+      (print-usage)
+      (uiop:quit -1))
+    (qlot/errors:qlot-error (e)
+      (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
+      (uiop:quit -1))))
+
+(defun main ()
+  (destructuring-bind (&optional $0 $1 &rest argv)
+      (command-line-arguments)
+    (declare (ignore $0))
+    (apply #'qlot-command $1 argv)))
