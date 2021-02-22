@@ -43,7 +43,8 @@
                (unless (or (find dir-name
                                  *exclude-directories*
                                  :test #'string=)
-                           (char= (aref dir-name 0) #\.))
+                           (and (stringp dir-name)
+                                (char= (aref dir-name 0) #\.)))
                  (nconc
                    (mapcar #'truename
                            (remove-if-not #'asd-file-p
