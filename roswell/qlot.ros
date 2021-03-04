@@ -63,7 +63,10 @@ OPTIONS:
                (uiop:directory-exists-p #P"quicklisp/")
                (uiop:file-exists-p #P"quicklisp/setup.lisp"))
       (qlot/cli:rename-quicklisp-to-dot-qlot nil t))
-    (setenv "QUICKLISP_HOME" ".qlot/"))
+    (setenv "QUICKLISP_HOME"
+            (format nil "~A" (or (probe-file ".qlot/")
+                                 (merge-pathnames ".qlot/"
+                                                  (make-pathname :defaults *default-pathname-defaults* :name nil :type nil))))))
   (let ((path (or (probe-file (ros:getenv "QUICKLISP_HOME"))
                   (merge-pathnames (ros:getenv "QUICKLISP_HOME")
                                    (make-pathname :defaults *load-pathname* :name nil :type nil)))))
@@ -104,6 +107,13 @@ OPTIONS:
         (list* (subseq sequence 0 pos)
                (split div (subseq sequence (1+ pos))))
         (list sequence))))
+
+(defun join (div sequence)
+  (with-output-to-string (s)
+    (when sequence
+      (format s "~A" (first sequence))
+      (dolist (element (rest sequence))
+        (format s "~A~A" div element)))))
 
 (defun parse-argv (argv)
   (loop with target = nil
@@ -160,9 +170,9 @@ OPTIONS:
 
              ;; Add ~/.roswell/bin to $PATH
              (setenv "PATH"
-                     (format nil "~A:~A"
-                             (merge-pathnames "bin/" (homedir))
-                             (ros:getenv "PATH")))
+                     (join (uiop/filesystem:inter-directory-separator)
+                           (cons (merge-pathnames "bin/" (homedir))
+                                 (uiop/filesystem:split-native-pathnames-string (ros:getenv "PATH")))))
 
              (let ((command (which (first argv))))
                (unless command
