@@ -2,24 +2,27 @@ name: CI
 
 on:
   push:
-    paths: ['*']
   schedule:
     - cron: '0 15 * * *'
 
 jobs:
-  test:
-    name: ${{ matrix.lisp }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        lisp: [sbcl-bin]
-        os: [ubuntu-latest, macOS-latest]
+  test_linux:
+    name: sbcl-bin on ubuntu-latest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Run tests
+        run: make test
+  test_mac:
+    name: sbcl-bin on macOS-latest
+    runs-on: macOS-latest
 
     steps:
       - uses: actions/checkout@v1
       - name: Install Roswell
         env:
-          LISP: ${{ matrix.lisp }}
+          LISP: sbcl-bin
           ROSWELL_INSTALL_DIR: /usr
         run: |
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh

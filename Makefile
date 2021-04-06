@@ -19,3 +19,11 @@ qlot_ccl:
 .PHONY: clean
 clean:
 	rm qlot
+
+.PHONY: build_test_image
+build_test_image:
+	docker build -t qlot-test-image -f tests/Dockerfile .
+
+.PHONY: test
+test: build_test_image
+	docker run --rm -i -v ${PWD}:/app qlot-test-image
