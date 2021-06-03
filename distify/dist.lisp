@@ -20,11 +20,19 @@
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
                             (slot-value source 'qlot/source/dist::%version))))
-  (let ((destination (truename destination)))
+  (let* ((destination (truename destination))
+         (relative-path
+           ;; distribution name may include slashes
+           ;; and can't be used directly as a name
+           ;; of a pathname.
+           (uiop:parse-unix-namestring (source-project-name source)
+                                       :type "txt"))
+         (target-path (merge-pathnames
+                       relative-path
+                       destination)))
+    (ensure-directories-exist target-path)
     (dex:fetch (source-distinfo-url source)
-               (make-pathname :name (source-project-name source)
-                              :type "txt"
-                              :defaults destination)
+               target-path
                :if-exists :supersede
                :proxy *proxy*)
     destination))
