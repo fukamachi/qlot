@@ -35,6 +35,10 @@
                       :install-deps install-deps)))
 
 (defun add (args)
+  ;; Use 'ql' as the default source
+  (when (= 1 (length args))
+    (setf args (cons "ql" args)))
+
   (unless (find-package :qlot/install)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
@@ -138,10 +142,12 @@ COMMANDS:
         Possible to update specific projects with --project option.
         ex) qlot update --project mito
 
+    add [project name]
     add [source] [project name] [arg1, arg2..]
         Add a new library to qlfile and trigger 'qlot install'.
         ex)
-          $ qlot add ql mito
+          $ qlot add mito       # Add 'ql mito'
+          $ qlot add ql mito    # Same as the above
           $ qlot add ultralisp egao1980-cl-idna
           $ qlot add github datafly fukamachi/datafly
 
@@ -242,7 +248,7 @@ OPTIONS:
                                 (first argv))))
                (exec (cons command (rest argv)))))
             ((equal "add" $1)
-             (unless (<= 2 (length argv))
+             (unless argv
                (qlot/errors:ros-command-error "requires a new library information."))
              (add argv))
             ((equal "--version" $1)
