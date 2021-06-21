@@ -86,8 +86,14 @@ COMMANDS:
         Possible to update specific projects with --project option.
         ex) qlot update --project mito
 
-    bundle
-        Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
+    add [project name]
+    add [source] [project name] [arg1, arg2..]
+        Add a new library to qlfile and trigger 'qlot install'.
+        ex)
+          $ qlot add mito       # Add 'ql mito'
+          $ qlot add ql mito    # Same as the above
+          $ qlot add ultralisp egao1980-cl-idna
+          $ qlot add github datafly fukamachi/datafly
 
     run
         Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').

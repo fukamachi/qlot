@@ -151,9 +151,6 @@ COMMANDS:
           $ qlot add ultralisp egao1980-cl-idna
           $ qlot add github datafly fukamachi/datafly
 
-    bundle
-        Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
-
     run
         Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
 
