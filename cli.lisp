@@ -1,6 +1,7 @@
 (defpackage #:qlot/cli
   (:use #:cl)
-  (:import-from #:qlot/logger)
+  (:import-from #:qlot/logger
+                #:message)
   (:import-from #:qlot/errors)
   (:import-from #:qlot/utils/cli
                 #:exec
@@ -8,6 +9,7 @@
                 #:command-line-arguments)
   (:export #:install
            #:update
+           #:add
            #:main))
 (in-package #:qlot/cli)
 
@@ -31,6 +33,21 @@
                       (pathname (or object *default-pathname-defaults*))
                       :projects projects
                       :install-deps install-deps)))
+
+(defun add (args)
+  ;; Use 'ql' as the default source
+  (when (= 1 (length args))
+    (setf args (cons "ql" args)))
+
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
+  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
+    (uiop:with-output-file (out qlfile :if-exists :append :if-does-not-exist :create)
+      (format out "~&~{~A~^ ~}~%" args)
+      (message "Add '~{~A~^ ~}' to '~A'." args qlfile)))
+  (install))
 
 (defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
   (fresh-line *error-output*)
@@ -124,6 +141,15 @@ COMMANDS:
         Makes './.qlot' up-to-date and update 'qlfile.lock'.
         Possible to update specific projects with --project option.
         ex) qlot update --project mito
+
+    add [project name]
+    add [source] [project name] [arg1, arg2..]
+        Add a new library to qlfile and trigger 'qlot install'.
+        ex)
+          $ qlot add mito       # Add 'ql mito'
+          $ qlot add ql mito    # Same as the above
+          $ qlot add ultralisp egao1980-cl-idna
+          $ qlot add github datafly fukamachi/datafly
 
     bundle
         Dumps all libraries to './bundle-libs' to allow to load them without Qlot and Quicklisp.
@@ -221,6 +247,10 @@ OPTIONS:
              (let ((command (or (which (first argv))
                                 (first argv))))
                (exec (cons command (rest argv)))))
+            ((equal "add" $1)
+             (unless argv
+               (qlot/errors:ros-command-error "requires a new library information."))
+             (add argv))
             ((equal "--version" $1)
              (print-version)
              (uiop:quit -1))

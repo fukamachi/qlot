@@ -161,6 +161,18 @@ $ qlot update --project mito
 $ qlot update --project mito,sxql
 ```
 
+### add
+
+`qlot add` will add a line to `qlfile` and invoke `qlot install` internally.
+It's arguments are same as the qlfile syntax.
+
+```
+$ qlot add mito                               # ql mito
+$ qlot add ql mito                            # ql mito (Same as the above)
+$ qlot add ultralisp egao1980-cl-idna         # ultralisp egao1980-cl-idna
+$ qlot add github datafly fukamachi/datafly   # github datafly fukamachi/datafly
+```
+
 ### exec
 
 `qlot exec` does following:
