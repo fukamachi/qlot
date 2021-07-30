@@ -11,7 +11,7 @@
            #:git-ref))
 (in-package #:qlot/utils/git)
 
-(defun git-clone (remote-url destination &key (checkout-to "master") ref)
+(defun git-clone (remote-url destination &key checkout-to ref)
   (tagbody git-cloning
     (when (uiop:directory-exists-p destination)
       #+(or mswindows win32)
@@ -25,7 +25,8 @@
     (restart-case
         (safety-shell-command "git"
                               `("clone"
-                                "--branch" ,checkout-to
+                                ,@(and checkout-to
+                                       `("--branch" ,checkout-to))
                                 "--depth" "1"
                                 "--recursive"
                                 "--config" "core.eol=lf"

@@ -70,8 +70,7 @@
         (git-clone (source-git-remote-access-url source)
                    source-directory
                    :checkout-to (or (source-git-branch source)
-                                    (source-git-tag source)
-                                    "master")
+                                    (source-git-tag source))
                    :ref (source-git-ref source))
 
         (let ((tarball (create-git-tarball source-directory

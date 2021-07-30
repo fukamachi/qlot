@@ -31,17 +31,13 @@
   (or (source-github-ref source)
       (source-github-branch source)
       (source-github-tag source)
-      "master"))
+      ;; When reached here it should be a bug
+      (error "Undetermined GitHub identifier")))
 
 (defun source-github-url (source)
   (format nil "https://github.com/~A/archive/~A.tar.gz"
           (source-github-repos source)
           (source-github-identifier source)))
-
-(defmethod initialize-instance :after ((source source-github) &key)
-  (unless (slot-boundp source 'qlot/source/http::url)
-    (setf (source-http-url source)
-          (source-github-url source))))
 
 (defmethod make-source ((source (eql :github)) &rest initargs)
   (handler-case

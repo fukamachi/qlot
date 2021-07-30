@@ -29,15 +29,18 @@
                (not (string= github-token "")))
       (cons "x-access-token" github-token))))
 
-(defun retrieve-from-github (repos action)
+(defun retrieve-from-github (repos &optional action)
   (let ((cred (github-credentials)))
     (yason:parse
       (apply #'dex:get
-             (format nil "https://api.github.com/repos/~A/~A" repos action)
+             (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
              :want-stream t
              :proxy *proxy*
              (when cred
                `(:basic-auth ,cred))))))
+
+(defun retrieve-default-branch (repos)
+  (gethash "default_branch" (retrieve-from-github repos)))
 
 (defun retrieve-source-git-ref-from-github (source)
   (labels ((find-ref (results name)
@@ -52,10 +55,10 @@
     (cond
       ((source-github-ref source))
       ((source-github-branch source)
-       (get-ref "branches" (source-github-branch source)))
+       (get-ref "/branches" (source-github-branch source)))
       ((source-github-tag source)
-       (get-ref "tags" (source-github-tag source)))
-      (t (get-ref "branches" "master")))))
+       (get-ref "/tags" (source-github-tag source)))
+      (t (get-ref "/branches" (retrieve-default-branch (source-github-repos source)))))))
 
 (defun load-source-github-version (source)
   (setf (source-github-ref source)
