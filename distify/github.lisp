@@ -4,12 +4,12 @@
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
-                #:source-http-url
                 #:source-github-repos
                 #:source-github-ref
                 #:source-github-branch
                 #:source-github-tag
                 #:source-github-identifier
+                #:source-github-url
                 #:write-distinfo)
   (:import-from #:qlot/proxy
                 #:*proxy*)
@@ -23,17 +23,21 @@
   (:export #:distify-github))
 (in-package #:qlot/distify/github)
 
-(defun retrieve-from-github (repos action)
+(defun github-credentials ()
   (let ((github-token (uiop:getenv "GITHUB_TOKEN")))
+    (when (and (stringp github-token)
+               (not (string= github-token "")))
+      (cons "x-access-token" github-token))))
+
+(defun retrieve-from-github (repos action)
+  (let ((cred (github-credentials)))
     (yason:parse
-     (apply #'dex:get
-            (format nil "https://api.github.com/repos/~A/~A" repos action)
-            :want-stream t
-            :proxy *proxy*
-            (if (and (stringp github-token)
-                     (not (string= github-token "")))
-                (list :basic-auth (cons github-token "x-oauth-basic"))
-                '())))))
+      (apply #'dex:get
+             (format nil "https://api.github.com/repos/~A/~A" repos action)
+             :want-stream t
+             :proxy *proxy*
+             (when cred
+               `(:basic-auth ,cred))))))
 
 (defun retrieve-source-git-ref-from-github (source)
   (labels ((find-ref (results name)
@@ -86,10 +90,14 @@
                        (format nil "~A-~A.tar.gz"
                                (source-project-name source)
                                (source-github-identifier source))
-                       archives-dir)))
-        (dex:fetch (source-http-url source) archive
-                   :if-exists :supersede
-                   :proxy *proxy*)
+                       archives-dir))
+            (cred (github-credentials)))
+        (apply #'dex:fetch (source-github-url source) archive
+               :proxy *proxy*
+               :want-stream t
+               :allow-other-keys t   ;; Old Dexador doesn't accept :basic-auth
+               (when cred
+                 `(:basic-auth ,cred)))
 
         (let ((extracted-source-directory (extract-tarball archive softwares-dir))
               (source-directory (merge-pathnames (format nil "~A-~A/"
