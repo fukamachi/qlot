@@ -4,8 +4,10 @@
         #:qlot/source/base)
   (:import-from #:qlot/errors
                 #:invalid-definition)
+  (:import-from #:quri)
   (:export #:source-git
            #:source-git-remote-url
+           #:source-git-remote-access-url
            #:source-git-ref
            #:source-git-branch
            #:source-git-tag))
@@ -23,6 +25,17 @@
    (tag :initarg :tag
         :initform nil
         :accessor source-git-tag)))
+
+(defun source-git-remote-access-url (source)
+  (or
+    (when (uiop:getenv "GITHUB_TOKEN")
+      (let ((parsed (quri:uri (source-git-remote-url source))))
+        (when (and (equal (quri:uri-scheme parsed) "https")
+                   (not (quri:uri-userinfo parsed)))
+          (setf (quri:uri-userinfo parsed)
+                (format nil "x-access-token:~A" (uiop:getenv "GITHUB_TOKEN")))
+          (quri:render-uri parsed))))
+    (source-git-remote-url source)))
 
 (defmethod make-source ((source (eql :git)) &rest initargs)
   (handler-case

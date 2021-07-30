@@ -10,7 +10,7 @@
                 #:source-git
                 #:source-git-branch
                 #:source-git-tag
-                #:source-git-remote-url
+                #:source-git-remote-access-url
                 #:source-git-ref
                 #:source-git-identifier)
   (:import-from #:qlot/utils/distify
@@ -32,7 +32,7 @@
 
 (defun load-source-git-version (source)
   (unless (ignore-errors (source-git-ref source))
-    (let ((ref (git-ref (source-git-remote-url source)
+    (let ((ref (git-ref (source-git-remote-access-url source)
                         (or (source-git-tag source)
                             (source-git-branch source)
                             "HEAD"))))
@@ -67,7 +67,7 @@
                                                        (source-project-name source)
                                                        (source-git-identifier source))
                                                softwares)))
-        (git-clone (source-git-remote-url source)
+        (git-clone (source-git-remote-access-url source)
                    source-directory
                    :checkout-to (or (source-git-branch source)
                                     (source-git-tag source)
