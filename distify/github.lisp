@@ -61,12 +61,14 @@
       (t (get-ref "/branches" (retrieve-default-branch (source-github-repos source)))))))
 
 (defun load-source-github-version (source)
-  (setf (source-github-ref source)
-        (retrieve-source-git-ref-from-github source))
-  (setf (source-version source)
-        (format nil "~A~A"
-                (source-version-prefix source)
-                (source-github-ref source))))
+  (unless (ignore-errors (source-github-ref source))
+    (setf (source-github-ref source)
+          (retrieve-source-git-ref-from-github source)))
+  (unless (ignore-errors (source-version source))
+    (setf (source-version source)
+          (format nil "~A~A"
+                  (source-version-prefix source)
+                  (source-github-ref source)))))
 
 (defun distify-github (source destination &key distinfo-only)
   (load-source-github-version source)
