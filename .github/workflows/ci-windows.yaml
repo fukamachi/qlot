@@ -34,6 +34,8 @@ jobs:
         shell: bash
         run: /c/roswell/bin/ros install fukamachi/dexador
       - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           PATH="~/.roswell/bin:/c/roswell/bin:$PATH"

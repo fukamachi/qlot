@@ -31,6 +31,8 @@ jobs:
       - name: Install Rove
         run: ros install rove
       - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PATH="~/.roswell/bin:$PATH"
           rove qlot.asd
