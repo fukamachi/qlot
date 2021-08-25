@@ -1,10 +1,6 @@
 name: Build Docker image
 
-on:
-  push:
-    branches:
-      - master
-  create:
+on: [push]
 
 jobs:
   build:
@@ -20,22 +16,18 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
-      - name: Build and publish (tag)
-        uses: docker/build-push-action@v2
-        if: ${{ github.event_name == 'create' }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
         with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          push: true
-          addLatest: true
-          image: ${{ secrets.DOCKER_HUB_USERNAME }}/qlot
-      - name: Build and publish (latest)
+          images: |
+            fukamachi/qlot
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+      - name: Build and publish
         uses: docker/build-push-action@v2
-        if: ${{ github.event_name != 'create' }}
         with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/qlot:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
