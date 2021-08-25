@@ -1,5 +1,4 @@
-ARG SBCL_VERSION=2.1.1
-FROM clfoundation/sbcl:${SBCL_VERSION}
+FROM clfoundation/sbcl
 
 WORKDIR /app
 
