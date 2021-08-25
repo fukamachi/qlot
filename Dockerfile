@@ -11,9 +11,9 @@ RUN set -x; \
   sbcl --no-userinit \
     --eval '(require (quote asdf))' \
     --eval '(load #P"/root/quicklisp/setup.lisp")' \
-    --eval '(ql:quickload :qlot/distify)' --quit && \
-  sbcl --eval '(asdf:make :qlot)' && \
-  mv /root/common-lisp/qlot/qlot /usr/local/bin && \
+    --eval '(ql:quickload (list :qlot/cli :qlot/distify))' --quit && \
+  echo "#!/bin/sh\nexec sbcl --noinform --non-interactive --load /root/quicklisp/setup.lisp --eval '(ql:quickload :qlot/cli :silent t)' --eval '(apply (function qlot/cli::qlot-command) (rest sb-ext:*posix-argv*))' \"\$@\"\n" > /usr/local/bin/qlot && \
+  chmod u+x /usr/local/bin/qlot && \
   rm /root/quicklisp.lisp
 
 ENTRYPOINT ["qlot"]
