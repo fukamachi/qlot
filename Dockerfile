@@ -5,7 +5,9 @@ WORKDIR /app
 COPY . /root/.roswell/local-projects/fukamachi/qlot
 
 RUN set -x; \
-  apt-get update && apt-get -y install --no-install-recommends git && \
+  apt-get update && apt-get -y install --no-install-recommends \
+    git \
+    openssh-client && \
   rm -rf /var/lib/apt/lists/*
 
 RUN set -x; \
