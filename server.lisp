@@ -66,20 +66,22 @@
   (let ((g-source (gensym "SOURCE"))
         (g-qlhome (gensym "QLHOME"))
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
-        (destination (or destination (gensym "DESTINATION"))))
+        (g-destination (gensym "DESTINATION")))
     `(let ((,g-source ,source)
            (,g-qlhome ,qlhome)
            (*system-quicklisp-home* #+quicklisp ql:*quicklisp-home*
                                     #-quicklisp nil)
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
-       (with-tmp-directory (,destination)
+       (,@(if destination
+              `(let ((,g-destination ,destination)))
+              `(with-tmp-directory (,g-destination)))
          ;; Run distify in another Lisp process
-         (run-distify-source-process ,g-source ,destination
+         (run-distify-source-process ,g-source ,g-destination
                                      :quicklisp-home ,g-qlhome
                                      :distinfo-only t)
          (progv (list ,fetch-scheme-functions '*handler*)
              (list (cons '("qlot" . qlot-fetch)
                          (symbol-value ,fetch-scheme-functions))
-                   (make-handler ,destination))
+                   (make-handler ,g-destination))
            (with-quicklisp-home ,g-qlhome
              ,@body))))))
