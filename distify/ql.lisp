@@ -5,15 +5,15 @@
                 #:source-version
                 #:source-version-prefix
                 #:source-distinfo-url
-                #:source-distribution
-                #:write-distinfo)
+                #:source-distribution)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
   (:import-from #:qlot/utils/distify
-                #:get-distinfo-url)
+                #:get-distinfo-url
+                #:write-source-distinfo)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
@@ -61,18 +61,17 @@
                             (slot-value source 'qlot/source/dist::%version))))
   (load-source-ql-version source)
 
-  (let ((destination (truename destination)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt"
-                                               :defaults destination)
-                                :if-exists :supersede)
-      (write-distinfo source out))
+  (let ((*default-pathname-defaults*
+          (uiop:ensure-absolute-pathname
+            (merge-pathnames
+              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
+              destination))))
+    (ensure-directories-exist *default-pathname-defaults*)
 
-    (let ((metadata (merge-pathnames (format nil "~A/~A/"
-                                             (source-project-name source)
-                                             (source-version source))
-                                     destination)))
-      (ensure-directories-exist metadata)
+    (write-source-distinfo source destination)
+
+    (unless (and (uiop:file-exists-p "systems.txt")
+                 (uiop:file-exists-p "releases.txt"))
       (let ((original-distinfo
               (parse-distinfo-stream (dex:get (source-distinfo-url source)
                                               :want-stream t
@@ -85,6 +84,8 @@
                                                       :test (lambda (data)
                                                               (equal (first data) (source-project-name source)))
                                                       :include-header t)))
-              (uiop:with-output-file (out (merge-pathnames file metadata))
+              (uiop:with-output-file (out (merge-pathnames file)
+                                          :if-exists :supersede)
                 (format out "~{~{~A~^ ~}~%~}" data)))))))
-    destination))
+
+    *default-pathname-defaults*))

@@ -4,8 +4,7 @@
                 #:source-project-name
                 #:source-dist-name
                 #:source-version
-                #:source-version-prefix
-                #:write-distinfo)
+                #:source-version-prefix)
   (:import-from #:qlot/source/git
                 #:source-git
                 #:source-git-branch
@@ -15,7 +14,8 @@
                 #:source-git-identifier)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
-                #:systems.txt)
+                #:systems.txt
+                #:write-source-distinfo)
   (:import-from #:qlot/utils/git
                 #:git-clone
                 #:git-ref
@@ -46,15 +46,6 @@
           (format nil "~A~A"
                   (source-version-prefix source)
                   (source-git-ref source)))))
-
-(defun write-source-distinfo (source destination)
-  (let ((distinfo.txt (merge-pathnames
-                        (make-pathname :name (source-project-name source)
-                                       :type "txt")
-                        destination)))
-    (unless (uiop:file-exists-p distinfo.txt)
-      (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
-        (write-distinfo source out)))))
 
 (defun write-metadata-files (source destination source-directory tarball)
   (uiop:with-output-file (out (merge-pathnames "systems.txt" destination)

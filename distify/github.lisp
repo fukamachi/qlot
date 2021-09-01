@@ -9,13 +9,13 @@
                 #:source-github-branch
                 #:source-github-tag
                 #:source-github-identifier
-                #:source-github-url
-                #:write-distinfo)
+                #:source-github-url)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
-                #:systems.txt)
+                #:systems.txt
+                #:write-source-distinfo)
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
@@ -71,15 +71,6 @@
           (format nil "~A~A"
                   (source-version-prefix source)
                   (source-github-ref source)))))
-
-(defun write-source-distinfo (source destination)
-  (let ((distinfo.txt (merge-pathnames
-                        (make-pathname :name (source-project-name source)
-                                       :type "txt")
-                        destination)))
-    (unless (uiop:file-exists-p distinfo.txt)
-      (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
-        (write-distinfo source out)))))
 
 (defun distify-github (source destination)
   (load-source-github-version source)

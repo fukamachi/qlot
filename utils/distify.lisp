@@ -8,14 +8,18 @@
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
   (:import-from #:qlot/source
-                #:source-distinfo-url)
+                #:source-distinfo-url
+                #:source-project-name
+                #:source-version
+                #:write-distinfo)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:ironclad)
   (:import-from #:dexador)
   (:export #:releases.txt
            #:systems.txt
-           #:get-distinfo-url))
+           #:get-distinfo-url
+           #:write-source-distinfo))
 (in-package #:qlot/utils/distify)
 
 (defun normalize-pathname (path)
@@ -85,3 +89,12 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
        (make-versioned-distinfo-url
          distribution
          version)))))
+
+(defun write-source-distinfo (source destination)
+  (let ((distinfo.txt (merge-pathnames
+                        (make-pathname :name (source-project-name source)
+                                       :type "txt")
+                        destination)))
+    (unless (uiop:file-exists-p distinfo.txt)
+      (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
+        (write-distinfo source out)))))

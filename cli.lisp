@@ -172,6 +172,8 @@ OPTIONS:
         A flag to enable debug logging. (Only for 'install' or 'update')
     --no-deps
         Don't install dependencies of all systems from the current directory.
+    --cache [directory]
+        Keep intermediate files for fast reinstallation.
 "
           "qlot"))
 
