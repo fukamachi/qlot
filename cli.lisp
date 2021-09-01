@@ -18,21 +18,29 @@
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
-  (destructuring-bind (&key install-deps) args
+  (destructuring-bind (&key install-deps cache) args
     (uiop:symbol-call '#:qlot/install '#:install-project
                       (pathname (or object *default-pathname-defaults*))
-                      :install-deps install-deps)))
+                      :install-deps install-deps
+                      :cache-directory (and cache
+                                            (uiop:ensure-absolute-pathname
+                                              (uiop:ensure-directory-pathname cache)
+                                              *default-pathname-defaults*)))))
 
 (defun update (&optional (object *default-pathname-defaults*) &rest args)
   (unless (find-package :qlot/install)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
-  (destructuring-bind (&key projects install-deps) args
+  (destructuring-bind (&key projects install-deps cache) args
     (uiop:symbol-call '#:qlot/install '#:update-project
                       (pathname (or object *default-pathname-defaults*))
                       :projects projects
-                      :install-deps install-deps)))
+                      :install-deps install-deps
+                      :cache-directory (and cache
+                                            (uiop:ensure-absolute-pathname
+                                              (uiop:ensure-directory-pathname cache)
+                                              *default-pathname-defaults*)))))
 
 (defun add (args)
   ;; Use 'ql' as the default source
@@ -175,6 +183,7 @@ OPTIONS:
   (loop with target = nil
         with projects = '()
         with install-deps = t
+        with cache = nil
         for option = (pop argv)
         while option
         do (case-equal option
@@ -193,6 +202,8 @@ OPTIONS:
               (setf qlot/logger:*debug* t))
              ("--no-deps"
               (setf install-deps nil))
+             ("--cache"
+              (setf cache (pop argv)))
              (otherwise
               (if target
                   (qlot/errors:ros-command-error "'~A' is unknown option" option)
@@ -202,7 +213,9 @@ OPTIONS:
              (append (list target
                            :install-deps install-deps)
                      (when projects
-                       (list :projects projects))))))
+                       (list :projects projects))
+                     (when cache
+                       (list :cache cache))))))
 
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/

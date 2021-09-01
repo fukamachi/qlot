@@ -49,9 +49,10 @@
                (merge-pathnames
                  (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
                  destination)))
-           (archive (merge-pathnames "archive.tar.gz")))
+           (archive-file (merge-pathnames "archive.tar.gz")))
       (ensure-directories-exist *default-pathname-defaults*)
-      (uiop:copy-file tmp-archive archive)
+      (unless (uiop:file-exists-p archive-file)
+        (uiop:copy-file tmp-archive archive-file))
 
       (uiop:with-output-file (out (merge-pathnames
                                     (make-pathname :name (source-project-name source)
@@ -63,18 +64,20 @@
       (when distinfo-only
         (return-from distify-http destination))
 
-      (with-tmp-directory (softwares-dir)
-        (let ((source-directory (extract-tarball archive softwares-dir)))
+      (unless (and (uiop:file-exists-p "systems.txt")
+                   (uiop:file-exists-p "releases.txt"))
+        (with-tmp-directory (softwares-dir)
+          (let ((source-directory (extract-tarball archive-file softwares-dir)))
 
-          (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
-            (princ (systems.txt (source-project-name source)
-                                source-directory)
-                   out))
-          (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
-            (princ (releases.txt (source-project-name source)
-                                 (source-version source)
-                                 source-directory
-                                 archive)
-                   out))))
+            (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
+              (princ (systems.txt (source-project-name source)
+                                  source-directory)
+                     out))
+            (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
+              (princ (releases.txt (source-project-name source)
+                                   (source-version source)
+                                   source-directory
+                                   archive-file)
+                     out)))))
 
       *default-pathname-defaults*)))

@@ -28,7 +28,8 @@
                 #:directory-lisp-files
                 #:lisp-file-dependencies)
   (:import-from #:qlot/utils/tmp
-                #:with-tmp-directory)
+                #:tmp-directory
+                #:delete-tmp-directory)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   #+sbcl
@@ -96,7 +97,8 @@
           (mapc #'ensure-installed all-dependencies))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home
-                                   (install-deps t))
+                                   (install-deps t)
+                                   cache-directory)
   (unless quicklisp-home
     (setf quicklisp-home
           (merge-pathnames *qlot-directory*
@@ -117,7 +119,8 @@
 
     (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
         (list *proxy*)
-      (apply-qlfile-to-qlhome qlfile qlhome))
+      (apply-qlfile-to-qlhome qlfile qlhome
+                              :cache-directory cache-directory))
 
     ;; Install project dependencies
     (when install-deps
@@ -128,7 +131,8 @@
 
 (defun update-qlfile (qlfile &key quicklisp-home
                                   projects
-                                  (install-deps t))
+                                  (install-deps t)
+                                  cache-directory)
   (unless quicklisp-home
     (setf quicklisp-home
           (merge-pathnames *qlot-directory*
@@ -149,7 +153,10 @@
 
     (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
         (list *proxy*)
-      (apply-qlfile-to-qlhome qlfile qlhome :ignore-lock t :projects projects))
+      (apply-qlfile-to-qlhome qlfile qlhome
+                              :ignore-lock t
+                              :projects projects
+                              :cache-directory cache-directory))
 
     ;; Install project dependencies
     (when install-deps
@@ -243,46 +250,50 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             for (project-name . contents) = (freeze-source source)
             do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects)
+(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory)
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
     (let ((preference (get-universal-time))
           (system-qlhome (and (find :quicklisp *features*)
-                              (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
-      (with-tmp-directory (tmp-dir)
-        (dolist (source sources)
-          (with-quicklisp-home qlhome
-            (with-package-functions #:ql-dist (find-dist version)
-              (let ((dist (find-dist (source-dist-name source))))
-                (cond
-                  ((not dist)
-                   (with-quicklisp-home system-qlhome
-                     (with-qlot-server (source qlhome tmp-dir)
-                       (debug-log "Using temporary directory '~A'" tmp-dir)
-                       (install-source source tmp-dir))))
-                  ((and (slot-boundp source 'qlot/source/base::version)
-                        (equal (version dist)
-                               (source-version source)))
-                   (message "Already have dist ~S version ~S."
-                            (source-dist-name source)
-                            (source-version source)))
-                  ((string= (source-dist-name source) "quicklisp")
-                   (with-package-functions #:ql-dist (uninstall)
-                     (uninstall (find-dist "quicklisp")))
-                   (with-quicklisp-home system-qlhome
-                     (with-qlot-server (source qlhome tmp-dir)
-                       (debug-log "Using temporary directory '~A'" tmp-dir)
-                       (install-source source qlhome))))
-                  (t
-                   (with-quicklisp-home system-qlhome
-                     (with-qlot-server (source qlhome tmp-dir)
-                       (debug-log "Using temporary directory '~A'" tmp-dir)
-                       (update-source source tmp-dir))))))))
-          (with-quicklisp-home qlhome
-            (with-package-functions #:ql-dist (find-dist (setf preference))
-              (setf (preference (find-dist (source-dist-name source)))
-                    (incf preference))))))
+                              (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))
+          (tmp-dir (or cache-directory (tmp-directory))))
+      (ensure-directories-exist tmp-dir)
+      (unwind-protect
+          (dolist (source sources)
+            (with-quicklisp-home qlhome
+              (with-package-functions #:ql-dist (find-dist version)
+                (let ((dist (find-dist (source-dist-name source))))
+                  (cond
+                    ((not dist)
+                     (with-quicklisp-home system-qlhome
+                       (with-qlot-server (source qlhome tmp-dir)
+                         (debug-log "Using temporary directory '~A'" tmp-dir)
+                         (install-source source tmp-dir))))
+                    ((and (slot-boundp source 'qlot/source/base::version)
+                          (equal (version dist)
+                                 (source-version source)))
+                     (message "Already have dist ~S version ~S."
+                              (source-dist-name source)
+                              (source-version source)))
+                    ((string= (source-dist-name source) "quicklisp")
+                     (with-package-functions #:ql-dist (uninstall)
+                       (uninstall (find-dist "quicklisp")))
+                     (with-quicklisp-home system-qlhome
+                       (with-qlot-server (source qlhome tmp-dir)
+                         (debug-log "Using temporary directory '~A'" tmp-dir)
+                         (install-source source qlhome))))
+                    (t
+                     (with-quicklisp-home system-qlhome
+                       (with-qlot-server (source qlhome tmp-dir)
+                         (debug-log "Using temporary directory '~A'" tmp-dir)
+                         (update-source source tmp-dir))))))))
+            (with-quicklisp-home qlhome
+              (with-package-functions #:ql-dist (find-dist (setf preference))
+                (setf (preference (find-dist (source-dist-name source)))
+                      (incf preference)))))
+        (unless cache-directory
+          (delete-tmp-directory tmp-dir)))
       (with-quicklisp-home qlhome
         (with-package-functions #:ql-dist (uninstall name all-dists)
           (dolist (dist (all-dists))
@@ -305,7 +316,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
      (merge-pathnames *default-qlfile* (uiop:ensure-directory-pathname object)))
     (t object)))
 
-(defun install-project (object &key (install-deps t))
+(defun install-project (object &key (install-deps t) cache-directory)
   (etypecase object
     ((or symbol string)
      (install-project (asdf:find-system object)))
@@ -313,13 +324,16 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                       :quicklisp-home (asdf:system-relative-pathname
                                        object *qlot-directory*)
-                      :install-deps install-deps))
+                      :install-deps install-deps
+                      :cache-directory cache-directory))
     (pathname
       (install-qlfile (ensure-qlfile-pathname object)
-                      :install-deps install-deps))))
+                      :install-deps install-deps
+                      :cache-directory cache-directory))))
 
 (defun update-project (object &key projects
-                                   (install-deps t))
+                                   (install-deps t)
+                                   cache-directory)
   (etypecase object
     ((or symbol string)
      (update-project (asdf:find-system object) :projects projects))
@@ -327,8 +341,10 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
                      :projects projects
-                     :install-deps install-deps))
+                     :install-deps install-deps
+                     :cache-directory cache-directory))
     (pathname
       (update-qlfile (ensure-qlfile-pathname object)
                      :projects projects
-                     :install-deps install-deps))))
+                     :install-deps install-deps
+                     :cache-directory cache-directory))))

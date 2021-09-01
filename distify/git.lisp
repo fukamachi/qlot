@@ -23,6 +23,8 @@
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:directory-system-files)
+  (:import-from #:qlot/utils/archive
+                #:extract-tarball)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:import-from #:ironclad
@@ -45,6 +47,25 @@
                   (source-version-prefix source)
                   (source-git-ref source)))))
 
+(defun write-source-distinfo (source destination)
+  (let ((distinfo.txt (merge-pathnames
+                        (make-pathname :name (source-project-name source)
+                                       :type "txt")
+                        destination)))
+    (unless (uiop:file-exists-p distinfo.txt)
+      (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
+        (write-distinfo source out)))))
+
+(defun write-metadata-files (source destination source-directory tarball)
+  (uiop:with-output-file (out (merge-pathnames "systems.txt" destination)
+                              :if-exists :supersede)
+    (princ (systems.txt (source-project-name source) source-directory) out))
+
+  (uiop:with-output-file (out (merge-pathnames "releases.txt" destination)
+                              :if-exists :supersede)
+    (princ (releases.txt (source-project-name source) (source-version source)
+                         source-directory tarball) out)))
+
 (defun distify-git (source destination &key distinfo-only)
   (check-type source source-git)
   (load-source-git-version source)
@@ -56,31 +77,31 @@
               destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
-    (uiop:with-output-file (out (merge-pathnames
-                                  (make-pathname :name (source-project-name source)
-                                                 :type "txt")
-                                  destination)
-                                :if-exists :supersede)
-      (write-distinfo source out))
+    (write-source-distinfo source destination)
 
     (when distinfo-only
       (return-from distify-git destination))
 
-    (with-tmp-directory (source-directory)
-      (git-clone (source-git-remote-access-url source)
-                 source-directory
-                 :checkout-to (or (source-git-branch source)
-                                  (source-git-tag source))
-                 :ref (source-git-ref source))
+    (let ((archive-file (merge-pathnames "archive.tar.gz")))
+      (cond
+        ((not (uiop:file-exists-p archive-file))
+         (with-tmp-directory (source-directory)
+           (git-clone (source-git-remote-access-url source)
+                      source-directory
+                      :checkout-to (or (source-git-branch source)
+                                       (source-git-tag source))
+                      :ref (source-git-ref source))
 
-      (let ((tarball (create-git-tarball source-directory
-                                         (merge-pathnames "archive.tar.gz")
-                                         (source-git-ref source))))
-        (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
-          (princ (systems.txt (source-project-name source) source-directory) out))
-
-        (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
-          (princ (releases.txt (source-project-name source) (source-version source)
-                               source-directory tarball) out))))
+           (create-git-tarball source-directory
+                               archive-file
+                               (source-git-ref source))
+           (unless (and (uiop:file-exists-p "systems.txt")
+                        (uiop:file-exists-p "releases.txt"))
+             (write-metadata-files source *default-pathname-defaults* source-directory archive-file))))
+        ((not (and (uiop:file-exists-p "systems.txt")
+                   (uiop:file-exists-p "releases.txt")))
+         (with-tmp-directory (softwares-dir)
+           (let ((source-directory (extract-tarball archive-file softwares-dir)))
+             (write-metadata-files source *default-pathname-defaults* source-directory archive-file))))))
 
     *default-pathname-defaults*))

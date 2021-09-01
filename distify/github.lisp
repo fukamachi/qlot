@@ -72,6 +72,15 @@
                   (source-version-prefix source)
                   (source-github-ref source)))))
 
+(defun write-source-distinfo (source destination)
+  (let ((distinfo.txt (merge-pathnames
+                        (make-pathname :name (source-project-name source)
+                                       :type "txt")
+                        destination)))
+    (unless (uiop:file-exists-p distinfo.txt)
+      (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
+        (write-distinfo source out)))))
+
 (defun distify-github (source destination &key distinfo-only)
   (load-source-github-version source)
 
@@ -82,42 +91,40 @@
               destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
-    (uiop:with-output-file (out (merge-pathnames
-                                  (make-pathname :name (source-project-name source)
-                                                 :type "txt")
-                                  destination)
-                                :if-exists :supersede)
-      (write-distinfo source out))
+    (write-source-distinfo source destination)
 
     (when distinfo-only
       (return-from distify-github destination))
 
     (with-tmp-directory (softwares-dir)
-      (let ((archive (merge-pathnames "archive.tar.gz"))
-            (cred (github-credentials)))
-        (apply #'dex:fetch (source-github-url source) archive
-               :proxy *proxy*
-               :want-stream t
-               :allow-other-keys t   ;; Old Dexador doesn't accept :basic-auth
-               (when cred
-                 `(:basic-auth ,cred)))
+      (let ((archive-file (merge-pathnames "archive.tar.gz")))
+        (unless (uiop:file-exists-p archive-file)
+          (let ((cred (github-credentials)))
+            (apply #'dex:fetch (source-github-url source) archive-file
+                   :proxy *proxy*
+                   :want-stream t
+                   :allow-other-keys t   ;; Old Dexador doesn't accept :basic-auth
+                   (when cred
+                     `(:basic-auth ,cred)))))
 
-        (let ((extracted-source-directory (extract-tarball archive softwares-dir))
-              (source-directory (uiop:ensure-directory-pathname
-                                  (merge-pathnames (format nil "~A-~A"
-                                                           (source-project-name source)
-                                                           (source-github-identifier source))
-                                                   softwares-dir))))
-          (rename-file extracted-source-directory source-directory)
-          (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
-            (princ (systems.txt (source-project-name source)
-                                source-directory)
-                   out))
-          (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
-            (princ (releases.txt (source-project-name source)
-                                 (source-version source)
-                                 source-directory
-                                 archive)
-                   out)))))
+        (unless (and (uiop:file-exists-p "systems.txt")
+                     (uiop:file-exists-p "releases.txt"))
+          (let ((extracted-source-directory (extract-tarball archive-file softwares-dir))
+                (source-directory (uiop:ensure-directory-pathname
+                                    (merge-pathnames (format nil "~A-~A"
+                                                             (source-project-name source)
+                                                             (source-github-identifier source))
+                                                     softwares-dir))))
+            (rename-file extracted-source-directory source-directory)
+            (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
+              (princ (systems.txt (source-project-name source)
+                                  source-directory)
+                     out))
+            (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
+              (princ (releases.txt (source-project-name source)
+                                   (source-version source)
+                                   source-directory
+                                   archive-file)
+                     out))))))
 
     *default-pathname-defaults*))
