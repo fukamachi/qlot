@@ -204,7 +204,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (dolist (release releases)
             (install-release release)))))))
 
-(defun install-source (source tmp-dir)
+(defun install-source (source)
   (with-package-functions #:ql-dist (install-dist version)
     (let ((new-dist (install-dist (source-install-url source)
                                   :prompt nil
@@ -213,7 +213,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (install-all-releases source)
       new-dist)))
 
-(defun update-source (source tmp-dir)
+(defun update-source (source)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
@@ -264,7 +264,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      (with-quicklisp-home system-qlhome
                        (with-qlot-server (source qlhome tmp-dir)
                          (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (install-source source tmp-dir))))
+                         (install-source source))))
                     ((and (slot-boundp source 'qlot/source/base::version)
                           (equal (version dist)
                                  (source-version source)))
@@ -277,12 +277,12 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      (with-quicklisp-home system-qlhome
                        (with-qlot-server (source qlhome tmp-dir)
                          (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (install-source source qlhome))))
+                         (install-source source))))
                     (t
                      (with-quicklisp-home system-qlhome
                        (with-qlot-server (source qlhome tmp-dir)
                          (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (update-source source tmp-dir))))))))
+                         (update-source source))))))))
             (with-quicklisp-home qlhome
               (with-package-functions #:ql-dist (find-dist (setf preference))
                 (setf (preference (find-dist (source-dist-name source)))
