@@ -11,7 +11,7 @@
   (let ((directory (merge-pathnames (format nil "~A~A/" prefix (generate-random-string))
                                     (uiop:temporary-directory))))
     (ensure-directories-exist directory)
-    directory))
+    (truename directory)))
 
 (defun delete-tmp-directory (tmp-dir)
   #+(or mswindows win32)
