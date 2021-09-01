@@ -14,7 +14,7 @@
   (:export #:distify))
 (in-package #:qlot/distify)
 
-(defun distify (source-or-sources destination)
+(defun distify (source-or-sources destination &key distinfo-only)
   (check-type destination pathname)
   (dolist (source (if (listp source-or-sources)
                       source-or-sources
@@ -26,5 +26,6 @@
                (source-github #'distify-github)
                (source-http #'distify-http))
              source
-             destination))
+             destination
+             :distinfo-only distinfo-only))
   destination)

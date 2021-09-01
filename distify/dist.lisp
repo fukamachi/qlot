@@ -13,7 +13,8 @@
   (:export #:distify-dist))
 (in-package #:qlot/distify/dist)
 
-(defun distify-dist (source destination)
+(defun distify-dist (source destination &key distinfo-only)
+  (declare (ignore distinfo-only))
   (check-type source source-dist)
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)

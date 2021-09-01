@@ -57,7 +57,7 @@
     (princ (releases.txt (source-project-name source) (source-version source)
                          source-directory tarball) out)))
 
-(defun distify-git (source destination)
+(defun distify-git (source destination &key distinfo-only)
   (check-type source source-git)
   (load-source-git-version source)
 
@@ -69,6 +69,9 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (write-source-distinfo source destination)
+
+    (when distinfo-only
+      (return-from distify-git))
 
     (let ((archive-file (merge-pathnames "archive.tar.gz")))
       (cond

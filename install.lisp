@@ -11,7 +11,8 @@
   (:import-from #:qlot/parser
                 #:read-qlfile-for-install)
   (:import-from #:qlot/server
-                #:with-qlot-server)
+                #:with-qlot-server
+                #:run-distify-source-process)
   (:import-from #:qlot/logger
                 #:message
                 #:debug-log)
@@ -224,6 +225,8 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (version dist)
                        (version new-dist))
               (map nil #'uninstall (installed-releases dist))
+              (run-distify-source-process source tmp-dir
+                                          :quicklisp-home (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
               (setf dist (find-dist (source-dist-name source))
                     new-dist (available-update dist))
               (let ((*trace-output* (make-broadcast-stream)))
@@ -280,7 +283,7 @@ exec qlot exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                          (install-source source))))
                     (t
                      (with-quicklisp-home system-qlhome
-                       (with-qlot-server (source qlhome tmp-dir)
+                       (with-qlot-server (source qlhome tmp-dir t)
                          (debug-log "Using temporary directory '~A'" tmp-dir)
                          (update-source source))))))))
             (with-quicklisp-home qlhome

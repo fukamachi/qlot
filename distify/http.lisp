@@ -31,7 +31,7 @@
       (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
       destination)))
 
-(defun distify-http (source destination)
+(defun distify-http (source destination &key distinfo-only)
   (let ((distinfo.txt (merge-pathnames
                         (make-pathname :name (source-project-name source)
                                        :type "txt")
@@ -81,6 +81,9 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (write-source-distinfo source destination)
+
+    (when distinfo-only
+      (return-from distify-http))
 
     (unless (and (uiop:file-exists-p "systems.txt")
                  (uiop:file-exists-p "releases.txt"))

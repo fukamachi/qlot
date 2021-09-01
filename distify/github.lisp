@@ -72,7 +72,7 @@
                   (source-version-prefix source)
                   (source-github-ref source)))))
 
-(defun distify-github (source destination)
+(defun distify-github (source destination &key distinfo-only)
   (load-source-github-version source)
 
   (let ((*default-pathname-defaults*
@@ -83,6 +83,9 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (write-source-distinfo source destination)
+
+    (when distinfo-only
+      (return-from distify-github))
 
     (with-tmp-directory (softwares-dir)
       (let ((archive-file (merge-pathnames "archive.tar.gz")))

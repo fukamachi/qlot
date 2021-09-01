@@ -54,7 +54,7 @@
                   (source-version-prefix source)
                   version))))
 
-(defun distify-ql (source destination)
+(defun distify-ql (source destination &key distinfo-only)
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
@@ -69,6 +69,9 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (write-source-distinfo source destination)
+
+    (when distinfo-only
+      (return-from distify-ql))
 
     (unless (and (uiop:file-exists-p "systems.txt")
                  (uiop:file-exists-p "releases.txt"))
