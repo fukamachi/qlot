@@ -18,6 +18,8 @@
                 #:systems.txt)
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
+  (:import-from #:qlot/utils/tmp
+                #:with-tmp-directory)
   (:import-from #:dexador)
   (:import-from #:yason)
   (:export #:distify-github))
@@ -73,29 +75,25 @@
 (defun distify-github (source destination &key distinfo-only)
   (load-source-github-version source)
 
-  (let ((destination (truename destination)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt"
-                                               :defaults destination)
+  (let ((*default-pathname-defaults*
+          (uiop:ensure-absolute-pathname
+            (merge-pathnames
+              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
+              destination))))
+    (ensure-directories-exist *default-pathname-defaults*)
+
+    (uiop:with-output-file (out (merge-pathnames
+                                  (make-pathname :name (source-project-name source)
+                                                 :type "txt")
+                                  destination)
                                 :if-exists :supersede)
       (write-distinfo source out))
 
     (when distinfo-only
       (return-from distify-github destination))
 
-    (let ((softwares-dir (merge-pathnames #P"softwares/" destination))
-          (archives-dir (merge-pathnames #P"archives/" destination))
-          (metadata-dir (merge-pathnames (format nil "~A/~A/"
-                                                 (source-project-name source)
-                                                 (source-version source))
-                                         destination)))
-      (mapc #'ensure-directories-exist (list softwares-dir archives-dir metadata-dir))
-
-      (let ((archive (merge-pathnames
-                       (format nil "~A-~A.tar.gz"
-                               (source-project-name source)
-                               (source-github-identifier source))
-                       archives-dir))
+    (with-tmp-directory (softwares-dir)
+      (let ((archive (merge-pathnames "archive.tar.gz"))
             (cred (github-credentials)))
         (apply #'dex:fetch (source-github-url source) archive
                :proxy *proxy*
@@ -105,21 +103,21 @@
                  `(:basic-auth ,cred)))
 
         (let ((extracted-source-directory (extract-tarball archive softwares-dir))
-              (source-directory (merge-pathnames (format nil "~A-~A/"
-                                                         (source-project-name source)
-                                                         (source-github-identifier source))
-                                                 softwares-dir)))
+              (source-directory (uiop:ensure-directory-pathname
+                                  (merge-pathnames (format nil "~A-~A"
+                                                           (source-project-name source)
+                                                           (source-github-identifier source))
+                                                   softwares-dir))))
           (rename-file extracted-source-directory source-directory)
-          (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata-dir)
-                                      :if-exists :supersede)
+          (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
             (princ (systems.txt (source-project-name source)
                                 source-directory)
                    out))
-          (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata-dir)
-                                      :if-exists :supersede)
+          (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
             (princ (releases.txt (source-project-name source)
+                                 (source-version source)
                                  source-directory
                                  archive)
                    out)))))
 
-    destination))
+    *default-pathname-defaults*))

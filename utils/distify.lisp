@@ -25,7 +25,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
     (error "Wild pathnames cannot be normalized."))
   (first (uiop:directory* path)))
 
-(defun releases.txt (project-name source-directory tarball-file)
+(defun releases.txt (project-name project-version source-directory tarball-file)
   (let* ((source-directory (normalize-pathname source-directory))
          (prefix (car (last (pathname-directory source-directory)))))
     (multiple-value-bind (size file-md5 content-sha1)
@@ -37,7 +37,9 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                     (ironclad:digest-stream :sha1 in))))
       (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
               project-name
-              (format nil "qlot://localhost/archives/~A"
+              (format nil "qlot://localhost/~A/~A/~A"
+                      project-name
+                      project-version
                       (file-namestring tarball-file))
               size
               file-md5

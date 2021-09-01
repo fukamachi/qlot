@@ -23,6 +23,8 @@
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:directory-system-files)
+  (:import-from #:qlot/utils/tmp
+                #:with-tmp-directory)
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
                 #:digest-file
@@ -47,39 +49,38 @@
   (check-type source source-git)
   (load-source-git-version source)
 
-  (let ((*default-pathname-defaults* (truename destination)))
-    (uiop:with-output-file (out (make-pathname :name (source-project-name source)
-                                               :type "txt")
+  (let ((*default-pathname-defaults*
+          (uiop:ensure-absolute-pathname
+            (merge-pathnames
+              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
+              destination))))
+    (ensure-directories-exist *default-pathname-defaults*)
+
+    (uiop:with-output-file (out (merge-pathnames
+                                  (make-pathname :name (source-project-name source)
+                                                 :type "txt")
+                                  destination)
                                 :if-exists :supersede)
       (write-distinfo source out))
+
     (when distinfo-only
       (return-from distify-git destination))
 
-    (let ((softwares (merge-pathnames #P"softwares/"))
-          (archives (merge-pathnames #P"archives/"))
-          (metadata (merge-pathnames (format nil "~A/~A/"
-                                             (source-project-name source)
-                                             (source-version source)))))
-      (ensure-directories-exist softwares)
-      (ensure-directories-exist archives)
-      (ensure-directories-exist metadata)
-      (let ((source-directory (merge-pathnames (format nil "~A-~A/"
-                                                       (source-project-name source)
-                                                       (source-git-identifier source))
-                                               softwares)))
-        (git-clone (source-git-remote-access-url source)
-                   source-directory
-                   :checkout-to (or (source-git-branch source)
-                                    (source-git-tag source))
-                   :ref (source-git-ref source))
+    (with-tmp-directory (source-directory)
+      (git-clone (source-git-remote-access-url source)
+                 source-directory
+                 :checkout-to (or (source-git-branch source)
+                                  (source-git-tag source))
+                 :ref (source-git-ref source))
 
-        (let ((tarball (create-git-tarball source-directory
-                                           archives
-                                           (source-git-ref source))))
-          (uiop:with-output-file (out (merge-pathnames "systems.txt" metadata))
-            (princ (systems.txt (source-project-name source) source-directory) out))
+      (let ((tarball (create-git-tarball source-directory
+                                         (merge-pathnames "archive.tar.gz")
+                                         (source-git-ref source))))
+        (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
+          (princ (systems.txt (source-project-name source) source-directory) out))
 
-          (uiop:with-output-file (out (merge-pathnames "releases.txt" metadata))
-            (princ (releases.txt (source-project-name source) source-directory tarball) out)))))
+        (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
+          (princ (releases.txt (source-project-name source) (source-version source)
+                               source-directory tarball) out))))
 
     *default-pathname-defaults*))

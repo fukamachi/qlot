@@ -28,11 +28,9 @@
     (distify-git source *tmp-directory*)
 
     (let ((distinfo.txt (merge-pathnames #P"cl-dbi.txt"))
-          (software (merge-pathnames #P"softwares/cl-dbi-ref-64941e1848354767e08e57aca90d7c40350bb6b3/"))
           (systems.txt (merge-pathnames #P"cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/systems.txt"))
           (releases.txt (merge-pathnames #P"cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/releases.txt"))
-          (tarball (merge-pathnames #P"archives/cl-dbi-ref-64941e1848354767e08e57aca90d7c40350bb6b3.tar.gz")))
-      (ok (uiop:directory-exists-p software))
+          (tarball (merge-pathnames #P"cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/archive.tar.gz")))
       (ok (uiop:file-exists-p tarball))
 
       (testing "distinfo.txt"
@@ -59,7 +57,7 @@
         (ok (uiop:file-exists-p releases.txt))
         (let ((data (parse-space-delimited-file releases.txt)))
           (equal data
-                 '(("cl-dbi" "qlot://localhost/archives/cl-dbi-ref-64941e1848354767e08e57aca90d7c40350bb6b3.tar.gz"
+                 '(("cl-dbi" "qlot://localhost/cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/archive.tar.gz"
                     "14465" "9bf32509e09b89333630f6ac39a054b8" "e163fc7a0f899f06c20b2f0aab141e76a37be832"
                     "cl-dbi-ref-64941e1848354767e08e57aca90d7c40350bb6b3"
                     "dbi.asd" "dbi-test.asd" "dbd-sqlite3.asd" "dbd-postgres.asd" "dbd-mysql.asd" "cl-dbi.asd"))))))))

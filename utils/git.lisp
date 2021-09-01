@@ -48,14 +48,13 @@
   (check-type project-directory pathname)
   (check-type destination pathname)
   (check-type ref string)
-  (let* ((prefix (car (last (pathname-directory project-directory))))
-         (tarball (merge-pathnames (format nil "~A.tar.gz" prefix) destination)))
+  (let ((prefix (car (last (pathname-directory project-directory)))))
     (with-in-directory project-directory
       (safety-shell-command "git"
                             `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
                               ,ref
-                              "-o" ,tarball)))
-    tarball))
+                              "-o" ,(uiop:native-namestring destination))))
+    destination))
 
 (defun git-ref (remote-url &optional (ref-identifier "HEAD"))
   (handler-case
