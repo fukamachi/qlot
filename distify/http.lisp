@@ -23,7 +23,7 @@
   (:export #:distify-http))
 (in-package #:qlot/distify/http)
 
-(defun distify-http (source destination &key distinfo-only)
+(defun distify-http (source destination)
   (uiop:with-temporary-file (:pathname tmp-archive :direction :io)
     (dex:fetch (source-http-url source) tmp-archive
                :if-exists :supersede
@@ -60,9 +60,6 @@
                                     destination)
                                   :if-exists :supersede)
         (write-distinfo source out))
-
-      (when distinfo-only
-        (return-from distify-http destination))
 
       (unless (and (uiop:file-exists-p "systems.txt")
                    (uiop:file-exists-p "releases.txt"))

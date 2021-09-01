@@ -81,7 +81,7 @@
       (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
         (write-distinfo source out)))))
 
-(defun distify-github (source destination &key distinfo-only)
+(defun distify-github (source destination)
   (load-source-github-version source)
 
   (let ((*default-pathname-defaults*
@@ -92,9 +92,6 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (write-source-distinfo source destination)
-
-    (when distinfo-only
-      (return-from distify-github destination))
 
     (with-tmp-directory (softwares-dir)
       (let ((archive-file (merge-pathnames "archive.tar.gz")))

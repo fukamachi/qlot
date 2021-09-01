@@ -54,7 +54,7 @@
                   (source-version-prefix source)
                   version))))
 
-(defun distify-ql (source destination &key distinfo-only)
+(defun distify-ql (source destination)
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
@@ -67,8 +67,6 @@
                                                :defaults destination)
                                 :if-exists :supersede)
       (write-distinfo source out))
-    (when distinfo-only
-      (return-from distify-ql destination))
 
     (let ((metadata (merge-pathnames (format nil "~A/~A/"
                                              (source-project-name source)
