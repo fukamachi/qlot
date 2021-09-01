@@ -100,6 +100,16 @@ COMMANDS:
 
     exec [shell-args..]
         Invokes the following shell-command with the project local Quicklisp.
+
+OPTIONS:
+    --version
+        Show the Qlot version
+    --debug
+        A flag to enable debug logging. (Only for 'install' or 'update')
+    --no-deps
+        Don't install dependencies of all systems from the current directory.
+    --cache [directory]
+        Keep intermediate files for fast reinstallation.
 ```
 
 ## Tutorial
