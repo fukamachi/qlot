@@ -76,19 +76,24 @@
     (let ((archive-file (merge-pathnames "archive.tar.gz")))
       (cond
         ((not (uiop:file-exists-p archive-file))
-         (with-tmp-directory (source-directory)
-           (git-clone (source-git-remote-access-url source)
-                      source-directory
-                      :checkout-to (or (source-git-branch source)
-                                       (source-git-tag source))
-                      :ref (source-git-ref source))
+         (with-tmp-directory (softwares-dir)
+           (let ((source-directory (uiop:ensure-directory-pathname
+                                     (merge-pathnames (format nil "~A-~A"
+                                                              (source-project-name source)
+                                                              (source-git-identifier source))
+                                                      softwares-dir))))
+             (git-clone (source-git-remote-access-url source)
+                        source-directory
+                        :checkout-to (or (source-git-branch source)
+                                         (source-git-tag source))
+                        :ref (source-git-ref source))
 
-           (create-git-tarball source-directory
-                               archive-file
-                               (source-git-ref source))
-           (unless (and (uiop:file-exists-p "systems.txt")
-                        (uiop:file-exists-p "releases.txt"))
-             (write-metadata-files source *default-pathname-defaults* source-directory archive-file))))
+             (create-git-tarball source-directory
+                                 archive-file
+                                 (source-git-ref source))
+             (unless (and (uiop:file-exists-p "systems.txt")
+                          (uiop:file-exists-p "releases.txt"))
+               (write-metadata-files source *default-pathname-defaults* source-directory archive-file)))))
         ((not (and (uiop:file-exists-p "systems.txt")
                    (uiop:file-exists-p "releases.txt")))
          (with-tmp-directory (softwares-dir)
