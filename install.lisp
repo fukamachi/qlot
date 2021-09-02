@@ -218,7 +218,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (install-all-releases source)
       new-dist)))
 
-(defun update-source (source)
+(defun update-source (source tmp-dir)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
@@ -289,7 +289,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      (with-quicklisp-home system-qlhome
                        (with-qlot-server (source qlhome tmp-dir t)
                          (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (update-source source))))))))
+                         (update-source source tmp-dir))))))))
             (with-quicklisp-home qlhome
               (with-package-functions #:ql-dist (find-dist (setf preference))
                 (setf (preference (find-dist (source-dist-name source)))
