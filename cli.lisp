@@ -108,11 +108,9 @@ in CL_SOURCE_REGISTRY environment variable."
                                 :pretty nil)))
             ;; When current-value is a string, then just
             ;; add qlot's path to the front
-            (t (format nil "~A~A~A"
+            (t (format nil "~A~C~A"
                        dir-to-add
-                       (if (uiop/os:os-windows-p)
-                           ";"
-                           ":")
+                       (uiop/filesystem:inter-directory-separator)
                        current-value)))
       dir-to-add))
 
@@ -226,15 +224,15 @@ OPTIONS:
                (uiop:directory-exists-p #P"quicklisp/")
                (uiop:file-exists-p #P"quicklisp/setup.lisp"))
       (rename-quicklisp-to-dot-qlot nil t))
-    (setf (uiop:getenv "QUICKLISP_HOME") ".qlot/"))
-  (let ((path (or (probe-file (uiop:getenv "QUICKLISP_HOME"))
-                  (merge-pathnames (uiop:getenv "QUICKLISP_HOME")
-                                   (make-pathname :defaults *default-pathname-defaults* :name nil :type nil)))))
-    (unless (probe-file path)
-      (qlot/errors:ros-command-error "'~A~A' does not exist."
-                                     *default-pathname-defaults*
-                                     (uiop:getenv "QUICKLISP_HOME")))
-    (unless (probe-file (merge-pathnames "setup.lisp" path))
+    (setf (uiop:getenv "QUICKLISP_HOME")
+          (uiop:native-namestring
+            (or (uiop:directory-exists-p ".qlot/")
+                (merge-pathnames #P".qlot/" (uiop:getcwd))))))
+  (let ((path (uiop:ensure-directory-pathname
+                (uiop:getenv-pathname "QUICKLISP_HOME"))))
+    (unless (uiop:directory-exists-p path)
+      (qlot/errors:ros-command-error "'~A' does not exist." path))
+    (unless (uiop:file-exists-p (merge-pathnames "setup.lisp" path))
       (qlot/errors:ros-command-error "Invalid Quicklisp directory: '~A'"
                                      (uiop:getenv "QUICKLISP_HOME"))))
 
