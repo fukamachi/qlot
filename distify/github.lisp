@@ -100,13 +100,7 @@
 
         (unless (and (uiop:file-exists-p "systems.txt")
                      (uiop:file-exists-p "releases.txt"))
-          (let ((extracted-source-directory (extract-tarball archive-file softwares-dir))
-                (source-directory (uiop:ensure-directory-pathname
-                                    (merge-pathnames (format nil "~A-~A"
-                                                             (source-project-name source)
-                                                             (source-github-identifier source))
-                                                     softwares-dir))))
-            (rename-file extracted-source-directory source-directory)
+          (let ((source-directory (extract-tarball archive-file softwares-dir)))
             (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
               (princ (systems.txt (source-project-name source)
                                   source-directory)
