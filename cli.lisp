@@ -10,6 +10,7 @@
   (:export #:install
            #:update
            #:add
+           #:bundle
            #:main))
 (in-package #:qlot/cli)
 
@@ -56,6 +57,15 @@
       (format out "~&~{~A~^ ~}~%" args)
       (message "Add '~{~A~^ ~}' to '~A'." args qlfile)))
   (install))
+
+(defun bundle (&optional (project-root *default-pathname-defaults*) &rest args)
+  (declare (ignore args))
+  (unless (find-package :qlot/bundle)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/bundle)))
+  (uiop:symbol-call '#:qlot/bundle '#:bundle-project
+                    (uiop:ensure-directory-pathname project-root)))
 
 (defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
   (fresh-line *error-output*)
@@ -163,6 +173,11 @@ COMMANDS:
     exec [shell-args..]
         Invokes the following shell-command with the project local Quicklisp.
 
+    bundle
+        Bundles project dependencies to './.bundle-libs'.
+        Load './.bundle-libs/bundle.lisp' to make them available.
+        Read https://www.quicklisp.org/beta/bundles.html for the detail.
+
 OPTIONS:
     --version
         Show the Qlot version
@@ -261,6 +276,8 @@ OPTIONS:
              (unless argv
                (qlot/errors:ros-command-error "requires a new library information."))
              (add argv))
+            ((equal "bundle" $1)
+             (apply #'bundle argv))
             ((equal "--version" $1)
              (print-version)
              (uiop:quit -1))

@@ -93,6 +93,10 @@
     (parse-space-delimited-stream in :test test :include-header include-header)))
 
 (defmacro with-quicklisp-home (qlhome &body body)
-  `(progv (list (intern #.(string :*quicklisp-home*) :ql))
-       (list ,qlhome)
-     ,@body))
+  (let ((g-qlhome (gensym "QLHOME")))
+    `(let ((,g-qlhome ,qlhome))
+       (assert (and (uiop:directory-exists-p ,g-qlhome)
+                    (uiop:file-exists-p (merge-pathnames "setup.lisp" ,g-qlhome))))
+       (progv (list (intern #.(string :*quicklisp-home*) :ql))
+           (list ,g-qlhome)
+         ,@body))))

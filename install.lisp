@@ -27,6 +27,11 @@
                 #:with-autoload-on-missing
                 #:directory-lisp-files
                 #:lisp-file-dependencies)
+  (:import-from #:qlot/utils/project
+                #:*qlot-directory*
+                #:project-dependencies
+                #:local-quicklisp-installed-p
+                #:local-quicklisp-home)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory
                 #:delete-tmp-directory)
@@ -40,92 +45,43 @@
            #:update-project))
 (in-package #:qlot/install)
 
-(defvar *qlot-directory* #P".qlot/")
 (defvar *default-qlfile* #P"qlfile")
 
-(defun canonical-qlhome (qlhome &optional (base *default-pathname-defaults*))
-  (setf qlhome (uiop:ensure-directory-pathname qlhome))
-  (if (uiop:absolute-pathname-p qlhome)
-      qlhome
-      (merge-pathnames qlhome base)))
-
 (defun install-dependencies (project-root qlhome)
-  (with-package-functions #:ql-dist (find-system)
-    (with-quicklisp-home qlhome
-      (let ((all-dependencies '()))
-        (with-directory (system-file system-name dependencies) project-root
-          (message "Loading '~A'..." system-file)
-          (let ((*standard-output* (make-broadcast-stream))
-                (*trace-output* (make-broadcast-stream))
-                (*error-output* (make-broadcast-stream)))
-            (with-autoload-on-missing
-              (asdf:load-asd system-file)))
-          (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
-            (let ((pis-dependencies
-                    (loop for file in (directory-lisp-files project-root)
-                          append (lisp-file-dependencies file))))
-              (setf dependencies
-                    (delete-duplicates
-                      (nconc dependencies pis-dependencies)
-                      :test 'equal))))
-          (let ((dependencies (remove-if-not #'find-system dependencies)))
-            (debug-log "'~A' requires ~S" system-name dependencies)
-            (setf all-dependencies
-                  (nconc all-dependencies
-                         (remove-if-not #'find-system dependencies)))))
-        (with-package-functions #:ql-dist (required-systems name)
-          (let ((already-seen (make-hash-table :test 'equal)))
-            (labels ((find-system-with-fallback (system-name)
-                       (or (find-system system-name)
-                           (find-system (asdf:primary-system-name system-name))))
-                     (system-dependencies (system-name)
-                       (unless (gethash system-name already-seen)
-                         (setf (gethash system-name already-seen) t)
-                         (let ((system (find-system-with-fallback system-name)))
-                           (when system
-                             (cons system
-                                   (mapcan #'system-dependencies (copy-seq (required-systems system)))))))))
-              (setf all-dependencies
-                    (delete-duplicates
-                      (loop for dependency in all-dependencies
-                            append (system-dependencies dependency))
-                      :key #'name
-                      :test 'string=)))))
-
-        (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
-        (with-package-functions #:ql-dist (ensure-installed)
-          (mapc #'ensure-installed all-dependencies))))))
+  (with-quicklisp-home qlhome
+    (let ((all-dependencies (project-dependencies project-root)))
+      (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
+      (with-package-functions #:ql-dist (ensure-installed)
+        (mapc #'ensure-installed all-dependencies)))))
 
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
                                    cache-directory)
-  (unless quicklisp-home
-    (setf quicklisp-home
-          (merge-pathnames *qlot-directory*
-                           (uiop:pathname-directory-pathname qlfile))))
   (unless (uiop:file-exists-p qlfile)
     (error 'qlot-simple-error
            :format-control "File does not exist: ~A"
            :format-arguments (list qlfile)))
 
-  (let ((qlhome (canonical-qlhome quicklisp-home)))
-    (unless (and (uiop:directory-exists-p qlhome)
-                 (uiop:file-exists-p (merge-pathnames "setup.lisp" qlhome)))
-      (ensure-directories-exist qlhome)
-      (install-quicklisp qlhome))
+  (let* ((project-root (uiop:pathname-directory-pathname qlfile))
+         (quicklisp-home (if quicklisp-home
+                             (uiop:ensure-directory-pathname quicklisp-home)
+                             (local-quicklisp-home project-root))))
+
+    (unless (local-quicklisp-installed-p project-root)
+      (ensure-directories-exist quicklisp-home)
+      (install-quicklisp quicklisp-home))
 
     (unless (find-package '#:ql)
-      (load (merge-pathnames #P"setup.lisp" qlhome)))
+      (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
         (list *proxy*)
-      (apply-qlfile-to-qlhome qlfile qlhome
+      (apply-qlfile-to-qlhome qlfile quicklisp-home
                               :cache-directory cache-directory))
 
     ;; Install project dependencies
     (when install-deps
-      (let ((project-root (uiop:pathname-directory-pathname qlfile)))
-        (install-dependencies project-root qlhome)))
+      (install-dependencies project-root quicklisp-home))
 
     (message "Successfully installed.")))
 
@@ -133,35 +89,33 @@
                                   projects
                                   (install-deps t)
                                   cache-directory)
-  (unless quicklisp-home
-    (setf quicklisp-home
-          (merge-pathnames *qlot-directory*
-                           (uiop:pathname-directory-pathname qlfile))))
   (unless (uiop:file-exists-p qlfile)
     (error 'qlot-simple-error
            :format-control "Failed to update because the file '~A' does not exist."
            :format-arguments (list qlfile)))
 
-  (let ((qlhome (canonical-qlhome quicklisp-home)))
-    (unless (and (uiop:directory-exists-p qlhome)
-                 (uiop:file-exists-p (merge-pathnames "setup.lisp" qlhome)))
+  (let* ((project-root (uiop:pathname-directory-pathname qlfile))
+         (quicklisp-home (if quicklisp-home
+                             (uiop:ensure-absolute-pathname quicklisp-home)
+                             (local-quicklisp-home project-root))))
+
+    (unless (local-quicklisp-installed-p project-root)
       (error 'qlot-simple-error
              :format-control "Local Quicklisp is not installed yet."))
 
     (unless (find-package '#:ql)
-      (load (merge-pathnames #P"setup.lisp" qlhome)))
+      (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
         (list *proxy*)
-      (apply-qlfile-to-qlhome qlfile qlhome
+      (apply-qlfile-to-qlhome qlfile quicklisp-home
                               :ignore-lock t
                               :projects projects
                               :cache-directory cache-directory))
 
     ;; Install project dependencies
     (when install-deps
-      (let ((project-root (uiop:pathname-directory-pathname qlfile)))
-        (install-dependencies project-root qlhome)))
+      (install-dependencies project-root quicklisp-home))
 
     (message "Successfully installed.")))
 

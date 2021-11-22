@@ -101,6 +101,11 @@ COMMANDS:
     exec [shell-args..]
         Invokes the following shell-command with the project local Quicklisp.
 
+    bundle
+        Bundles project dependencies to './.bundle-libs'.
+        Load './.bundle-libs/bundle.lisp' to make them available.
+        Read https://www.quicklisp.org/beta/bundles.html for the detail.
+
 OPTIONS:
     --version
         Show the Qlot version
