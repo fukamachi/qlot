@@ -6,6 +6,8 @@
                 #:update-project
                 #:*qlot-directory*
                 #:*default-qlfile*)
+  (:import-from #:qlot/bundle
+                #:bundle-project)
   (:import-from #:qlot/logger
                 #:*debug*
                 #:*logger-message-stream*
@@ -19,6 +21,7 @@
            #:update
            #:with-local-quicklisp
            #:quickload
+           #:bundle
            #:*proxy*
            #:*debug*
            #:*logger-message-stream*
@@ -109,3 +112,6 @@
     (dolist (system systems systems)
       (with-local-quicklisp (system)
         (apply #'uiop:symbol-call '#:ql '#:quickload system args)))))
+
+(defun bundle (object)
+  (bundle-project object))

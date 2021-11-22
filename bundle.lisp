@@ -17,7 +17,7 @@
 
 (defvar *bundle-directory* #P".bundle-libs/")
 
-(defun bundle-project (project-root)
+(defun %bundle-project (project-root)
   (assert (uiop:absolute-pathname-p project-root))
 
   (unless (local-quicklisp-installed-p project-root)
@@ -39,3 +39,12 @@
                 (bundle-systems dependency-names
                                 :to bundle-directory))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
+
+(defun bundle-project (object)
+  (etypecase object
+    ((or symbol string)
+     (bundle-project (asdf:find-system object)))
+    (asdf:system
+      (%bundle-project (asdf:system-source-directory object)))
+    (pathname
+      (%bundle-project object))))
