@@ -20,9 +20,6 @@
                 #:git-clone
                 #:git-ref
                 #:create-git-tarball)
-  (:import-from #:qlot/utils/asdf
-                #:with-directory
-                #:directory-system-files)
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
