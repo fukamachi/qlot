@@ -5,6 +5,7 @@
   (:use #:cl)
   (:export #:with-in-directory
            #:make-keyword
+           #:starts-with
            #:split-with
            #:generate-random-string
            #:with-package-functions
@@ -25,6 +26,10 @@
   "This function differ from alexandria:make-keyword
    because it upcases text before making it a keyword."
   (intern (string-upcase text) :keyword))
+
+(defun starts-with (prefix value)
+  (and (<= (length prefix) (length value))
+       (string= prefix value :end2 (length prefix))))
 
 (defun split-with (delimiter value &key limit)
   (check-type delimiter character)
