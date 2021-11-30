@@ -8,6 +8,7 @@
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/logger
+                #:*debug*
                 #:message
                 #:debug-log)
   (:export #:*qlot-directory*
@@ -40,11 +41,17 @@
         (unless (find system-file loaded-asd-files :test 'equal)
           (push system-file loaded-asd-files)
           (message "Loading '~A'..." system-file)
-          (let ((*standard-output* (make-broadcast-stream))
-                (*trace-output* (make-broadcast-stream))
-                (*error-output* (make-broadcast-stream)))
-            (with-autoload-on-missing
-              (asdf:load-asd system-file))))
+          (let ((errout *error-output*))
+            (handler-bind ((error
+                             (lambda (e)
+                               (uiop:print-condition-backtrace e :stream errout))))
+              (let ((*standard-output* (make-broadcast-stream))
+                    (*trace-output* (make-broadcast-stream))
+                    (*error-output* (if *debug*
+                                        *error-output*
+                                        (make-broadcast-stream))))
+                (with-autoload-on-missing
+                  (asdf:load-asd system-file))))))
         (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
           (let ((pis-dependencies
                   (loop for file in (directory-lisp-files project-root)
