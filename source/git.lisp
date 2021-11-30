@@ -4,7 +4,8 @@
         #:qlot/source/base)
   (:import-from #:qlot/errors
                 #:invalid-definition)
-  (:import-from #:quri)
+  (:import-from #:qlot/utils
+                #:starts-with)
   (:export #:source-git
            #:source-git-remote-url
            #:source-git-remote-access-url
@@ -29,12 +30,11 @@
 (defun source-git-remote-access-url (source)
   (or
     (when (uiop:getenv "GITHUB_TOKEN")
-      (let ((parsed (quri:uri (source-git-remote-url source))))
-        (when (and (equal (quri:uri-scheme parsed) "https")
-                   (not (quri:uri-userinfo parsed)))
-          (setf (quri:uri-userinfo parsed)
-                (format nil "x-access-token:~A" (uiop:getenv "GITHUB_TOKEN")))
-          (quri:render-uri parsed))))
+      (let ((url (source-git-remote-url source)))
+        (when (starts-with "https://github.com/" url)
+          (format nil "https://x-access-token:~A@github.com/~A"
+                  (uiop:getenv "GITHUB_TOKEN")
+                  (subseq url (length "https://github.com/"))))))
     (source-git-remote-url source)))
 
 (defmethod make-source ((source (eql :git)) &rest initargs)
