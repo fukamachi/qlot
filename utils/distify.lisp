@@ -95,6 +95,5 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                         (make-pathname :name (source-project-name source)
                                        :type "txt")
                         destination)))
-    (unless (uiop:file-exists-p distinfo.txt)
-      (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
-        (write-distinfo source out)))))
+    (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
+      (write-distinfo source out))))
