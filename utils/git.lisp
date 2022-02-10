@@ -4,7 +4,6 @@
                 #:safety-shell-command
                 #:shell-command-error)
   (:import-from #:qlot/utils
-                #:with-in-directory
                 #:split-with)
   (:export #:git-clone
            #:create-git-tarball
@@ -32,7 +31,7 @@
                                 "--config" "core.eol=lf"
                                 "--config" "core.autocrlf=input"
                                 ,remote-url
-                                ,destination))
+                                ,(uiop:native-namestring destination)))
       (retry-git-clone ()
         :report "Retry to git clone the repository."
         (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
@@ -40,20 +39,21 @@
 
   (when ref
     (let ((*error-output* (make-broadcast-stream)))
-      (with-in-directory destination
-        (safety-shell-command "git" '("fetch" "--unshallow"))
-        (safety-shell-command "git" `("checkout" ,ref))))))
+      (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
+                                    "fetch" "--unshallow"))
+      (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
+                                    "checkout" ,ref)))))
 
 (defun create-git-tarball (project-directory destination ref)
   (check-type project-directory pathname)
   (check-type destination pathname)
   (check-type ref string)
   (let ((prefix (car (last (pathname-directory project-directory)))))
-    (with-in-directory project-directory
-      (safety-shell-command "git"
-                            `("archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
-                              ,ref
-                              "-o" ,(uiop:native-namestring destination))))
+    (safety-shell-command "git"
+                          `("-C" ,(uiop:native-namestring project-directory)
+                            "archive" "--format=tar.gz" ,(format nil "--prefix=~A/" prefix)
+                            ,ref
+                            "-o" ,(uiop:native-namestring destination)))
     destination))
 
 (defun git-ref (remote-url &optional (ref-identifier "HEAD"))
