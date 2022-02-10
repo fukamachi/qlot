@@ -28,22 +28,22 @@
 (defun safety-shell-command (program args)
   (setf args (mapcar #'princ-to-string args))
   (debug-log "Running shell command: ~A ~{~S~^ ~}" program args)
-  (with-output-to-string (stdout)
-    (let ((stderr (make-string-output-stream)))
-      (let ((process (uiop:launch-program (cons program args)
-                                          :input :interactive
-                                          :output (make-broadcast-stream *standard-output*
-                                                                         stdout)
-                                          :error-output stderr
-                                          :ignore-error-status t)))
-        (unwind-protect
-            (let ((code (uiop:wait-process process)))
-              (unless (zerop code)
-                (error 'shell-command-error
-                       :command (cons program args)
-                       :code code
-                       :stderr (get-output-stream-string stderr))))
-          (uiop:terminate-process process))))))
+  (let ((process (uiop:launch-program (cons program args)
+                                      :input :interactive
+                                      :output :stream
+                                      :error-output :stream
+                                      :ignore-error-status t)))
+    (unwind-protect
+        (let ((code (uiop:wait-process process)))
+          (unless (zerop code)
+            (error 'shell-command-error
+                   :command (cons program args)
+                   :code code
+                   :stderr (uiop:slurp-stream-string
+                             (uiop:process-info-error-output process))))
+          (uiop:slurp-stream-string
+            (uiop:process-info-output process)))
+      (uiop:terminate-process process))))
 
 (defvar *current-lisp-path*
   (or #+ccl (car ccl:*command-line-argument-list*)
