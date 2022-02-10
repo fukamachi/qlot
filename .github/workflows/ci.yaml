@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        lisp: [sbcl-bin, abcl-bin]
+        lisp: [sbcl-bin, abcl-bin/1.8.0]
 
     steps:
       - uses: actions/checkout@v1
