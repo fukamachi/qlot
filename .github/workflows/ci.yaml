@@ -7,13 +7,30 @@ on:
 
 jobs:
   test_linux:
-    name: sbcl-bin on ubuntu-latest
+    name: ${{ matrix.lisp }} on ubuntu-latest
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lisp: [sbcl-bin, abcl-bin]
 
     steps:
       - uses: actions/checkout@v1
+      - name: Install Roswell
+        env:
+          LISP: ${{ matrix.lisp }}
+          ROSWELL_INSTALL_DIR: /usr
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Install Ultralisp
+        run: ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
+      - name: Install Rove
+        run: ros install rove
       - name: Run tests
-        run: make test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PATH="~/.roswell/bin:$PATH"
+          rove qlot.asd
   test_mac:
     name: sbcl-bin on macOS-latest
     runs-on: macOS-latest
