@@ -1,10 +1,8 @@
 (defpackage #:qlot/utils/archive
   (:use #:cl)
-  (:import-from #:gzip-stream
-                #:with-open-gzip-file)
+  (:import-from #:deflate
+                #:inflate-gzip-stream)
   (:import-from #:archive
-                #:open-archive
-                #:tar-archive
                 #:name
                 #:read-entry-from-archive
                 #:extract-files-from-archive)
@@ -13,10 +11,16 @@
 
 (defun extract-tarball (tarball &optional (destination *default-pathname-defaults*))
   (let ((*default-pathname-defaults* destination))
-    (with-open-gzip-file (gzip tarball)
-      (let ((archive (archive:open-archive 'archive:tar-archive gzip)))
-        (prog1
-            (merge-pathnames
-             (archive:name (archive:read-entry-from-archive archive))
-             *default-pathname-defaults*)
-          (archive::extract-files-from-archive archive))))))
+    (with-open-file (in tarball
+                        :element-type '(unsigned-byte 8))
+      (uiop:with-temporary-file (:pathname tar-file
+                                 :stream tar-stream
+                                 :direction :output
+                                 :element-type '(unsigned-byte 8))
+        (deflate:inflate-gzip-stream in tar-stream)
+        (archive:with-open-archive (archive tar-file)
+          (prog1
+              (merge-pathnames
+                (archive:name (archive:read-entry-from-archive archive))
+                *default-pathname-defaults*)
+            (archive::extract-files-from-archive archive)))))))
