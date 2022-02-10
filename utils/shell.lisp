@@ -51,7 +51,8 @@
       #+allegro (car (system:command-line-arguments))
       #+clisp "clisp"
       #+cmu (car ext:*command-line-strings*)
-      #+ecl (car (si:command-args))))
+      #+ecl (car (si:command-args))
+      #+abcl "java"))
 
 (defvar *eval-option*
   (or
@@ -61,7 +62,8 @@
     #+allegro "-e"
     #+clisp "-x"
     #+cmu "-eval"
-    #+ecl "-eval"))
+    #+ecl "-eval"
+    #+abcl "--eval"))
 
 (defun str (form)
   (let ((*package* (find-package :cl-user)))
@@ -133,12 +135,16 @@
   #-ros.init
   (safety-shell-command *current-lisp-path*
                         (append
+                          #+abcl `("-jar" ,(uiop:native-namestring
+                                             (first (pathname-device ext:*lisp-home*))))
+
                           #+ccl '("--no-init" "--quiet" "--batch")
                           #+sbcl '("--noinform" "--no-sysinit" "--no-userinit" "--non-interactive")
                           #+allegro '("--qq")
                           #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
                           #+cmu '("-noinit")
                           #+ecl '("-norc")
+                          #+abcl '("--noinform" "--noinit")
 
                           (apply #'build-command-args forms args)
 
@@ -150,4 +156,5 @@
                               #+clisp (ext:quit)
                               #+cmucl (unix:unix-exit)
                               #+ecl (ext:quit)
-                              #-(or ccl sbcl allegro clisp cmucl ecl) (cl-user::quit))))))
+                              #+abcl (ext:quit)
+                              #-(or ccl sbcl allegro clisp cmucl ecl abcl) (cl-user::quit))))))
