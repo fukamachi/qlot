@@ -55,6 +55,7 @@
 
 (defvar *eval-option*
   (or
+    #+ros.init "-e"
     #+ccl "--eval"
     #+sbcl "--eval"
     #+allegro "-e"
