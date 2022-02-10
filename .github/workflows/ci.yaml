@@ -6,23 +6,19 @@ on:
     - cron: '0 15 * * *'
 
 jobs:
-  test_linux:
-    name: sbcl-bin on ubuntu-latest
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v1
-      - name: Run tests
-        run: make test
-  test_mac:
-    name: sbcl-bin on macOS-latest
-    runs-on: macOS-latest
+  test:
+    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin, abcl-bin/1.8.0]
+        os: [ubuntu-latest, macOS-latest]
 
     steps:
       - uses: actions/checkout@v1
       - name: Install Roswell
         env:
-          LISP: sbcl-bin
+          LISP: ${{ matrix.lisp }}
           ROSWELL_INSTALL_DIR: /usr
         run: |
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh

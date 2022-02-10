@@ -29,7 +29,8 @@
 (defun local-quicklisp-home (project-root)
   (let ((project-root (uiop:ensure-directory-pathname project-root)))
     (uiop:ensure-absolute-pathname
-      (merge-pathnames *qlot-directory* project-root))))
+      (merge-pathnames *qlot-directory* project-root)
+      *default-pathname-defaults*)))
 
 (defun project-dependencies (project-root)
   (with-package-functions #:ql-dist (find-system name)

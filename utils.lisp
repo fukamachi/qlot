@@ -3,8 +3,7 @@
   ;; ex. https://github.com/inaimathi/cl-notebook/issues/71
   (:nicknames #:qlot/util)
   (:use #:cl)
-  (:export #:with-in-directory
-           #:make-keyword
+  (:export #:make-keyword
            #:starts-with
            #:split-with
            #:generate-random-string
@@ -13,14 +12,6 @@
            #:merge-hash-tables
            #:octets-stream-to-string))
 (in-package #:qlot/utils)
-
-(defmacro with-in-directory (dir &body body)
-  (let ((cwd (gensym "CWD")))
-    `(let ((,cwd (uiop:getcwd)))
-       (uiop:chdir ,dir)
-       (unwind-protect
-            (progn ,@body)
-         (uiop:chdir ,cwd)))))
 
 (defun make-keyword (text)
   "This function differ from alexandria:make-keyword

@@ -50,7 +50,10 @@
                            (remove-if-not #'asd-file-p
                                           (uiop:directory-files dir)))
                    (mapcan #'collect-asd-files-in-directory (uiop:subdirectories dir)))))))
-    (collect-asd-files-in-directory directory)))
+    (sort
+      (collect-asd-files-in-directory directory)
+      #'string<
+      :key #'uiop:native-namestring)))
 
 (defvar *registry*)
 (defvar *load-asd-file*)
@@ -109,19 +112,21 @@
                 do (read-asd-form form)))))))
 
 (defmacro with-directory ((system-file system-name dependencies) directory &body body)
-  (let ((value (gensym "VALUE")))
-    `(let ((*registry* (make-hash-table :test 'equal)))
-       (dolist (,system-file (directory-system-files ,directory))
+  (let ((value (gensym "VALUE"))
+        (dir-system-files (gensym "DIR-SYSTEM-FILES")))
+    `(let ((*registry* (make-hash-table :test 'equal))
+           (,dir-system-files (directory-system-files ,directory)))
+       (dolist (,system-file ,dir-system-files)
          (handler-bind ((style-warning #'muffle-warning))
            (let ((*load-asd-file* ,system-file))
              (read-asd-file ,system-file))))
-       (maphash (lambda (,system-file ,value)
-                  (declare (ignorable ,system-file))
-                  (dolist (,value ,value)
-                    (destructuring-bind (,system-name &rest ,dependencies) ,value
-                      (declare (ignorable ,system-name ,dependencies))
-                      ,@body)))
-                *registry*))))
+       (dolist (,system-file ,dir-system-files)
+         (declare (ignorable ,system-file))
+         (let ((,value (gethash ,system-file *registry*)))
+           (dolist (,value ,value)
+             (destructuring-bind (,system-name &rest ,dependencies) ,value
+               (declare (ignorable ,system-name ,dependencies))
+               ,@body)))))))
 
 (defun directory-lisp-files (directory)
   (append (uiop:directory-files directory "*.lisp")

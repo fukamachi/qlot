@@ -28,22 +28,19 @@
 (defun safety-shell-command (program args)
   (setf args (mapcar #'princ-to-string args))
   (debug-log "Running shell command: ~A ~{~S~^ ~}" program args)
-  (with-output-to-string (stdout)
-    (let ((stderr (make-string-output-stream)))
-      (let ((process (uiop:launch-program (cons program args)
-                                          :input :interactive
-                                          :output (make-broadcast-stream *standard-output*
-                                                                         stdout)
-                                          :error-output stderr
-                                          :ignore-error-status t)))
-        (unwind-protect
-            (let ((code (uiop:wait-process process)))
-              (unless (zerop code)
-                (error 'shell-command-error
-                       :command (cons program args)
-                       :code code
-                       :stderr (get-output-stream-string stderr))))
-          (uiop:terminate-process process))))))
+  (uiop:with-temporary-file (:pathname stderr
+                             :direction :output)
+    (handler-case
+        (uiop:run-program (cons program args)
+                          :input :interactive
+                          :output :string
+                          :error-output stderr)
+      (uiop/run-program:subprocess-error (e)
+        (let ((process (uiop/run-program:subprocess-error-process e)))
+          (error 'shell-command-error
+                 :command (cons program args)
+                 :code (uiop/run-program:subprocess-error-code e)
+                 :stderr (uiop:read-file-string stderr)))))))
 
 (defvar *current-lisp-path*
   (or #+ccl (car ccl:*command-line-argument-list*)
@@ -51,16 +48,19 @@
       #+allegro (car (system:command-line-arguments))
       #+clisp "clisp"
       #+cmu (car ext:*command-line-strings*)
-      #+ecl (car (si:command-args))))
+      #+ecl (car (si:command-args))
+      #+abcl "java"))
 
 (defvar *eval-option*
   (or
+    #+ros.init "-e"
     #+ccl "--eval"
     #+sbcl "--eval"
     #+allegro "-e"
     #+clisp "-x"
     #+cmu "-eval"
-    #+ecl "-eval"))
+    #+ecl "-eval"
+    #+abcl "--eval"))
 
 (defun str (form)
   (let ((*package* (find-package :cl-user)))
@@ -132,12 +132,16 @@
   #-ros.init
   (safety-shell-command *current-lisp-path*
                         (append
+                          #+abcl `("-jar" ,(uiop:native-namestring
+                                             (first (pathname-device ext:*lisp-home*))))
+
                           #+ccl '("--no-init" "--quiet" "--batch")
                           #+sbcl '("--noinform" "--no-sysinit" "--no-userinit" "--non-interactive")
                           #+allegro '("--qq")
                           #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
                           #+cmu '("-noinit")
                           #+ecl '("-norc")
+                          #+abcl '("--noinform" "--noinit")
 
                           (apply #'build-command-args forms args)
 
@@ -149,4 +153,5 @@
                               #+clisp (ext:quit)
                               #+cmucl (unix:unix-exit)
                               #+ecl (ext:quit)
-                              #-(or ccl sbcl allegro clisp cmucl ecl) (cl-user::quit))))))
+                              #+abcl (ext:quit)
+                              #-(or ccl sbcl allegro clisp cmucl ecl abcl) (cl-user::quit))))))

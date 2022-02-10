@@ -4,16 +4,6 @@
         #:qlot/utils))
 (in-package #:qlot/tests/utils)
 
-(deftest with-in-directory-tests
-  (let ((cwd (uiop:getcwd)))
-    #+(or mswindows win32)
-    (with-in-directory #P"C:/"
-      (ok (equal (uiop:native-namestring (uiop:getcwd)) "C:\\\\")))
-    #-(or mswindows win32)
-    (with-in-directory #P"/"
-      (ok (equal (uiop:getcwd) #P"/")))
-    (ok (equal (uiop:getcwd) cwd))))
-
 (deftest make-keyword-tests
   (ok (eq (make-keyword "foo") :foo))
   (ok (eq (make-keyword "FOO") :foo))
