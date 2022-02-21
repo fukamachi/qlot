@@ -36,11 +36,10 @@
                           :output :string
                           :error-output stderr)
       (uiop/run-program:subprocess-error (e)
-        (let ((process (uiop/run-program:subprocess-error-process e)))
-          (error 'shell-command-error
-                 :command (cons program args)
-                 :code (uiop/run-program:subprocess-error-code e)
-                 :stderr (uiop:read-file-string stderr)))))))
+        (error 'shell-command-error
+               :command (cons program args)
+               :code (uiop/run-program:subprocess-error-code e)
+               :stderr (uiop:read-file-string stderr))))))
 
 (defvar *current-lisp-path*
   (or #+ccl (car ccl:*command-line-argument-list*)
