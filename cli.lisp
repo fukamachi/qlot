@@ -160,7 +160,7 @@ COMMANDS:
 
     add [project name]
     add [source] [project name] [arg1, arg2..]
-        Add a new library to qlfile and trigger 'qlot install'.
+        Add a new library to qlfile and trigger 'qlot install'. (experimental)
         ex)
           $ qlot add mito       # Add 'ql mito'
           $ qlot add ql mito    # Same as the above

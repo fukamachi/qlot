@@ -4,8 +4,6 @@
 
 **Qlot** (pronounced `kyü-'lät`, like culotte) is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
 
-<strong><span style="color:red">Warning</span>: This software is still BETA quality. The APIs will be likely to change.</strong>
-
 ## Usage
 
 ```
@@ -88,7 +86,7 @@ COMMANDS:
 
     add [project name]
     add [source] [project name] [arg1, arg2..]
-        Add a new library to qlfile and trigger 'qlot install'.
+        Add a new library to qlfile and trigger 'qlot install'. (experimental)
         ex)
           $ qlot add mito       # Add 'ql mito'
           $ qlot add ql mito    # Same as the above
@@ -115,6 +113,14 @@ OPTIONS:
         Don't install dependencies of all systems from the current directory.
     --cache [directory]
         Keep intermediate files for fast reinstallation.
+```
+
+### via Docker
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/fukamachi/qlot.svg)](https://hub.docker.com/r/fukamachi/qlot/)
+
+```
+$ docker pull fukamachi/qlot
 ```
 
 ## Tutorial
