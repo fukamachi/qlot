@@ -92,6 +92,8 @@
                 :version (source-version source)
                 :distinfo-subscription-url (format nil "qlot://localhost/~A.txt"
                                                    (source-project-name source))
+                :canonical-distinfo-url (format nil "qlot://localhost/~A.txt"
+                                                (source-project-name source))
                 :release-index-url (format nil "qlot://localhost/~A/~A/releases.txt"
                                            (source-project-name source)
                                            (source-version source))
