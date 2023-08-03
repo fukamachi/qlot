@@ -379,6 +379,27 @@ $ git clone https://github.com/lem-project/micros /path/to/project/.qlot/local-p
 2. Relaunch the Emacs.
 3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
 
+### Vim/NeoVim
+
+1. Install [vlime/vlime](https://github.com/vlime/vlime).
+2. Add the following code to your Vim/NeoVim init.vim.
+
+```vimscript
+let g:vlime_cl_use_terminal = v:true
+let s:vlime_path = '/path/to/vlime'
+function! VlimeBuildServerCommandFor_qlot(vlime_loader, vlime_eval)
+    return ["qlot", "exec", "ros", "run",
+               \ "--load", s:vlime_path . "/lisp/load-vlime.lisp",
+               \ "--eval", vlime_eval]
+endfunction
+function! VlimeQlotExec()
+    call vlime#server#New(v:true, get(g:, "vlime_cl_use_terminal", v:false), v:null, "qlot")
+endfunction
+```
+
+3. Relaunch the Vim/NeoVim.
+4. Change the directory by `:cd /path/to/project/` and invoke `:call VlimeQlotExec()`.
+
 ## Working with local git repositories
 
 `PROJECT_ROOT/.qlot/local-projects` can be used for local git repositories. Symbolic links are also be accessible in Qlot environment.
