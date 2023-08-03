@@ -339,7 +339,30 @@ If multiple distributions provide the same library, lower one would take priorit
 
 [SLIME](https://github.com/slime/slime) is the most popular development environment in Common Lisp. However, its REPL always loads the global Quicklisp, not the project-local one.
 
-Here's quick steps to start project-local REPL with SLIME:
+Here's quick steps to start project-local REPL with SLIME for each text editors:
+
+### Lem
+
+1. Add [lem-project/micros](https://github.com/lem-project/micros) to `.qlot/local-projects`.
+
+```shell
+$ git clone https://github.com/lem-project/micros
+```
+
+2. Add the following function to `~/.lem/init.lisp`.
+
+```common-lisp
+(define-command slime-qlot-exec (directory) ((prompt-for-directory (format nil "Project directory (~A): " (buffer-directory))))
+  (let ((command (first (lem-lisp-mode/implementation::list-roswell-with-qlot-commands))))
+    (when command
+      (lem-lisp-mode:run-slime command :directory directory))))
+```
+
+3. Relaunch the Lem, or reload the init file with `M-x lisp-load-file RET ~/.lem/init.lisp`.
+
+4. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
+
+### Emacs
 
 1. Add the following function to `init.el`.
 
