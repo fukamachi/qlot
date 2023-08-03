@@ -346,7 +346,7 @@ Here's quick steps to start project-local REPL with SLIME for each text editors:
 1. Add [lem-project/micros](https://github.com/lem-project/micros) to `.qlot/local-projects`.
 
 ```shell
-$ git clone https://github.com/lem-project/micros
+$ git clone https://github.com/lem-project/micros /path/to/project/.qlot/local-projects/micros
 ```
 
 2. Add the following function to `~/.lem/init.lisp`.
