@@ -79,9 +79,9 @@
              (null (slot-value source 'upstream-url)))
     (setf (slot-value source 'upstream-url)
           (run-lisp `((write-string
-                       (uiop:symbol-call :qlot/distify/ql :project-upstream-url
+                       (uiop:symbol-call :qlot/utils/quickdocs :project-upstream-url
                                          ,(source-project-name source))))
-                    :systems '("qlot/distify/ql")
+                    :systems '("qlot/utils/quickdocs")
                     :source-registry (asdf:system-source-directory :qlot)))))
 
 (defmethod source-frozen-slots ((source source-ql))

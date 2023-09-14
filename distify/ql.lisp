@@ -20,6 +20,8 @@
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url
                 #:write-source-distinfo)
+  (:import-from #:qlot/utils/quickdocs
+                #:project-upstream-url)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
@@ -62,28 +64,12 @@
                   (source-version-prefix source)
                   version))))
 
-(defun project-upstream-url (project-name)
-  (let ((project-info
-          (dex:get (format nil "https://api.quickdocs.org/projects/~A"
-                           (quri:url-encode project-name)))))
-    (gethash "upstream_url" (yason:parse project-info))))
-
-(defun git-url-p (url)
-  ;; Currently supports GitHub and GitLab
-  (find (quri:uri-host (quri:uri url))
-        '("github.com"
-          "gitlab.com"
-          "gitlab.common-lisp.net")
-        :test #'string=))
-
 (defun distify-ql (source destination &key distinfo-only)
   ;; Upstream
   (when (eq (source-dist-version source) :upstream)
     (let* ((project-name (source-project-name source))
            (upstream-url (or (source-ql-upstream-url source)
                              (project-upstream-url project-name))))
-      (unless (git-url-p upstream-url)
-        (error "Not supported upstream URL: ~A" upstream-url))
       (setf (source-ql-upstream-url source) upstream-url)
       (return-from distify-ql
         (distify-git
