@@ -1,6 +1,7 @@
 (defpackage #:qlot/utils/shell
   (:use #:cl)
   (:import-from #:qlot/logger
+                #:*debug*
                 #:debug-log)
   (:export #:safety-shell-command
            #:shell-command-error
@@ -34,7 +35,9 @@
         (uiop:run-program (cons program args)
                           :input :interactive
                           :output :string
-                          :error-output stderr)
+                          :error-output (if *debug*
+                                            :interactive
+                                            stderr))
       (uiop/run-program:subprocess-error (e)
         (error 'shell-command-error
                :command (cons program args)
