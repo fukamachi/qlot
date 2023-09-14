@@ -25,8 +25,6 @@
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
-  (:import-from #:quri)
-  (:import-from #:yason)
   (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
 

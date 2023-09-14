@@ -7,8 +7,6 @@
                 #:source-dist-project
                 #:source-dist-version
                 #:source-distribution)
-  (:import-from #:qlot/source/git
-                #:source-git)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:import-from #:qlot/utils/ql
