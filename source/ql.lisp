@@ -5,6 +5,7 @@
   (:import-from #:qlot/source/dist
                 #:source-dist
                 #:source-dist-project
+                #:source-dist-version
                 #:source-distribution)
   (:import-from #:qlot/source/git
                 #:source-git)
@@ -12,6 +13,8 @@
                 #:invalid-definition)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
+  (:import-from #:qlot/utils/shell
+                #:run-lisp)
   (:export #:source-ql
            #:source-ql-all
            #:source-ql-upstream-url))
@@ -70,6 +73,16 @@
              :source :ql
              :usage "ql <project name> [<version>]"
              :reason (princ-to-string e)))))
+
+(defmethod freeze-source :before ((source source-ql))
+  (when (and (eq (source-dist-version source) :upstream)
+             (null (slot-value source 'upstream-url)))
+    (setf (slot-value source 'upstream-url)
+          (run-lisp `((write-string
+                       (uiop:symbol-call :qlot/distify/ql :project-upstream-url
+                                         ,(source-project-name source))))
+                    :systems '("qlot/distify/ql")
+                    :source-registry (asdf:system-source-directory :qlot)))))
 
 (defmethod source-frozen-slots ((source source-ql))
   (append (call-next-method)
