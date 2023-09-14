@@ -62,6 +62,7 @@
     #+abcl "--eval"))
 
 (defun str (form)
+  #+sbcl (declare (ignore sb-ext:code-deletion-note))
   (let ((*package* (find-package :cl-user)))
     (if (stringp form)
         form
