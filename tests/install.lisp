@@ -56,7 +56,7 @@
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/fukamachi-lack/distinfo.txt") qlhome))))
         (ok (equal (aget data "version") "ultralisp-20190904101505")))
       (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/mito/distinfo.txt") qlhome))))
-        (ok (equal (aget data "version") "git-8c795b7b4de7dc635f1d2442ef1faf8f23d283e6")))
+        (ok (equal (aget data "version") "ql-upstream-8c795b7b4de7dc635f1d2442ef1faf8f23d283e6")))
 
       ;; Check if Dexador, qlot/distify depends on, is not installed in the local Quicklisp
       (ng (find-if (lambda (name)

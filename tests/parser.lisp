@@ -8,11 +8,13 @@
                 #:source-project-name
                 #:source-version
                 #:source-git
+                #:source-git-remote-url
                 #:source-ql
+                #:source-ql-upstream
                 #:source-dist
                 #:source-distribution
                 #:source-dist-version
-                #:source-ql-upstream-url)
+                #:freeze-source)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed
                 #:unknown-source
@@ -41,10 +43,9 @@
       (ok (equal (source-project-name source) "log4cl"))
       (ok (equal (source-distribution source) "http://beta.quicklisp.org/dist/quicklisp.txt")))
     (let ((source (parse-qlfile-line "ql mito :upstream")))
-      (ok (typep source 'source-ql))
+      (ok (typep source 'source-ql-upstream))
       (ok (equal (source-project-name source) "mito"))
-      (ok (equal (source-dist-version source) :upstream))
-      (ok (null (source-ql-upstream-url source)))))
+      (ok (null (source-git-remote-url source)))))
 
   (ok (signals
         (parse-qlfile-line "source")
@@ -93,3 +94,10 @@
     (ok (slot-boundp (first sources) 'qlot/source/base::version))
     (ok (string= (source-version (first sources)) "2019-08-13"))
     (ok (= (length sources) 6))))
+
+(deftest ql-upstream
+  (let ((source (parse-qlfile-line "ql mito :upstream")))
+    (setf (source-version source)
+          "ql-upstream-8c795b7b4de7dc635f1d2442ef1faf8f23d283e6")
+    (ok (equal (getf (cdr (freeze-source source)) :remote-url)
+               "https://github.com/fukamachi/mito.git"))))
