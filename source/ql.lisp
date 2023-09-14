@@ -12,15 +12,15 @@
                 #:invalid-definition)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
-  (:import-from #:dexador)
-  (:import-from #:quri)
-  (:import-from #:yason)
   (:export #:source-ql
-           #:source-ql-all))
+           #:source-ql-all
+           #:source-ql-upstream-url))
 (in-package #:qlot/source/ql)
 
 (defclass source-ql (source-dist-project)
-  ())
+  ((upstream-url :initarg :upstream-url
+                 :initform nil
+                 :accessor source-ql-upstream-url)))
 
 (defmethod initialize-instance ((source source-ql) &rest initargs &key distribution)
   ;; Just to ignore :distribution
@@ -43,20 +43,6 @@
     (setf (slot-value source 'qlot/source/base::initargs) initargs)
     source))
 
-(defun project-upstream-url (project-name)
-  (let ((project-info
-          (dex:get (format nil "https://api.quickdocs.org/projects/~A"
-                           (quri:url-encode project-name)))))
-    (gethash "upstream_url" (yason:parse project-info))))
-
-(defun git-url-p (url)
-  ;; Currently supports GitHub and GitLab
-  (find (quri:uri-host (quri:uri url))
-        '("github.com"
-          "gitlab.com"
-          "gitlab.common-lisp.net")
-        :test #'string=))
-
 (defmethod make-source ((source (eql :ql)) &rest args)
   (handler-case
       (destructuring-bind (project-name &rest initargs) args
@@ -71,25 +57,21 @@
 
             (let ((distribution (or distribution
                                     (quicklisp-distinfo-url))))
-              (cond
-                ((eq project-name :all)
-                 (make-instance 'source-dist
-                                :project-name "quicklisp"
-                                :distribution distribution
-                                :%version version))
-                ((eq version :upstream)
-                 (let ((upstream-url (project-upstream-url project-name)))
-                   (unless (git-url-p upstream-url)
-                     (error "Not supported upstream URL: ~A" upstream-url))
-                   (make-instance 'source-git
-                                  :project-name project-name
-                                  :remote-url upstream-url)))
-                (t
-                 (make-instance 'source-ql
-                                :project-name project-name
-                                :%version version)))))))
+              (if (eq project-name :all)
+                  (make-instance 'source-dist
+                                 :project-name "quicklisp"
+                                 :distribution distribution
+                                 :%version version)
+                  (make-instance 'source-ql
+                                 :project-name project-name
+                                 :%version version))))))
     (error (e)
       (error 'invalid-definition
              :source :ql
              :usage "ql <project name> [<version>]"
              :reason (princ-to-string e)))))
+
+(defmethod source-frozen-slots ((source source-ql))
+  (append (call-next-method)
+          (when (slot-value source 'upstream-url)
+            `(:upstream-url ,(slot-value source 'upstream-url)))))

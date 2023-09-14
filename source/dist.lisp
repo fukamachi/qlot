@@ -7,13 +7,15 @@
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:export #:source-dist
+           #:source-dist-version
            #:source-dist-project
            #:source-distribution
            #:source-distinfo-url))
 (in-package #:qlot/source/dist)
 
 (defclass source-dist-project (source)
-  ((%version :initarg :%version)
+  ((%version :initarg :%version
+             :reader source-dist-version)
    (distinfo :initarg :distinfo
              :initform nil
              :accessor source-distinfo-url)))

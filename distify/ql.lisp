@@ -1,11 +1,17 @@
 (defpackage #:qlot/distify/ql
   (:use #:cl)
+  (:import-from #:qlot/distify/git
+                #:distify-git)
   (:import-from #:qlot/source
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
+                #:source-dist-version
                 #:source-distinfo-url
-                #:source-distribution)
+                #:source-distribution
+                #:source-ql-upstream-url)
+  (:import-from #:qlot/source/git
+                #:source-git)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils/ql
@@ -17,6 +23,8 @@
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
+  (:import-from #:quri)
+  (:import-from #:yason)
   (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
 
@@ -54,7 +62,37 @@
                   (source-version-prefix source)
                   version))))
 
+(defun project-upstream-url (project-name)
+  (let ((project-info
+          (dex:get (format nil "https://api.quickdocs.org/projects/~A"
+                           (quri:url-encode project-name)))))
+    (gethash "upstream_url" (yason:parse project-info))))
+
+(defun git-url-p (url)
+  ;; Currently supports GitHub and GitLab
+  (find (quri:uri-host (quri:uri url))
+        '("github.com"
+          "gitlab.com"
+          "gitlab.common-lisp.net")
+        :test #'string=))
+
 (defun distify-ql (source destination &key distinfo-only)
+  ;; Upstream
+  (when (eq (source-dist-version source) :upstream)
+    (let* ((project-name (source-project-name source))
+           (upstream-url (or (source-ql-upstream-url source)
+                             (project-upstream-url project-name))))
+      (unless (git-url-p upstream-url)
+        (error "Not supported upstream URL: ~A" upstream-url))
+      (setf (source-ql-upstream-url source) upstream-url)
+      (return-from distify-ql
+        (distify-git
+         (make-instance 'source-git
+                        :project-name project-name
+                        :remote-url upstream-url)
+         destination
+         :distinfo-only distinfo-only))))
+
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
