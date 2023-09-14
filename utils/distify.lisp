@@ -2,7 +2,10 @@
   (:use #:cl)
   (:import-from #:qlot/utils/asdf
                 #:with-directory
-                #:directory-system-files)
+                #:directory-system-files
+                #:directory-lisp-files
+                #:lisp-file-system-name
+                #:lisp-file-dependencies)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
                 #:make-versioned-distinfo-url
@@ -64,7 +67,24 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
               project-name
               (pathname-name system-file)
               system-name
-              dependencies))))
+              dependencies)
+      (let ((system (let ((asdf:*central-registry* (list source-directory)))
+                      (asdf:find-system system-name))))
+        (when (typep system 'asdf:package-inferred-system)
+          (loop for file in (directory-lisp-files source-directory)
+                for sub-system-name = (lisp-file-system-name file
+                                                             source-directory
+                                                             system-name)
+                when sub-system-name
+                do (format s "~A ~A ~A~{ ~A~}~%"
+                           project-name
+                           (enough-namestring file source-directory)
+                           sub-system-name
+                           (delete-duplicates
+                            (mapcar #'string-downcase
+                                    (lisp-file-dependencies file))
+                            :test 'equal
+                            :from-end t))))))))
 
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data

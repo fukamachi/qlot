@@ -4,6 +4,7 @@
            #:directory-system-files
            #:with-directory
            #:directory-lisp-files
+           #:lisp-file-system-name
            #:lisp-file-dependencies))
 (in-package #:qlot/utils/asdf)
 
@@ -60,25 +61,22 @@
 
 (defun read-asd-form (form)
   (labels ((dep-list-name (dep)
-                          (ecase (first dep)
-                            ((:version :require) (second dep))
-                            (:feature (third dep))))
+             (ecase (first dep)
+               ((:version :require) (second dep))
+               (:feature (third dep))))
            (normalize (dep)
-                      (real-system-name
-                        (cond
-                          ((and (consp dep)
-                                (keywordp (car dep)))
-                           (let ((name (dep-list-name dep)))
-                             (etypecase name
-                               ((or symbol string) (string-downcase name))
-                               (list (ecase (first name)
-                                       (:require (normalize (second name))))))))
-                          ((or (symbolp dep)
-                               (stringp dep))
-                           (string-downcase dep))
-                          (t (error "Can't normalize dependency: ~S" dep)))))
-           (real-system-name (name)
-                             (subseq name 0 (position #\/ name))))
+             (cond
+               ((and (consp dep)
+                     (keywordp (car dep)))
+                (let ((name (dep-list-name dep)))
+                  (etypecase name
+                    ((or symbol string) (string-downcase name))
+                    (list (ecase (first name)
+                            (:require (normalize (second name))))))))
+               ((or (symbolp dep)
+                    (stringp dep))
+                (string-downcase dep))
+               (t (error "Can't normalize dependency: ~S" dep)))))
     (cond
       ((not (consp form)) nil)
       ((eq (first form) 'asdf:defsystem)
@@ -138,6 +136,56 @@
                            (char= (aref dir-name 0) #\.))
                 append (directory-lisp-files subdir))))
 
+(defun starts-with (prefix value)
+  (check-type prefix string)
+  (check-type value string)
+  (and (<= (length prefix) (length value))
+       (string= prefix value :end2 (length prefix))))
+
+(defun lisp-file-system-name (file root primary-system-name)
+  (block nil
+    (handler-bind ((error
+                     (lambda (e)
+                       (declare (ignorable e))
+                       ;;(uiop:print-condition-backtrace e)
+                       (return nil))))
+      (flet ((primary-system-prefix-p (package-name)
+               (check-type package-name string)
+               (starts-with (format nil "~A/" primary-system-name) package-name)))
+        (let ((defpackage-form (asdf/package-inferred-system::file-defpackage-form file)))
+          (when defpackage-form
+            (let* ((package-names (mapcar #'string-downcase
+                                          (cons (second defpackage-form)
+                                                (cdr
+                                                 (assoc :nicknames (cddr defpackage-form)
+                                                        :test #'string=)))))
+                   (system-name (find-if
+                                 (lambda (name)
+                                   (and (primary-system-prefix-p name)
+                                        (uiop:pathname-equal
+                                         (merge-pathnames
+                                          (format nil "~A~@[.~A~]"
+                                                  (subseq name (1+ (length primary-system-name)))
+                                                  (pathname-type file))
+                                          root)
+                                         file)))
+                                 package-names)))
+              (when system-name
+                (string-downcase system-name)))))))))
+
 (defun lisp-file-dependencies (file)
-  (when (ignore-errors (asdf/package-inferred-system::file-defpackage-form file))
-    (asdf/package-inferred-system::package-inferred-system-file-dependencies file)))
+  (flet ((ensure-car (object)
+           (if (listp object)
+               (car object)
+               object)))
+    (let* ((defpackage-form (asdf/package-inferred-system::file-defpackage-form file))
+           (defpackage-form (remove :local-nicknames
+                                    defpackage-form
+                                    :key #'ensure-car
+                                    :test 'equal)))
+      (and defpackage-form
+           (remove-if (lambda (dep-name)
+                        (or (sbcl-contrib-p dep-name)
+                            (member (princ-to-string dep-name) '("cl" "common-lisp")
+                                    :test 'string-equal)))
+                      (asdf/package-inferred-system::package-dependencies defpackage-form))))))
