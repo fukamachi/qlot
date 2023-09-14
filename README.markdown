@@ -11,6 +11,7 @@
 git clack https://github.com/fukamachi/clack.git
 github datafly fukamachi/datafly :branch v0.7.x
 ql log4cl 2014-03-17
+ql mito :upstream
 ```
 
 ```
@@ -249,6 +250,10 @@ If you want to use Clack in Quicklisp dist of January 13, 2014, qlfile would be 
 ```
 ql clack 2014-01-13
 ```
+
+If `:latest` is specified for the version, the latest Quicklisp dist version will be used.
+
+If `:upstream` is specified, Qlot downloads the latest code from the upstream git repository.
 
 ### ultralisp
 
