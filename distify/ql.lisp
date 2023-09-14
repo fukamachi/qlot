@@ -1,16 +1,11 @@
 (defpackage #:qlot/distify/ql
   (:use #:cl)
-  (:import-from #:qlot/distify/git
-                #:distify-git)
   (:import-from #:qlot/source
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
-                #:source-dist-version
                 #:source-distinfo-url
                 #:source-distribution)
-  (:import-from #:qlot/source/git
-                #:source-git)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils/ql

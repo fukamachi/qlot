@@ -13,7 +13,6 @@
                 #:source-ql-upstream
                 #:source-dist
                 #:source-distribution
-                #:source-dist-version
                 #:freeze-source)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed

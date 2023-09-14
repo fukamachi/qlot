@@ -5,7 +5,6 @@
   (:import-from #:qlot/source/dist
                 #:source-dist
                 #:source-dist-project
-                #:source-dist-version
                 #:source-distribution)
   (:import-from #:qlot/source/git
                 #:source-git
