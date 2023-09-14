@@ -7,6 +7,9 @@
                 #:source-dist-project
                 #:source-dist-version
                 #:source-distribution)
+  (:import-from #:qlot/source/git
+                #:source-git
+                #:source-git-remote-url)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:import-from #:qlot/utils/ql
@@ -15,13 +18,14 @@
                 #:run-lisp)
   (:export #:source-ql
            #:source-ql-all
-           #:source-ql-upstream-url))
+           #:source-ql-upstream))
 (in-package #:qlot/source/ql)
 
 (defclass source-ql (source-dist-project)
-  ((upstream-url :initarg :upstream-url
-                 :initform nil
-                 :accessor source-ql-upstream-url)))
+  ())
+
+(defclass source-ql-upstream (source-git)
+  ())
 
 (defmethod initialize-instance ((source source-ql) &rest initargs &key distribution)
   ;; Just to ignore :distribution
@@ -58,31 +62,35 @@
 
             (let ((distribution (or distribution
                                     (quicklisp-distinfo-url))))
-              (if (eq project-name :all)
-                  (make-instance 'source-dist
-                                 :project-name "quicklisp"
-                                 :distribution distribution
-                                 :%version version)
-                  (make-instance 'source-ql
-                                 :project-name project-name
-                                 :%version version))))))
+              (cond
+                ((eq project-name :all)
+                 (make-instance 'source-dist
+                                :project-name "quicklisp"
+                                :distribution distribution
+                                :%version version))
+                ((eq version :upstream)
+                 (make-instance 'source-ql-upstream
+                                :project-name project-name))
+                (t
+                 (make-instance 'source-ql
+                                :project-name project-name
+                                :%version version)))))))
     (error (e)
       (error 'invalid-definition
              :source :ql
              :usage "ql <project name> [<version>]"
              :reason (princ-to-string e)))))
 
-(defmethod freeze-source :before ((source source-ql))
-  (when (and (eq (source-dist-version source) :upstream)
-             (null (slot-value source 'upstream-url)))
-    (setf (slot-value source 'upstream-url)
+(defmethod freeze-source :before ((source source-ql-upstream))
+  (unless (source-git-remote-url source)
+    (setf (source-git-remote-url source)
           (run-lisp `((write-string
                        (uiop:symbol-call :qlot/utils/quickdocs :project-upstream-url
                                          ,(source-project-name source))))
                     :systems '("qlot/utils/quickdocs")
                     :source-registry (asdf:system-source-directory :qlot)))))
 
-(defmethod source-frozen-slots ((source source-ql))
+(defmethod source-frozen-slots ((source source-ql-upstream))
   (append (call-next-method)
-          (when (slot-value source 'upstream-url)
-            `(:upstream-url ,(slot-value source 'upstream-url)))))
+          (when (source-git-remote-url source)
+            `(:remote-url ,(source-git-remote-url source)))))

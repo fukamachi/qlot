@@ -9,9 +9,12 @@
                 #:source-git
                 #:source-git-branch
                 #:source-git-tag
+                #:source-git-remote-url
                 #:source-git-remote-access-url
                 #:source-git-ref
                 #:source-git-identifier)
+  (:import-from #:qlot/source/ql
+                #:source-ql-upstream)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt
@@ -20,6 +23,8 @@
                 #:git-clone
                 #:git-ref
                 #:create-git-tarball)
+  (:import-from #:qlot/utils/quickdocs
+                #:project-upstream-url)
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
@@ -56,6 +61,12 @@
 
 (defun distify-git (source destination &key distinfo-only)
   (check-type source source-git)
+
+  (when (typep source 'source-ql-upstream)
+    (unless (source-git-remote-url source)
+      (setf (source-git-remote-url source)
+            (project-upstream-url (source-project-name source)))))
+
   (load-source-git-version source)
 
   (let ((*default-pathname-defaults*

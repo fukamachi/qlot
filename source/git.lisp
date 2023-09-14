@@ -16,6 +16,7 @@
 
 (defclass source-git (source)
   ((remote-url :initarg :remote-url
+               :initform nil
                :accessor source-git-remote-url)
    (ref :initarg :ref
         :initform nil

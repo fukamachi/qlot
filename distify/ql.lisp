@@ -8,8 +8,7 @@
                 #:source-version-prefix
                 #:source-dist-version
                 #:source-distinfo-url
-                #:source-distribution
-                #:source-ql-upstream-url)
+                #:source-distribution)
   (:import-from #:qlot/source/git
                 #:source-git)
   (:import-from #:qlot/proxy
@@ -20,8 +19,6 @@
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url
                 #:write-source-distinfo)
-  (:import-from #:qlot/utils/quickdocs
-                #:project-upstream-url)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
@@ -63,20 +60,6 @@
                   version))))
 
 (defun distify-ql (source destination &key distinfo-only)
-  ;; Upstream
-  (when (eq (source-dist-version source) :upstream)
-    (let* ((project-name (source-project-name source))
-           (upstream-url (or (source-ql-upstream-url source)
-                             (project-upstream-url project-name))))
-      (setf (source-ql-upstream-url source) upstream-url)
-      (return-from distify-ql
-        (distify-git
-         (make-instance 'source-git
-                        :project-name project-name
-                        :remote-url upstream-url)
-         destination
-         :distinfo-only distinfo-only))))
-
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)

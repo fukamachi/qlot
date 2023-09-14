@@ -24,3 +24,8 @@
  (:class qlot.source.ql:source-ql
   :initargs (:project-name "log4cl" :%version "2014-03-17")
   :version "ql-2014-03-17"))
+("mito" .
+ (:class qlot/source/ql:source-ql
+  :initargs (:%version :upstream)
+  :version "git-8c795b7b4de7dc635f1d2442ef1faf8f23d283e6"
+  :upstream-url "https://github.com/fukamachi/mito.git"))
