@@ -199,10 +199,11 @@
                (car object)
                object)))
     (let* ((defpackage-form (asdf/package-inferred-system::file-defpackage-form file))
-           (defpackage-form (remove :local-nicknames
-                                    defpackage-form
-                                    :key #'ensure-car
-                                    :test 'equal)))
+           (defpackage-form (remove-if (lambda (key)
+                                         (find key '(:local-nicknames :lock)
+                                               :test 'equal))
+                                       defpackage-form
+                                       :key #'ensure-car)))
       (and defpackage-form
            (mapcar (lambda (name)
                      (let ((name-str (typecase name
