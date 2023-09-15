@@ -20,8 +20,8 @@ case "$command" in
   sbcl)
     check_qlot_directory
     shift
-    exec sbcl --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
+    exec sbcl --noinform --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
     ;;
   *)
-    exec sbcl --noinform --disable-debugger --eval '(ql:quickload :qlot/cli :silent t)' --eval '(qlot/cli:main)' --quit "$@"
+    exec sbcl --noinform --non-interactive --eval '(ql:quickload :qlot/cli :silent t)' --eval '(qlot/cli:main)' "$@"
 esac

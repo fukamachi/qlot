@@ -60,7 +60,7 @@ or
 
 ```shell
 $ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
-$ printf '#!/bin/sh\nexec sbcl --noinform --disable-debugger --eval "(ql:quickload :qlot/cli :silent t)" --eval "(qlot/cli:main)" --quit "$@"\n' > /usr/local/bin/qlot
+$ printf '#!/bin/sh\nexec sbcl --noinform --non-interactive --eval "(ql:quickload :qlot/cli :silent t)" --eval "(qlot/cli:main)" "$@"\n' > /usr/local/bin/qlot
 $ chmod u+x /usr/local/bin/qlot
 ```
 
