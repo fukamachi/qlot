@@ -1,6 +1,7 @@
 (defpackage #:qlot/utils/distify
   (:use #:cl)
   (:import-from #:qlot/utils/asdf
+                #:system-class-name
                 #:with-directory
                 #:directory-system-files
                 #:directory-lisp-files
@@ -68,9 +69,9 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
               (pathname-name system-file)
               system-name
               dependencies)
-      (let ((system (let ((asdf:*central-registry* (list source-directory)))
-                      (asdf:find-system system-name))))
-        (when (typep system 'asdf:package-inferred-system)
+      (let ((system-class-name (system-class-name system-name)))
+        ;; XXX: This doesn't work if it's a class inherits package-inferred-system.
+        (when (eq system-class-name :package-inferred-system)
           (loop for file in (directory-lisp-files source-directory)
                 for sub-system-name = (lisp-file-system-name file
                                                              source-directory

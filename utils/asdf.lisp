@@ -2,6 +2,7 @@
   (:use #:cl)
   (:export #:with-autoload-on-missing
            #:directory-system-files
+           #:system-class-name
            #:with-directory
            #:directory-lisp-files
            #:lisp-file-system-name
@@ -57,7 +58,9 @@
       :key #'uiop:native-namestring)))
 
 (defvar *registry*)
+(defvar *package-system*)
 (defvar *load-asd-file*)
+(defvar *system-class-name*)
 
 (defun read-asd-form (form)
   (labels ((dep-list-name (dep)
@@ -95,7 +98,19 @@
                                               :test #'equalp))
                                  :test #'string=)
                          #'string<))
-                 (gethash *load-asd-file* *registry*)))))
+                 (gethash *load-asd-file* *registry*))
+           (setf (gethash system-name *system-class-name*)
+                 (getf system-form :class)))))
+      ((eq (first form) 'asdf:register-system-packages)
+       (destructuring-bind (system-name package-names)
+           (rest form)
+         (dolist (pkg package-names)
+           (let ((pkg (typecase pkg
+                        (symbol (symbol-name pkg))
+                        (string pkg))))
+             (when pkg
+               (setf (gethash pkg *package-system*)
+                     system-name))))))
       ((macro-function (first form))
        (read-asd-form (macroexpand-1 form))))))
 
@@ -109,10 +124,15 @@
                 until (eq form eof)
                 do (read-asd-form form)))))))
 
+(defun system-class-name (system-name)
+  (gethash system-name *system-class-name*))
+
 (defmacro with-directory ((system-file system-name dependencies) directory &body body)
   (let ((value (gensym "VALUE"))
         (dir-system-files (gensym "DIR-SYSTEM-FILES")))
     `(let ((*registry* (make-hash-table :test 'equal))
+           (*package-system* (make-hash-table :test 'eql))
+           (*system-class-name* (make-hash-table :test 'equal))
            (,dir-system-files (directory-system-files ,directory)))
        (dolist (,system-file ,dir-system-files)
          (handler-bind ((style-warning #'muffle-warning))
@@ -184,8 +204,15 @@
                                     :key #'ensure-car
                                     :test 'equal)))
       (and defpackage-form
-           (remove-if (lambda (dep-name)
-                        (or (sbcl-contrib-p dep-name)
-                            (member (princ-to-string dep-name) '("cl" "common-lisp")
-                                    :test 'string-equal)))
-                      (asdf/package-inferred-system::package-dependencies defpackage-form))))))
+           (mapcar (lambda (name)
+                     (let ((name-str (typecase name
+                                       (symbol (symbol-name name))
+                                       (string name))))
+                       (or (and name-str
+                                (gethash name-str *package-system*))
+                           name)))
+                   (remove-if (lambda (dep-name)
+                                (or (sbcl-contrib-p dep-name)
+                                    (member (princ-to-string dep-name) '("cl" "common-lisp")
+                                            :test 'string-equal)))
+                              (asdf/package-inferred-system::package-dependencies defpackage-form)))))))
