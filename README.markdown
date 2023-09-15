@@ -60,15 +60,8 @@ or
 
 ```shell
 $ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
-```
-
-Run the following steps to make an executable shell command:
-
-```shell
-$ sbcl --noinform --eval '(asdf:make :qlot)'
-$ mv `sbcl --noinform --eval '(princ (ql:where-is-system :qlot))' --quit`/qlot /usr/local/bin
-$ which qlot
-/usr/local/bin/qlot
+$ printf '#!/bin/sh\nexec sbcl --noinform --disable-debugger --eval "(ql:quickload :qlot/cli :silent t)" --eval "(qlot/cli:main)" --quit "$@"\n' > /usr/local/bin/qlot
+$ chmod u+x /usr/local/bin/qlot
 ```
 
 ### via Roswell
@@ -235,6 +228,14 @@ Here are few usefull commands:
 * `qlot exec ros build some-app.ros` - another command, useful, to build a binary
   from systems, fixed in `qlfile` and `qlfile.lock`. This way you can be sure that your builds are stable.
 
+**NOTE**: `qlot exec` is only affects to `ros` or Roswell scripts.
+
+If you're using Qlot without Roswell, load `.qlot/setup.lisp` instead, like:
+
+```
+$ sbcl --noinform --no-userinit --no-sysinit --load .qlot/setup.lisp
+```
+
 ## `qlfile` syntax
 
 "qlfile" is a collection of Quicklisp dist declarations. Each line of that represents a dist.
@@ -386,7 +387,7 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 (defun slime-qlot-exec (directory)
   (interactive (list (read-directory-name "Project directory: ")))
   (slime-start :program "sbcl"
-               :program-args `("--load" ,(concat (file-name-as-directory directory) ".qlot/setup.lisp"))
+               :program-args `("--no-userinit" "--no-sysinit" "--load" ,(concat (file-name-as-directory directory) ".qlot/setup.lisp"))
                :directory directory
                :name 'qlot
                :env (list (concat "PATH=" (mapconcat 'identity exec-path ":"))
