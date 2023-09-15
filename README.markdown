@@ -47,32 +47,41 @@ This is what Qlot is trying to solve.
 
 ## Requirements
 
-* ASDF 3.2 or above
+* [Roswell](https://github.com/roswell/roswell/)
+
+or
+
+* [SBCL](https://www.sbcl.org/)
+* [Quicklisp](https://www.quicklisp.org/)
 
 ## Installation
 
 ### via Quicklisp
 
-```common-lisp
-(ql:quickload :qlot)
+```shell
+$ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
+```
+
+Run the following steps to make an executable shell command:
+
+```shell
+$ sbcl --noinform --eval '(asdf:make :qlot)'
+$ mv `sbcl --noinform --eval '(princ (ql:where-is-system :qlot))' --quit`/qlot /usr/local/bin
+$ which qlot
+/usr/local/bin/qlot
 ```
 
 ### via Roswell
 
-It also can be installed with [Roswell](https://github.com/roswell/roswell).
-
-```
+```shell
 $ ros install qlot
-
-# Install the latest version from GitHub
-$ ros install fukamachi/qlot
 ```
 
-It's almost the same as using Quicklisp, except it also introduces a shell command "qlot".
+Roswell adds an executable script under `$HOME/.roswell/bin`. Make sure if the directory exists in `$PATH`.
 
-```
+```shell
 $ which qlot
-/Users/nitro_idiot/.roswell/bin/qlot
+/Users/fukamachi/.roswell/bin/qlot
 $ qlot
 Usage: qlot COMMAND [ARGS..]
 
@@ -120,8 +129,8 @@ OPTIONS:
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/fukamachi/qlot.svg)](https://hub.docker.com/r/fukamachi/qlot/)
 
-```
-$ docker pull fukamachi/qlot
+```shell
+$ docker run --rm -it fukamachi/qlot
 ```
 
 ## Tutorial
@@ -351,7 +360,7 @@ Here's quick steps to start project-local REPL with SLIME for each text editors:
 1. Add [lem-project/micros](https://github.com/lem-project/micros) to `.qlot/local-projects`.
 
 ```shell
-$ git clone https://github.com/lem-project/micros /path/to/project/.qlot/local-projects/micros
+$ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 ```
 
 2. Add the following function to `~/.lem/init.lisp`.
@@ -369,7 +378,22 @@ $ git clone https://github.com/lem-project/micros /path/to/project/.qlot/local-p
 
 ### Emacs
 
-1. Add the following function to `init.el`.
+1. Add one of the following functions to `init.el`.
+
+#### a) SBCL version
+
+```emacs-lisp
+(defun slime-qlot-exec (directory)
+  (interactive (list (read-directory-name "Project directory: ")))
+  (slime-start :program "sbcl"
+               :program-args `("--load" ,(concat (file-name-as-directory directory) ".qlot/setup.lisp"))
+               :directory directory
+               :name 'qlot
+               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":"))
+                          (concat "CL_SOURCE_REGISTRY=" directory))))
+```
+
+#### b) Roswell version
 
 ```emacs-lisp
 (defun slime-qlot-exec (directory)
