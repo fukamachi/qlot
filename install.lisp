@@ -50,9 +50,13 @@
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome
     (let ((all-dependencies (project-dependencies project-root)))
-      (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length all-dependencies))
-      (with-package-functions #:ql-dist (ensure-installed)
-        (mapc #'ensure-installed all-dependencies)))))
+      (with-package-functions #:ql-dist (ensure-installed release name)
+        (let ((releases (delete-duplicates (mapcar #'release all-dependencies)
+                                           :key #'name
+                                           :test 'equal
+                                           :from-end t)))
+          (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length releases))
+          (mapc #'ensure-installed releases))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
