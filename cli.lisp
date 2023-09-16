@@ -7,6 +7,8 @@
                 #:exec
                 #:which
                 #:command-line-arguments)
+  (:import-from #:qlot/utils
+                #:generate-random-string)
   (:export #:install
            #:update
            #:add
@@ -52,11 +54,18 @@
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
-  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
+  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install)))
+        (qlfile.lock (merge-pathnames (format nil "qlfile-~A.lock" (generate-random-string))
+                                      (uiop:temporary-directory))))
+    (uiop:copy-file qlfile qlfile.lock)
     (uiop:with-output-file (out qlfile :if-exists :append :if-does-not-exist :create)
       (format out "~&~{~A~^ ~}~%" args)
-      (message "Add '~{~A~^ ~}' to '~A'." args qlfile)))
-  (install))
+      (message "Add '~{~A~^ ~}' to '~A'." args qlfile))
+    (handler-bind ((error
+                     (lambda (e)
+                       (declare (ignore e))
+                       (uiop:copy-file qlfile.lock qlfile))))
+      (install))))
 
 (defun bundle (&optional (project-root *default-pathname-defaults*) &rest args)
   (declare (ignore args))
