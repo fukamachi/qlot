@@ -83,8 +83,9 @@
   (:method (source1 source2)
     nil)
   (:method ((source1 source) (source2 source))
-    (string= (source-project-name source1)
-             (source-project-name source2))))
+    (and (eq (class-of source1) (class-of source2))
+         (string= (source-project-name source1)
+                  (source-project-name source2)))))
 
 (defun write-distinfo (source &optional (stream *standard-output*))
   (format stream "~{~(~A~): ~A~%~}"
