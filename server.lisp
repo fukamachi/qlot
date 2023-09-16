@@ -10,9 +10,13 @@
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/shell
                 #:run-lisp
+                #:shell-command-error
+                #:shell-command-error-output
                 #:*qlot-source-directory*)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
+  (:import-from #:qlot/errors
+                #:qlot-simple-error)
   (:export #:with-qlot-server
            #:run-distify-source-process))
 (in-package #:qlot/server)
@@ -43,24 +47,28 @@
 
 (defun run-distify-source-process (source destination &key quicklisp-home distinfo-only)
   (let (#+quicklisp (ql:*quicklisp-home* *system-quicklisp-home*))
-    (run-lisp (append
-                (when quicklisp-home
-                  (list `(let ((*error-output* (make-broadcast-stream)))
-                           (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
-                (list `(uiop:symbol-call :qlot/distify :distify
-                                         ;; Call defrost-source to set '%version' from 'source-version'.
-                                         (defrost-source
-                                           (make-instance ',(type-of source)
-                                                          :project-name ,(source-project-name source)
-                                                          ,@(source-initargs source)
-                                                          ,@(and (slot-boundp source 'qlot/source/base::version)
-                                                                 `(:version ,(source-version source)))
-                                                          ,@(source-frozen-slots source)))
-                                         ,destination
-                                         :distinfo-only ,distinfo-only)))
-              :systems '("qlot/distify")
-              :source-registry (or *qlot-source-directory*
-                                   (asdf:system-source-directory :qlot)))))
+    (handler-case
+        (run-lisp (append
+                   (when quicklisp-home
+                     (list `(let ((*error-output* (make-broadcast-stream)))
+                              (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
+                   (list `(uiop:symbol-call :qlot/distify :distify
+                                            ;; Call defrost-source to set '%version' from 'source-version'.
+                                            (defrost-source
+                                                (make-instance ',(type-of source)
+                                                               :project-name ,(source-project-name source)
+                                                               ,@(source-initargs source)
+                                                               ,@(and (slot-boundp source 'qlot/source/base::version)
+                                                                      `(:version ,(source-version source)))
+                                                               ,@(source-frozen-slots source)))
+                                            ,destination
+                                            :distinfo-only ,distinfo-only)))
+                  :systems '("qlot/distify")
+                  :source-registry (or *qlot-source-directory*
+                                       (asdf:system-source-directory :qlot)))
+      (shell-command-error (e)
+        (error 'qlot-simple-error
+               :format-control (shell-command-error-output e))))))
 
 (defmacro with-qlot-server ((source &optional qlhome destination distinfo-only) &body body)
   (let ((g-source (gensym "SOURCE"))

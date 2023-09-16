@@ -5,6 +5,7 @@
                 #:debug-log)
   (:export #:safety-shell-command
            #:shell-command-error
+           #:shell-command-error-output
            #:run-lisp
            #:*qlot-source-directory*))
 (in-package #:qlot/utils/shell)
@@ -18,7 +19,8 @@
    (code :type integer
          :initarg :code)
    (stderr :type string
-           :initarg :stderr))
+           :initarg :stderr
+           :reader shell-command-error-output))
   (:report
    (lambda (condition stream)
      (format stream "Error while executing a shell command: ~{~S~^ ~} (Code=~D)~2%  ~A"
@@ -75,15 +77,16 @@
 (defun -e (form)
   (list *eval-option* (str form)))
 
-(defvar *default-args*
+(defun default-args ()
   (append
     (-e "(require 'asdf)")
     (-e
-      '(setf *debugger-hook*
+      `(setf *debugger-hook*
              (lambda (cl-user::c cl-user::parent)
                (declare (ignore cl-user::parent))
-               (format *error-output* "~&Error: ~A~2%" cl-user::c)
-               (uiop:print-backtrace :condition cl-user::c)
+               (format *error-output* "~&Error: ~A~%" cl-user::c)
+               ,@(and *debug*
+                      '((uiop:print-backtrace :condition cl-user::c)))
                (uiop:quit -1))))))
 
 (defun build-command-args (forms &key systems source-registry without-quicklisp)
@@ -91,7 +94,7 @@
                     nil
                     (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
     (append
-      *default-args*
+      (default-args)
 
       (when source-registry
         (-e `(push ,source-registry asdf:*central-registry*)))
