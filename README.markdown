@@ -6,47 +6,29 @@
 
 ## Usage
 
-``` # "qlfile" of "myapp"
-Usage: qlot COMMAND [ARGS..]
+```
+# "qlfile" of "myapp"
+git clack https://github.com/fukamachi/clack.git
+github datafly fukamachi/datafly :branch v0.7.x
+ql log4cl 2014-03-17
+ql mito :upstream
+```
 
-COMMANDS:
-    install
-        Installs libraries to './.qlot'.
+```
+$ cd /path/to/myapp
 
-    update
-        Makes './.qlot' up-to-date and update 'qlfile.lock'.
-        Possible to update specific projects with --project option.
-        ex) qlot update --project mito
+# Installing libraries project-locally.
+$ qlot install
 
-    add [project name]
-    add [source] [project name] [arg1, arg2..]
-        Add a new library to qlfile and trigger 'qlot install'. (experimental)
-        ex)
-          $ qlot add mito       # Add 'ql mito'
-          $ qlot add ql mito    # Same as the above
-          $ qlot add ultralisp egao1980-cl-idna
-          $ qlot add github datafly fukamachi/datafly
+# Updating depending libraries of a project.
+$ qlot update
 
-    run
-        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
+# Updating specific libraries
+$ qlot update --project mito
 
-    exec [shell-args..]
-        Invokes the following shell-command with the project local Quicklisp.
-
-    bundle
-        Bundles project dependencies to './.bundle-libs'.
-        Load './.bundle-libs/bundle.lisp' to make them available.
-        Read https://www.quicklisp.org/beta/bundles.html for the detail.
-
-OPTIONS:
-    --version
-        Show the Qlot version
-    --debug
-        A flag to enable debug logging. (Only for 'install' or 'update')
-    --no-deps
-        Don't install dependencies of all systems from the current directory.
-    --cache [directory]
-        Keep intermediate files for fast reinstallation.
+# Execute a command with a project-local Quicklisp
+$ qlot exec ros -S . run
+$ qlot exec clackup app.lisp
 ```
 
 ## What Qlot is trying to solve
