@@ -47,12 +47,10 @@ This is what Qlot is trying to solve.
 
 ## Requirements
 
-* [Roswell](https://github.com/roswell/roswell/)
-
-or
-
-* [SBCL](https://www.sbcl.org/)
-* [Quicklisp](https://www.quicklisp.org/)
+* [Roswell](https://github.com/roswell/roswell/) or [SBCL](https://www.sbcl.org/)
+* OpenSSL
+  * apt install libssl-dev
+* git (for installation from git repositories)
 
 ## Installation
 
@@ -75,47 +73,6 @@ Roswell adds an executable script under `$HOME/.roswell/bin`. Make sure if the d
 ```shell
 $ which qlot
 /Users/fukamachi/.roswell/bin/qlot
-$ qlot
-Usage: qlot COMMAND [ARGS..]
-
-COMMANDS:
-    install
-        Installs libraries to './.qlot'.
-
-    update
-        Makes './.qlot' up-to-date and update 'qlfile.lock'.
-        Possible to update specific projects with --project option.
-        ex) qlot update --project mito
-
-    add [project name]
-    add [source] [project name] [arg1, arg2..]
-        Add a new library to qlfile and trigger 'qlot install'. (experimental)
-        ex)
-          $ qlot add mito       # Add 'ql mito'
-          $ qlot add ql mito    # Same as the above
-          $ qlot add ultralisp egao1980-cl-idna
-          $ qlot add github datafly fukamachi/datafly
-
-    run
-        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
-
-    exec [shell-args..]
-        Invokes the following shell-command with the project local Quicklisp.
-
-    bundle
-        Bundles project dependencies to './.bundle-libs'.
-        Load './.bundle-libs/bundle.lisp' to make them available.
-        Read https://www.quicklisp.org/beta/bundles.html for the detail.
-
-OPTIONS:
-    --version
-        Show the Qlot version
-    --debug
-        A flag to enable debug logging. (Only for 'install' or 'update')
-    --no-deps
-        Don't install dependencies of all systems from the current directory.
-    --cache [directory]
-        Keep intermediate files for fast reinstallation.
 ```
 
 ### via Docker
@@ -124,6 +81,15 @@ OPTIONS:
 
 ```shell
 $ docker run --rm -it fukamachi/qlot
+```
+
+### Install from source
+
+```shell
+$ git clone https://github.com/fukamachi/qlot
+$ cd qlot
+$ scripts/setup.sh
+$ printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
 ```
 
 ## Tutorial

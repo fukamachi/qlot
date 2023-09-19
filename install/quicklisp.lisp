@@ -10,6 +10,8 @@
                 #:run-lisp)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
+  (:import-from #:qlot/utils/http
+                #:http-fetch)
   (:export #:install-quicklisp))
 (in-package #:qlot/install/quicklisp)
 
@@ -19,11 +21,8 @@
                                                      (generate-random-string))
                                              to)
                             to)))
-    (progv (list (intern #.(string '#:*proxy-url*) '#:ql-http))
-        (list *proxy*)
-      (uiop:symbol-call '#:ql-http '#:http-fetch
-                        "http://beta.quicklisp.org/quicklisp.lisp"
-                        quicklisp-file))
+    (http-fetch "http://beta.quicklisp.org/quicklisp.lisp"
+                quicklisp-file)
     quicklisp-file))
 
 (defun install-quicklisp (path)
