@@ -1,9 +1,32 @@
 #!/bin/bash
 
 QLOT_HOME=$(cd "$(dirname "$0")/../" && pwd -P)
+command=$1
 
-sbcl --noinform --no-sysinit --no-userinit --non-interactive \
-  --load $QLOT_HOME/.qlot/setup.lisp \
-  --eval "(asdf:load-asd #P\"$QLOT_HOME/qlot.asd\")" \
-  --eval '(ql:quickload :qlot/cli :silent t)' \
-  --eval '(qlot/cli:main)' "$@"
+check_qlot_directory() {
+  if [ ! -f .qlot/setup.lisp ]; then
+    echo ".qlot/ is not a quicklisp directory." >&2
+    echo "Run 'qlot install' first." >&2
+    exit 1
+  fi
+}
+
+case "$command" in
+  exec)
+    check_qlot_directory
+    QUICKLISP_HOME=.qlot/
+    CL_SOURCE_REGISTRY="$(pwd)/"
+    exec "$@"
+    ;;
+  run)
+    check_qlot_directory
+    shift
+    exec sbcl --noinform --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
+    ;;
+  *)
+    sbcl --noinform --no-sysinit --no-userinit --non-interactive \
+      --load $QLOT_HOME/.qlot/setup.lisp \
+      --eval "(asdf:load-asd #P\"$QLOT_HOME/qlot.asd\")" \
+      --eval '(ql:quickload :qlot/cli :silent t)' \
+      --eval '(qlot/cli:main)' "$@"
+esac
