@@ -1,0 +1,9 @@
+(defsystem "qlot-linux-packaging"
+  :defsystem-depends-on ("linux-packaging")
+  :class "linux-packaging:deb"
+  :build-operation "linux-packaging:build-op"
+  :depends-on ("qlot/command")
+  :package-name "qlot"
+  :version "1.1.6"
+  :build-pathname "qlot"
+  :entry-point "qlot/cli::main")
