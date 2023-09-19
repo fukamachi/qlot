@@ -1,6 +1,6 @@
 (defpackage #:qlot/utils/http
   (:use #:cl
-        #:sb-bsd-sockets)
+        #+sbcl #:sb-bsd-sockets)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:export #:http-fetch))
@@ -24,6 +24,7 @@
              (format stream "HTTP request failed with the status ~A"
                      (slot-value condition 'status)))))
 
+#+sbcl
 (defun host-to-address (host)
   (check-type host string)
   (host-ent-address (get-host-by-name host)))
@@ -50,6 +51,7 @@
               host (subseq host 0 non-digit-pos))))
     (list host port path)))
 
+#+sbcl
 (defun connect-tcp (host port)
   (let ((address (host-to-address host))
         (socket (make-instance 'inet-socket
@@ -156,6 +158,7 @@
                     (read-sequence body stream :start (- (length buf) start))
                     (values body status headers))))))))))
 
+#+sbcl
 (defun http-fetch (url destination)
   (destructuring-bind (host port path)
       (parse-http-url url)
@@ -182,3 +185,9 @@
                    (write-sequence body out)))
                destination)
           (close stream))))))
+
+#-sbcl
+(defun http-fetch (url destination)
+  (progv (list (intern #.(string '#:*proxy-url*) '#:ql-http))
+      (list *proxy*)
+    (uiop:symbol-call '#:ql-http '#:http-fetch url destination)))
