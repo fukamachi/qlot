@@ -6,29 +6,47 @@
 
 ## Usage
 
-```
-# "qlfile" of "myapp"
-git clack https://github.com/fukamachi/clack.git
-github datafly fukamachi/datafly :branch v0.7.x
-ql log4cl 2014-03-17
-ql mito :upstream
-```
+``` # "qlfile" of "myapp"
+Usage: qlot COMMAND [ARGS..]
 
-```
-$ cd /path/to/myapp
+COMMANDS:
+    install
+        Installs libraries to './.qlot'.
 
-# Installing libraries project-locally.
-$ qlot install
+    update
+        Makes './.qlot' up-to-date and update 'qlfile.lock'.
+        Possible to update specific projects with --project option.
+        ex) qlot update --project mito
 
-# Updating depending libraries of a project.
-$ qlot update
+    add [project name]
+    add [source] [project name] [arg1, arg2..]
+        Add a new library to qlfile and trigger 'qlot install'. (experimental)
+        ex)
+          $ qlot add mito       # Add 'ql mito'
+          $ qlot add ql mito    # Same as the above
+          $ qlot add ultralisp egao1980-cl-idna
+          $ qlot add github datafly fukamachi/datafly
 
-# Updating specific libraries
-$ qlot update --project mito
+    run
+        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
 
-# Execute a command with a project-local Quicklisp
-$ qlot exec ros -S . run
-$ qlot exec clackup app.lisp
+    exec [shell-args..]
+        Invokes the following shell-command with the project local Quicklisp.
+
+    bundle
+        Bundles project dependencies to './.bundle-libs'.
+        Load './.bundle-libs/bundle.lisp' to make them available.
+        Read https://www.quicklisp.org/beta/bundles.html for the detail.
+
+OPTIONS:
+    --version
+        Show the Qlot version
+    --debug
+        A flag to enable debug logging. (Only for 'install' or 'update')
+    --no-deps
+        Don't install dependencies of all systems from the current directory.
+    --cache [directory]
+        Keep intermediate files for fast reinstallation.
 ```
 
 ## What Qlot is trying to solve
@@ -49,23 +67,19 @@ This is what Qlot is trying to solve.
 
 * [Roswell](https://github.com/roswell/roswell/) or [SBCL](https://www.sbcl.org/)
 * OpenSSL
-  * apt install libssl-dev
+  * **[Ubuntu/Debian]** `apt install libssl-dev`
+  * **[macOS]** `brew install openssl`
 * git (for installation from git repositories)
 
 ## Installation
 
-### via Quicklisp
-
-```shell
-$ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
-$ printf '#!/bin/sh\nexec sbcl --noinform --non-interactive --eval "(ql:quickload :qlot/cli :silent t)" --eval "(qlot/cli:main)" "$@"\n' > /usr/local/bin/qlot
-$ chmod u+x /usr/local/bin/qlot
-```
-
 ### via Roswell
 
+If you're already using Roswell, this is the easiest way to install Qlot.
+
 ```shell
-$ ros install qlot
+$ ros install qlot              # Install from the Quicklisp dist
+$ ros install fukamachi/qlot    # Install the latest version from the git repository
 ```
 
 Roswell adds an executable script under `$HOME/.roswell/bin`. Make sure if the directory exists in `$PATH`.
@@ -75,21 +89,40 @@ $ which qlot
 /Users/fukamachi/.roswell/bin/qlot
 ```
 
+Run `ros update qlot` to update Qlot.
+
+### via Quicklisp
+
+If [Quicklisp](https://www.quicklisp.org/) is set up on your home directory, this is the best way to install Qlot.
+
+```shell
+$ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
+$ sudo printf '#!/bin/sh\nexec sbcl --noinform --non-interactive --eval "(ql:quickload :qlot/cli :silent t)" --eval "(qlot/cli:main)" "$@"\n' > /usr/local/bin/qlot
+$ sudo chmod u+x /usr/local/bin/qlot
+```
+
+To update Qlot, run `(ql:update-all-dists)` in the REPL.
+
+### Install from source
+
+If you don't use both of Roswell and Quicklisp, Qlot also can be installed from the source code.
+
+```shell
+$ git clone https://github.com/fukamachi/qlot
+$ cd qlot
+$ scripts/setup.sh
+$ sudo printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
+$ sudo chmod u+x /usr/local/bin/qlot
+```
+
+To update Qlot, run `git pull && scripts/setup.sh`.
+
 ### via Docker
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/fukamachi/qlot.svg)](https://hub.docker.com/r/fukamachi/qlot/)
 
 ```shell
 $ docker run --rm -it fukamachi/qlot
-```
-
-### Install from source
-
-```shell
-$ git clone https://github.com/fukamachi/qlot
-$ cd qlot
-$ scripts/setup.sh
-$ printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
 ```
 
 ## Tutorial
