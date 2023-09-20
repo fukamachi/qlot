@@ -118,7 +118,7 @@ $ sudo chmod u+x /usr/local/bin/qlot
 
 To update Qlot, run `git pull && scripts/setup.sh`.
 
-**WARNING**: Don't add the Qlot source directory to any ASDF loadable directory, like `~/common-lisp` or `~/quicklisp/local-projects`. ASDF accidentally loads dependencies of Qlot itself in a REPL.
+**WARNING**: Don't add the Qlot source directory to any ASDF loadable directories, such as `~/common-lisp` or `~/quicklisp/local-projects`. ASDF accidentally loads dependencies of Qlot in a REPL even in case you don't need it. (See also [ASDF configuration](#asdf-configuration-to-prevent-from-loading-by-mistake) section)
 
 ### via Docker
 
@@ -127,6 +127,22 @@ To update Qlot, run `git pull && scripts/setup.sh`.
 ```shell
 $ docker run --rm -it fukamachi/qlot
 ```
+
+## Optional settings
+
+### ASDF configuration to prevent from loading by mistake
+
+ASDF loads any ASD files under a directory `~/common-lisp` including its subdirectories. It is easily understandable and convenient. However, it will lead a problematic situation that ASDF accidentally loads libraries under ".qlot/" even in case you don't need it.
+
+To avoid the situation, we recommend not to use `~/common-lisp` directory, or add the following lines to your Lisp's init file such as `~/.sbclrc` for SBCL.
+
+```
+;; .sbclrc
+(push ".qlot" asdf::*default-source-registry-exclusions*)
+(asdf:initialize-source-registry)
+```
+
+Roswell doesn't require this setting since it ignores directories starting with a dot.
 
 ## Tutorial
 
@@ -196,7 +212,7 @@ $ qlot update --project mito,sxql
 ### add
 
 `qlot add` will add a line to `qlfile` and invoke `qlot install` internally.
-It's arguments are same as the qlfile syntax.
+Its arguments are same as the qlfile syntax.
 
 ```
 $ qlot add mito                          # ql mito
@@ -411,10 +427,10 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 2. Relaunch the Emacs.
 3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
 
-### Vim/NeoVim
+### Vim/Neovim
 
 1. Install [vlime/vlime](https://github.com/vlime/vlime).
-2. Add the following code to your Vim/NeoVim init.vim.
+2. Add the following code to your Vim/Neovim init.vim.
 
 ```vimscript
 let g:vlime_cl_use_terminal = v:true
@@ -429,7 +445,7 @@ function! VlimeQlotExec()
 endfunction
 ```
 
-3. Relaunch the Vim/NeoVim.
+3. Relaunch the Vim/Neovim.
 4. Change the directory by `:cd /path/to/project/` and invoke `:call VlimeQlotExec()`.
 
 ## Working with local git repositories
