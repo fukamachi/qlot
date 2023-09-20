@@ -48,6 +48,7 @@
     (let ((repos (first initargs)))
       (destructuring-bind (username repository)
           (split-with #\/ repos)
+        (declare (ignore username))
         (setf initargs
               (cons repository initargs)))))
   (handler-case
