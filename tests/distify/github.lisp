@@ -16,7 +16,6 @@
 
 (deftest distify-github-tests
   (let ((source (make-source :github
-                             "quri"
                              "fukamachi/quri"
                              :ref "adb6d04f1b9ea99fa7f18044df4c86b6c68023af")))
     (distify-github source *tmp-directory*)

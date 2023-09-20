@@ -9,7 +9,7 @@
 ```
 # "qlfile" of "myapp"
 git clack https://github.com/fukamachi/clack.git
-github datafly fukamachi/datafly :branch v0.7.x
+github fukamachi/datafly :branch v0.7.x
 ql log4cl 2014-03-17
 ql mito :upstream
 ```
@@ -178,10 +178,10 @@ $ qlot update --project mito,sxql
 It's arguments are same as the qlfile syntax.
 
 ```
-$ qlot add mito                               # ql mito
-$ qlot add ql mito                            # ql mito (Same as the above)
-$ qlot add ultralisp egao1980-cl-idna         # ultralisp egao1980-cl-idna
-$ qlot add github datafly fukamachi/datafly   # github datafly fukamachi/datafly
+$ qlot add mito                          # ql mito
+$ qlot add ql mito                       # ql mito (Same as the above)
+$ qlot add ultralisp egao1980-cl-idna    # ultralisp egao1980-cl-idna
+$ qlot add github fukamachi/datafly      # github datafly fukamachi/datafly
 ```
 
 ### exec
@@ -301,17 +301,17 @@ git myapp git@github.com:somewrite-adtech/myapp
 ### github
 
 ```
-github <project name> <repos>
-github <project name> <repos> :ref <commit ref>
-github <project name> <repos> :branch <branch name>
-github <project name> <repos> :tag <tag name>
+github <username/repository>
+github <username/repository> :ref <commit ref>
+github <username/repository> :branch <branch name>
+github <username/repository> :tag <tag name>
 ```
 
 `github` source is similar to `git`, but it is specifically for GitHub. As it uses GitHub API and tarballs GitHub serves, it doesn't require "git" command.
 
 ```
-github datafly fukamachi/datafly
-github datafly fukamachi/datafly :branch develop
+github fukamachi/datafly
+github fukamachi/datafly :branch develop
 ```
 
 ### dist
