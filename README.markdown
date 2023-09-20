@@ -4,6 +4,25 @@
 
 **Qlot** (pronounced `kyü-'lät`, like culotte) is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
 
+## Table of Contents
+
+* [Usage](#usage)
+* [What Qlot is trying to solve](#what-qlot-is-trying-to-solve)
+* [Requirements](#requirements)
+* [Installation](#installation)
+  * [via Roswell](#via-roswell)
+  * [via Quicklisp](#via-quicklisp)
+  * [Install from source](#install-from-source)
+  * [via Docker](#via-docker)
+* [Tutorial](#tutorial)
+* [qlfile syntax](#qlfile-syntax)
+* [Priorities of distributions](#priorities-of-distributions)
+* [Working with SLIME](#working-with-slime)
+  * [Lem](#lem)
+  * [Emacs](#emacs)
+  * [Vim/Neovim](#vimneovim)
+* [Working with local git repositories](#working-with-local-git-repositories)
+
 ## Usage
 
 ```
@@ -87,7 +106,7 @@ To update Qlot, run `(ql:update-all-dists)` in the REPL.
 
 ### Install from source
 
-If you don't use both of Roswell and Quicklisp, Qlot also can be installed from the source code.
+If you don't use both of Roswell and Quicklisp for some reason, Qlot also can be installed from the source code.
 
 ```shell
 $ git clone https://github.com/fukamachi/qlot
@@ -98,6 +117,8 @@ $ sudo chmod u+x /usr/local/bin/qlot
 ```
 
 To update Qlot, run `git pull && scripts/setup.sh`.
+
+**WARNING**: Don't add the Qlot source directory to any ASDF loadable directory, like `~/common-lisp` or `~/quicklisp/local-projects`. ASDF accidentally loads dependencies of Qlot itself in a REPL.
 
 ### via Docker
 
