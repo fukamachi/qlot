@@ -72,7 +72,7 @@ fi
 
 mkdir -p "$QLOT_BIN_DIR"
 printf '#!/bin/sh\nexec %s/scripts/run.sh "$@"\n' "$QLOT_SOURCE_DIR" > "$QLOT_BIN_DIR/qlot"
-chmod u+x "$QLOT_BIN_DIR/qlot"
+chmod 755 "$QLOT_BIN_DIR/qlot"
 
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
