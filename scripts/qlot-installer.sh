@@ -77,13 +77,19 @@ chmod u+x "$QLOT_BIN_DIR/qlot"
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
 echo ''
-echo "The executable script is located at '$QLOT_BIN_DIR/qlot'."
-echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
-echo ''
-echo "    export PATH=\"$QLOT_BIN_DIR:\$PATH\""
-echo ''
-echo 'Or, copy the script to a searchable directory such as /usr/local/bin.'
-echo ''
-echo "    sudo cp $QLOT_BIN_DIR/qlot /usr/local/bin"
+
+if [ `id -u` == "0" ]; then
+  cp "$QLOT_BIN_DIR/qlot" /usr/local/bin
+  echo "The executable script is located at '/usr/local/bin/qlot'."
+else
+  echo "The executable script is located at '$QLOT_BIN_DIR/qlot'."
+  echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
+  echo ''
+  echo "    export PATH=\"$QLOT_BIN_DIR:\$PATH\""
+  echo ''
+  echo 'Or, copy the script to a searchable directory such as /usr/local/bin.'
+  echo ''
+  echo "    sudo cp $QLOT_BIN_DIR/qlot /usr/local/bin"
+fi
 echo ''
 echo 'Enjoy!'
