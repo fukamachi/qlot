@@ -67,12 +67,20 @@ This is what Qlot is trying to solve.
 ## Requirements
 
 * [Roswell](https://github.com/roswell/roswell/) or [SBCL](https://www.sbcl.org/)
-* OpenSSL
+* OpenSSL (Unix only)
   * **[Ubuntu/Debian]** `apt install libssl-dev`
   * **[macOS]** `brew install openssl`
 * git (for installation from git repositories)
 
 ## Installation
+
+### Automatic installer
+
+```shell
+$ curl https://raw.githubusercontent.com/fukamachi/qlot/master/scripts/qlot-installer.sh | bash
+```
+
+It requires `curl` and `sbcl` (or `ros`).
 
 ### via Roswell
 
