@@ -1,6 +1,6 @@
 #!/bin/bash
 
-QLOT_HOME=$(cd "$(dirname "$0")/../" && pwd -P)
+QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" && pwd -P)
 command=$1
 
 check_qlot_directory() {
@@ -25,8 +25,8 @@ case "$command" in
     ;;
   *)
     sbcl --noinform --no-sysinit --no-userinit --non-interactive \
-      --load $QLOT_HOME/.qlot/setup.lisp \
-      --eval "(asdf:load-asd #P\"$QLOT_HOME/qlot.asd\")" \
+      --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
+      --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
       --eval '(ql:quickload :qlot/cli :silent t)' \
       --eval '(qlot/cli:main)' "$@"
 esac
