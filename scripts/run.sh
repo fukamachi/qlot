@@ -16,6 +16,7 @@ case "$command" in
     check_qlot_directory
     QUICKLISP_HOME=.qlot/
     CL_SOURCE_REGISTRY="$(pwd)/"
+    shift
     exec "$@"
     ;;
   run)
