@@ -80,7 +80,7 @@ This is what Qlot is trying to solve.
 ### Automatic installer
 
 ```shell
-$ curl https://raw.githubusercontent.com/fukamachi/qlot/master/scripts/qlot-installer.sh | bash
+$ curl -L https://qlot.tech/installer | bash
 ```
 
 It requires `curl` and `sbcl` (or `ros`).
