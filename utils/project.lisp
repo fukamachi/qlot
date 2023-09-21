@@ -55,7 +55,7 @@
                   (asdf:load-asd system-file))))))
         (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
           (let ((pis-dependencies
-                  (loop for file in (directory-lisp-files project-root)
+                  (loop for file in (directory-lisp-files (uiop:pathname-directory-pathname system-file))
                         append (lisp-file-dependencies file))))
             (setf dependencies
                   (delete-duplicates
