@@ -362,6 +362,18 @@ github fukamachi/datafly
 github fukamachi/datafly :branch develop
 ```
 
+### local
+
+```
+local <project name> <directory path>
+```
+
+Add a directory to the ASDF's source registry.
+
+```
+local rove ~/Programs/lib/rove
+```
+
 ### dist
 
 ```
