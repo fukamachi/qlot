@@ -7,6 +7,7 @@
            #:shell-command-error
            #:shell-command-error-output
            #:run-lisp
+           #:launch-lisp
            #:*qlot-source-directory*))
 (in-package #:qlot/utils/shell)
 
@@ -122,42 +123,58 @@
                          form))))))
 
 #+ros.init
-(defun run-roswell (forms &rest args &key systems source-registry without-quicklisp)
+(defun precommand-options ()
+  '("+Q" "-L" "sbcl-bin"))
+
+#-ros.init
+(defun precommand-options ()
+  #+abcl `("-jar" ,(uiop:native-namestring
+                    (first (pathname-device ext:*lisp-home*))))
+
+  #+ccl '("--no-init" "--quiet" "--batch")
+  #+sbcl '("--noinform" "--no-sysinit" "--no-userinit" "--non-interactive")
+  #+allegro '("--qq")
+  #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
+  #+cmu '("-noinit")
+  #+ecl '("-norc")
+  #+abcl '("--noinform" "--noinit"))
+
+#+ros.init
+(defun postcommand-options () nil)
+
+#-ros.init
+(defun postcommand-options ()
+  (-e
+   (quote
+    #+ccl (ccl:quit)
+    #+sbcl (sb-ext:exit)
+    #+allegro (excl:exit :quiet t)
+    #+clisp (ext:quit)
+    #+cmucl (unix:unix-exit)
+    #+ecl (ext:quit)
+    #+abcl (ext:quit)
+    #-(or ccl sbcl allegro clisp cmucl ecl abcl) (cl-user::quit))))
+
+(defun command-options (forms args)
+  (append
+   (precommand-options)
+   (apply #'build-command-args forms args)
+   (postcommand-options)))
+
+(defun launch-lisp (forms &rest args &key systems source-registry without-quicklisp)
   (declare (ignore systems source-registry without-quicklisp))
-  (let ((ros (or (ros:opt "wargv0")
-                 (ros:opt "argv0"))))
-    (safety-shell-command ros
-                          (list* "+Q"
-                                 "-L" "sbcl-bin"
-                                 (apply #'build-command-args forms args)))))
+  (uiop:launch-program
+   (cons #-ros.init *current-lisp-path*
+         #+ros.init (or (ros:opt "wargv0")
+                        (ros:opt "argv0"))
+         (command-options forms args))
+   :input :stream
+   :output :stream
+   :error-output :interactive))
 
 (defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
   (declare (ignore systems source-registry without-quicklisp))
-  #+ros.init
-  (apply #'run-roswell forms args)
-  #-ros.init
-  (safety-shell-command *current-lisp-path*
-                        (append
-                          #+abcl `("-jar" ,(uiop:native-namestring
-                                             (first (pathname-device ext:*lisp-home*))))
-
-                          #+ccl '("--no-init" "--quiet" "--batch")
-                          #+sbcl '("--noinform" "--no-sysinit" "--no-userinit" "--non-interactive")
-                          #+allegro '("--qq")
-                          #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
-                          #+cmu '("-noinit")
-                          #+ecl '("-norc")
-                          #+abcl '("--noinform" "--noinit")
-
-                          (apply #'build-command-args forms args)
-
-                          (-e
-                            (quote
-                              #+ccl (ccl:quit)
-                              #+sbcl (sb-ext:exit)
-                              #+allegro (excl:exit :quiet t)
-                              #+clisp (ext:quit)
-                              #+cmucl (unix:unix-exit)
-                              #+ecl (ext:quit)
-                              #+abcl (ext:quit)
-                              #-(or ccl sbcl allegro clisp cmucl ecl abcl) (cl-user::quit))))))
+  (safety-shell-command #-ros.init *current-lisp-path*
+                        #+ros.init (or (ros:opt "wargv0")
+                                       (ros:opt "argv0"))
+                        (command-options forms args)))
