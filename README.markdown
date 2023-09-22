@@ -467,10 +467,8 @@ endfunction
 
 * Eitaro Fukamachi (e.arrows@gmail.com)
 
-## Copyright
-
-Copyright (c) 2014 Eitaro Fukamachi (e.arrows@gmail.com)
-
 ## License
 
-Licensed under the MIT License.
+See [LICENSE.txt](LICENSE.txt).
+
+The license of bundled Quicklisp installer can be found at [quicklisp/LICENSE.txt](quicklisp/LICENSE.txt).
