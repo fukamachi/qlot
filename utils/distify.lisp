@@ -93,6 +93,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
   (let* ((distinfo-data
            (parse-distinfo-stream (dex:get (https-of distribution)
                                            :want-stream t
+                                           :keep-alive nil
                                            :proxy *proxy*)))
          (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
                                             :test #'string=)))

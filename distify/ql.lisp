@@ -24,6 +24,7 @@
 
 (defun load-source-ql-version (source)
   (let* ((body-stream (handler-case (dex:get (source-distinfo-url source)
+                                             :keep-alive nil
                                              :want-stream t
                                              :proxy *proxy*)
                         (dex:http-request-failed (e)
@@ -40,6 +41,7 @@
     ;; Check if the project is available
     (let ((stream (dex:get (https-of release-index-url)
                            :want-stream t
+                           :keep-alive nil
                            :proxy *proxy*)))
       (block nil
         (parse-space-delimited-stream stream
@@ -80,12 +82,13 @@
       (let ((original-distinfo
               (parse-distinfo-stream (dex:get (source-distinfo-url source)
                                               :want-stream t
+                                              :keep-alive nil
                                               :proxy *proxy*))))
         (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
                                  ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair
             (check-type url string)
-            (let ((data (parse-space-delimited-stream (dex:get (https-of url) :want-stream t :proxy *proxy*)
+            (let ((data (parse-space-delimited-stream (dex:get (https-of url) :want-stream t :proxy *proxy* :keep-alive nil)
                                                       :test (lambda (data)
                                                               (equal (first data) (source-project-name source)))
                                                       :include-header t)))
