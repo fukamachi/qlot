@@ -33,7 +33,7 @@
           initargs
         (make-instance 'source-dist
                        :project-name project-name
-                       :distribution (https-of distribution)
+                       :distribution distribution
                        :%version version))
     (error ()
       (error 'invalid-definition
@@ -58,8 +58,11 @@
 (defmethod source= ((source1 source-dist-project) (source2 source-dist-project))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
-       (string= (source-distribution source1)
-                (source-distribution source2))
+       (or (string= (source-distribution source1)
+                    (source-distribution source2))
+           ;; Backward-compatibility
+           (string= (https-of (source-distribution source1))
+                    (https-of (source-distribution source2))))
        (string= (slot-value source1 '%version)
                 (slot-value source2 '%version))))
 

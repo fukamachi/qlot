@@ -1,6 +1,6 @@
 ("quicklisp" .
  (:class qlot.source.dist:source-dist
-  :initargs (:project-name "quicklisp" :distribution "http://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
+  :initargs (:project-name "quicklisp" :distribution "https://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
   :version "2019-08-13"))
 ("clack" .
  (:class qlot.source.git:source-git
