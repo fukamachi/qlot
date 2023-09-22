@@ -170,7 +170,7 @@
          (command-options forms args))
    :input :stream
    :output :stream
-   :error-output :interactive))
+   :error-output (and *debug* :interactive)))
 
 (defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
   (declare (ignore systems source-registry without-quicklisp))
