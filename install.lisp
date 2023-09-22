@@ -1,7 +1,8 @@
 (defpackage #:qlot/install
   (:use #:cl)
   (:import-from #:qlot/install/quicklisp
-                #:install-quicklisp)
+                #:install-quicklisp
+                #:copy-local-init-files)
   (:import-from #:qlot/source
                 #:source-dist
                 #:source-dist-name
@@ -33,6 +34,7 @@
                 #:*qlot-directory*
                 #:project-dependencies
                 #:local-quicklisp-installed-p
+                #:local-quicklisp-local-init-installed-p
                 #:local-quicklisp-home)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory
@@ -73,9 +75,12 @@
                              (uiop:ensure-directory-pathname quicklisp-home)
                              (local-quicklisp-home project-root))))
 
-    (unless (local-quicklisp-installed-p project-root)
-      (ensure-directories-exist quicklisp-home)
-      (install-quicklisp quicklisp-home))
+    (cond
+      ((not (local-quicklisp-installed-p project-root))
+       (ensure-directories-exist quicklisp-home)
+       (install-quicklisp quicklisp-home))
+      ((not (local-quicklisp-local-init-installed-p project-root))
+       (copy-local-init-files quicklisp-home)))
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
