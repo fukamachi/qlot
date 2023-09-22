@@ -19,11 +19,13 @@ check_requirement() {
   fi
 }
 
-lisp="sbcl"
-if [ "$(which ros)" != "" ]; then
+if [ "$(which sbcl)" != "" ]; then
+  lisp="sbcl"
+elif [ "$(which ros)" != "" ]; then
   lisp="ros without-roswell=t -L sbcl-bin run --"
 else
-  check_requirement "sbcl"
+  errmsg "sbcl is required to setup Qlot."
+  exit 1
 fi
 
 qlot_version() {

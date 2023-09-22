@@ -10,6 +10,16 @@ check_qlot_directory() {
     exit 1
   fi
 }
+errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
+
+if [ "$(which sbcl)" != "" ]; then
+  lisp="sbcl"
+elif [ "$(which ros)" != "" ]; then
+  lisp="ros without-roswell=t -L sbcl-bin run --"
+else
+  errmsg "sbcl is required to run Qlot."
+  exit 1
+fi
 
 case "$command" in
   exec)
@@ -22,10 +32,10 @@ case "$command" in
   run)
     check_qlot_directory
     shift
-    exec sbcl --noinform --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
+    exec $lisp --noinform --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
     ;;
   *)
-    sbcl --noinform --no-sysinit --no-userinit --non-interactive \
+    exec $lisp --noinform --no-sysinit --no-userinit --non-interactive \
       --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
       --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
       --eval '(ql:quickload :qlot/cli :silent t)' \
