@@ -14,6 +14,8 @@
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url
                 #:write-source-distinfo)
+  (:import-from #:qlot/utils/https
+                #:https-of)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:dexador)
@@ -36,7 +38,7 @@
     (check-type release-index-url string)
     (check-type version string)
     ;; Check if the project is available
-    (let ((stream (dex:get release-index-url
+    (let ((stream (dex:get (https-of release-index-url)
                            :want-stream t
                            :proxy *proxy*)))
       (block nil
@@ -83,7 +85,7 @@
                                  ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair
             (check-type url string)
-            (let ((data (parse-space-delimited-stream (dex:get url :want-stream t :proxy *proxy*)
+            (let ((data (parse-space-delimited-stream (dex:get (https-of url) :want-stream t :proxy *proxy*)
                                                       :test (lambda (data)
                                                               (equal (first data) (source-project-name source)))
                                                       :include-header t)))

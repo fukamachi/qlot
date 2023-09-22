@@ -11,6 +11,8 @@
                 #:parse-distinfo-stream
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
+  (:import-from #:qlot/utils/https
+                #:https-of)
   (:import-from #:qlot/source
                 #:source-distinfo-url
                 #:source-project-name
@@ -89,7 +91,7 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
 
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data
-           (parse-distinfo-stream (dex:get distribution
+           (parse-distinfo-stream (dex:get (https-of distribution)
                                            :want-stream t
                                            :proxy *proxy*)))
          (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data

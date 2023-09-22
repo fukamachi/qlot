@@ -9,6 +9,8 @@
                 #:*proxy*)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url)
+  (:import-from #:qlot/utils/https
+                #:https-of)
   (:import-from #:dexador)
   (:export #:distify-dist))
 (in-package #:qlot/distify/dist)
