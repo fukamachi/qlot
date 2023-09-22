@@ -4,6 +4,8 @@
         #:qlot/source/base)
   (:import-from #:qlot/utils/ql
                 #:make-versioned-distinfo-url)
+  (:import-from #:qlot/utils/https
+                #:https-of)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:export #:source-dist
@@ -31,7 +33,7 @@
           initargs
         (make-instance 'source-dist
                        :project-name project-name
-                       :distribution distribution
+                       :distribution (https-of distribution)
                        :%version version))
     (error ()
       (error 'invalid-definition

@@ -7,14 +7,15 @@
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:export #:https-of
-           #:http-fetch
            #:with-secure-installer))
 (in-package #:qlot/utils/https)
 
 (defvar *install-process* nil)
 
 (defun https-of (url)
-  (if (search "http://" url :end2 7)
+  (if (and (stringp url)
+           (<= 7 (length url))
+           (search "http://" url :end2 7))
       (format nil "https://~A" (subseq url 7))
       url))
 

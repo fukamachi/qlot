@@ -23,7 +23,7 @@
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
-  (let* ((body-stream (handler-case (dex:get (source-distinfo-url source)
+  (let* ((body-stream (handler-case (dex:get (https-of (source-distinfo-url source))
                                              :keep-alive nil
                                              :want-stream t
                                              :proxy *proxy*)
@@ -80,7 +80,7 @@
     (unless (and (uiop:file-exists-p "systems.txt")
                  (uiop:file-exists-p "releases.txt"))
       (let ((original-distinfo
-              (parse-distinfo-stream (dex:get (source-distinfo-url source)
+              (parse-distinfo-stream (dex:get (https-of (source-distinfo-url source))
                                               :want-stream t
                                               :keep-alive nil
                                               :proxy *proxy*))))

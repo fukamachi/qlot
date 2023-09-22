@@ -33,7 +33,7 @@
                        relative-path
                        destination)))
     (ensure-directories-exist target-path)
-    (dex:fetch (source-distinfo-url source)
+    (dex:fetch (https-of (source-distinfo-url source))
                target-path
                :if-exists :supersede
                :proxy *proxy*)
