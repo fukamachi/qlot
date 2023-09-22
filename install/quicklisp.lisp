@@ -20,4 +20,9 @@
                        path
                        *proxy*))
               :without-quicklisp t)
+    (let ((local-init-dir (merge-pathnames #P"local-init/" path)))
+      (ensure-directories-exist local-init-dir)
+      (dolist (file (uiop:directory-files (asdf:system-relative-pathname :qlot #P"local-init/")))
+        (uiop:copy-file file (merge-pathnames (file-namestring file)
+                                              local-init-dir))))
     t))
