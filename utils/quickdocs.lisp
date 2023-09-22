@@ -1,5 +1,7 @@
 (defpackage #:qlot/utils/quickdocs
   (:use #:cl)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:dexador)
   (:import-from #:quri)
   (:import-from #:yason)
@@ -17,7 +19,8 @@
 (defun project-upstream-url (project-name)
   (let* ((project-info
            (dex:get (format nil "https://api.quickdocs.org/projects/~A"
-                            (quri:url-encode project-name))))
+                            (quri:url-encode project-name))
+                    :proxy *proxy*))
          (upstream-url (gethash "upstream_url" (yason:parse project-info))))
     (unless (git-url-p upstream-url)
       (error "Not supported upstream URL: ~A" upstream-url))

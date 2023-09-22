@@ -1,5 +1,7 @@
 (defpackage #:qlot/utils/https
   (:use #:cl)
+  (:import-from #:qlot/proxy
+                #:*proxy*)
   (:import-from #:qlot/utils/shell
                 #:launch-lisp)
   (:import-from #:qlot/utils/ql
@@ -44,7 +46,8 @@
                             (,file-var (read-line)))
                         (uiop:symbol-call :dexador :fetch ,url-var
                                           ,file-var
-                                          :if-exists :supersede)
+                                          :if-exists :supersede
+                                          :proxy ,*proxy*)
                         (format t "~A~%" ,file-var)
                         (force-output)))))
                  :without-quicklisp t)))
