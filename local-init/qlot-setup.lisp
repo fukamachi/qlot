@@ -10,9 +10,9 @@
       (append
        (and (uiop:file-exists-p source-registry)
             (uiop:read-file-form source-registry))
-       `((:tree ,(merge-pathnames #P"../" ql:*quicklisp-home*))))
+       `((:tree ,(probe-file (merge-pathnames #P"../" ql:*quicklisp-home*)))))
       `(:source-registry :ignore-inherited-configuration
-        (:tree ,(merge-pathnames #P"../" ql:*quicklisp-home*))
+        (:tree ,(probe-file (merge-pathnames #P"../" ql:*quicklisp-home*)))
         (:also-exclude ".qlot"))))))
 
 (setup-source-registry)
