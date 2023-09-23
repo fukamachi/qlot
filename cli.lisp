@@ -263,11 +263,9 @@ OPTIONS:
   ;; Overwrite CL_SOURCE_REGISTRY to the current directory
   (setf (uiop:getenv "CL_SOURCE_REGISTRY")
         (extend-source-registry
-          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
-          (uiop:native-namestring (asdf:system-source-directory :qlot))
-          (extend-source-registry
-            (uiop:getenv "CL_SOURCE_REGISTRY")
-            (uiop:native-namestring (truename *default-pathname-defaults*))))))
+         (uiop:getenv "CL_SOURCE_REGISTRY")
+         ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
+         (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
 (defun qlot-command (&optional $1 &rest argv)
   (handler-case

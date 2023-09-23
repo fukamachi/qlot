@@ -6,11 +6,13 @@
   #+ros.init (setf roswell:*local-project-directories* nil)
   (let ((source-registry (ql-setup:qmerge "source-registry.conf")))
     (asdf:initialize-source-registry
-      (or
-        (and (uiop:file-exists-p source-registry)
-             (uiop:read-file-form source-registry))
-        `(:source-registry :ignore-inherited-configuration
-                           (:tree ,(merge-pathnames #P"../" ql:*quicklisp-home*))
-                           (:also-exclude ".qlot"))))))
+     (or
+      (append
+       (and (uiop:file-exists-p source-registry)
+            (uiop:read-file-form source-registry))
+       `((:tree ,(merge-pathnames #P"../" ql:*quicklisp-home*))))
+      `(:source-registry :ignore-inherited-configuration
+        (:tree ,(merge-pathnames #P"../" ql:*quicklisp-home*))
+        (:also-exclude ".qlot"))))))
 
 (setup-source-registry)

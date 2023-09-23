@@ -155,10 +155,8 @@ CURRENT=$(dirname $0)
 cd \"$CURRENT/../..\"
 ROOT=$(pwd)
 export QUICKLISP_HOME=\"$CURRENT/../\"
-export CL_SOURCE_REGISTRY=\"$ROOT~C$CL_SOURCE_REGISTRY\"
 exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 "
-                    #+unix #\: #-unix #\;
                     (subseq (namestring script)
                             (length (namestring qlhome)))))
           #+sbcl (sb-posix:chmod to #o700)))))

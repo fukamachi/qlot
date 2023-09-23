@@ -12,12 +12,6 @@ check_qlot_directory() {
 }
 
 case "$command" in
-  exec)
-    check_qlot_directory
-    QUICKLISP_HOME=.qlot/
-    CL_SOURCE_REGISTRY="$(pwd)/"
-    exec "$@"
-    ;;
   run)
     check_qlot_directory
     shift

@@ -236,7 +236,7 @@ $ qlot add github fukamachi/datafly      # github datafly fukamachi/datafly
 
 `qlot exec` does following:
 
-* configures `CL_SOURCE_REGISTRY` environment variable by adding a current directory;
+* configures ASDF's source registries;
 * adds Roswell's `bin` directory to the `PATH` environment variable;
 * executes given command with arguments.
 
@@ -419,8 +419,7 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
                :program-args `("--no-userinit" "--no-sysinit" "--load" ,(concat (file-name-as-directory directory) ".qlot/setup.lisp"))
                :directory directory
                :name 'qlot
-               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":"))
-                          (concat "CL_SOURCE_REGISTRY=" directory))))
+               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":")))))
 ```
 
 #### b) Roswell version
