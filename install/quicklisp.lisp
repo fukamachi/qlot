@@ -6,8 +6,16 @@
                 #:*proxy*)
   (:import-from #:qlot/utils/shell
                 #:run-lisp)
-  (:export #:install-quicklisp))
+  (:export #:install-quicklisp
+           #:copy-local-init-file))
 (in-package #:qlot/install/quicklisp)
+
+(defun copy-local-init-files (path)
+  (let ((local-init-dir (merge-pathnames #P"local-init/" path)))
+    (ensure-directories-exist local-init-dir)
+    (dolist (file (uiop:directory-files (asdf:system-relative-pathname :qlot #P"local-init/")))
+      (uiop:copy-file file (merge-pathnames (file-namestring file)
+                                            local-init-dir)))))
 
 (defun install-quicklisp (path)
   (message "Installing Quicklisp to ~A ..." path)
@@ -20,4 +28,5 @@
                        path
                        *proxy*))
               :without-quicklisp t)
+    (copy-local-init-files path)
     t))

@@ -1,10 +1,14 @@
 (defpackage #:qlot/install
   (:use #:cl)
   (:import-from #:qlot/install/quicklisp
-                #:install-quicklisp)
+                #:install-quicklisp
+                #:copy-local-init-files)
   (:import-from #:qlot/source
                 #:source-dist
                 #:source-dist-name
+                #:source-local
+                #:source-local-path
+                #:source-project-name
                 #:source-version
                 #:source-install-url
                 #:freeze-source)
@@ -33,6 +37,7 @@
                 #:*qlot-directory*
                 #:project-dependencies
                 #:local-quicklisp-installed-p
+                #:local-quicklisp-local-init-installed-p
                 #:local-quicklisp-home)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory
@@ -73,9 +78,12 @@
                              (uiop:ensure-directory-pathname quicklisp-home)
                              (local-quicklisp-home project-root))))
 
-    (unless (local-quicklisp-installed-p project-root)
-      (ensure-directories-exist quicklisp-home)
-      (install-quicklisp quicklisp-home))
+    (cond
+      ((not (local-quicklisp-installed-p project-root))
+       (ensure-directories-exist quicklisp-home)
+       (install-quicklisp quicklisp-home))
+      ((not (local-quicklisp-local-init-installed-p project-root))
+       (copy-local-init-files quicklisp-home)))
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
@@ -150,10 +158,8 @@ CURRENT=$(dirname $0)
 cd \"$CURRENT/../..\"
 ROOT=$(pwd)
 export QUICKLISP_HOME=\"$CURRENT/../\"
-export CL_SOURCE_REGISTRY=\"$ROOT~C$CL_SOURCE_REGISTRY\"
 exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 "
-                    #+unix #\: #-unix #\;
                     (subseq (namestring script)
                             (length (namestring qlhome)))))
           #+sbcl (sb-posix:chmod to #o700)))))
@@ -207,6 +213,24 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (source-version source))))
         new-dist))))
 
+(defun dump-source-registry-conf (qlhome file sources)
+  (uiop:with-output-file (out file :if-exists :supersede)
+    (let ((*print-pretty* nil)
+          (*print-case* :downcase))
+      (format out
+              "~&(~{~S~^~% ~})~%"
+              `(:source-registry
+                :ignore-inherited-configuration
+                (:also-exclude ".qlot")
+                (:tree ,(probe-file (merge-pathnames #P"../" qlhome)))
+                ,@(loop for source in sources
+                        when (typep source 'source-local)
+                        collect (progn
+                                  (message "Adding ~S located at '~A'."
+                                           (source-project-name source)
+                                           (source-local-path source))
+                                  `(:tree ,(source-local-path source)))))))))
+
 (defun dump-qlfile-lock (file sources)
   (uiop:with-output-file (out file :if-exists :supersede)
     (let ((*print-pretty* nil)
@@ -225,7 +249,9 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (tmp-dir (or cache-directory (tmp-directory))))
       (ensure-directories-exist tmp-dir)
       (unwind-protect
-          (dolist (source sources)
+          (dolist (source (remove-if (lambda (source)
+                                       (typep source 'source-local))
+                                     sources))
             (with-quicklisp-home qlhome
               (with-package-functions #:ql-dist (find-dist version)
                 (let ((dist (find-dist (source-dist-name source))))
@@ -266,6 +292,9 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (message "Removing dist ~S." (name dist))
               (uninstall dist))))))
 
+    (dump-source-registry-conf qlhome
+                               (merge-pathnames #P"source-registry.conf" qlhome)
+                               sources)
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
                                      :type "lock"
                                      :defaults qlfile)

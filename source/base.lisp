@@ -32,9 +32,10 @@
                  :accessor source-defrost-args))
   (:documentation "A representation of each lines of qlfile"))
 
-(defmethod initialize-instance :after ((source source) &rest initargs)
-  (remf initargs :project-name)
-  (setf (slot-value source 'initargs) initargs))
+(defmethod initialize-instance ((source source) &rest initargs)
+  (prog1 (call-next-method)
+    (remf initargs :project-name)
+    (setf (slot-value source 'initargs) initargs)))
 
 (defgeneric make-source (source &rest args)
   (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")
