@@ -9,8 +9,6 @@
                 #:*proxy*)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url)
-  (:import-from #:qlot/utils/https
-                #:https-of)
   (:import-from #:dexador)
   (:export #:distify-dist))
 (in-package #:qlot/distify/dist)
@@ -33,7 +31,7 @@
                        relative-path
                        destination)))
     (ensure-directories-exist target-path)
-    (dex:fetch (https-of (source-distinfo-url source))
+    (dex:fetch (source-distinfo-url source)
                target-path
                :if-exists :supersede
                :proxy *proxy*)

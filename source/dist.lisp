@@ -33,7 +33,7 @@
           initargs
         (make-instance 'source-dist
                        :project-name project-name
-                       :distribution distribution
+                       :distribution (https-of distribution)
                        :%version version))
     (error ()
       (error 'invalid-definition
@@ -44,7 +44,9 @@
   (when (slot-boundp source 'qlot/source/base::version)
     (setf (slot-value source '%version)
           (subseq (source-version source)
-                  (length (source-version-prefix source))))))
+                  (length (source-version-prefix source)))))
+  (setf (source-distinfo-url source)
+        (https-of (source-distinfo-url source))))
 
 (defmethod print-object ((source source-dist-project) stream)
   (print-unreadable-object (source stream :type t :identity t)
