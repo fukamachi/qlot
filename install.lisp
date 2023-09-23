@@ -20,6 +20,8 @@
                 #:*proxy*)
   (:import-from #:qlot/utils
                 #:with-package-functions)
+  (:import-from #:qlot/utils/https
+                #:with-secure-installer)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
@@ -78,14 +80,15 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
-    (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
-        (list *proxy*)
-      (apply-qlfile-to-qlhome qlfile quicklisp-home
-                              :cache-directory cache-directory))
+    (with-secure-installer ()
+      (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
+          (list *proxy*)
+        (apply-qlfile-to-qlhome qlfile quicklisp-home
+                                :cache-directory cache-directory))
 
-    ;; Install project dependencies
-    (when install-deps
-      (install-dependencies project-root quicklisp-home))
+      ;; Install project dependencies
+      (when install-deps
+        (install-dependencies project-root quicklisp-home)))
 
     (message "Successfully installed.")))
 
@@ -110,23 +113,21 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
-    (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
-        (list *proxy*)
-      (apply-qlfile-to-qlhome qlfile quicklisp-home
-                              :ignore-lock t
-                              :projects projects
-                              :cache-directory cache-directory))
+    (with-secure-installer ()
+      (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
+          (list *proxy*)
+        (apply-qlfile-to-qlhome qlfile quicklisp-home
+                                :ignore-lock t
+                                :projects projects
+                                :cache-directory cache-directory))
 
-    ;; Install project dependencies
-    (when install-deps
-      (install-dependencies project-root quicklisp-home))
+      ;; Install project dependencies
+      (when install-deps
+        (install-dependencies project-root quicklisp-home)))
 
     (message "Successfully installed.")))
 
-(defun install-release (release)
-  (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
-
-  ;; Install Roswell scripts.
+(defun install-release-roswell-scripts (release)
   (let* ((qlhome (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))
          (ros-dir (merge-pathnames #P"roswell/" (uiop:symbol-call '#:ql-dist '#:base-directory release)))
          (bin-dir (merge-pathnames #P"bin/" qlhome))
@@ -135,12 +136,12 @@
       (ensure-directories-exist bin-dir)
       (dolist (script scripts)
         (let ((to (make-pathname
-                    :name (pathname-name script)
-                    :type #+unix (if (equalp (pathname-type script) "ros")
-                                     nil
-                                     (pathname-type script))
-                    #-unix (pathname-type script)
-                    :defaults bin-dir)))
+                   :name (pathname-name script)
+                   :type #+unix (if (equalp (pathname-type script) "ros")
+                                    nil
+                                    (pathname-type script))
+                   #-unix (pathname-type script)
+                   :defaults bin-dir)))
           (uiop:with-output-file (out to
                                       :if-exists :supersede
                                       :if-does-not-exist :create)
@@ -152,11 +153,15 @@ export QUICKLISP_HOME=\"$CURRENT/../\"
 export CL_SOURCE_REGISTRY=\"$ROOT~C$CL_SOURCE_REGISTRY\"
 exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 "
-            #+unix #\: #-unix #\;
-            (subseq (namestring script)
-                    (length (namestring qlhome)))))
+                    #+unix #\: #-unix #\;
+                    (subseq (namestring script)
+                            (length (namestring qlhome)))))
           #+sbcl (sb-posix:chmod to #o700)))))
+  (values))
 
+(defun install-release (release)
+  (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
+  (install-release-roswell-scripts release)
   (values))
 
 (defun install-all-releases (source)

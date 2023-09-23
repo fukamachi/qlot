@@ -34,5 +34,6 @@
     (dex:fetch (source-distinfo-url source)
                target-path
                :if-exists :supersede
+               :keep-alive nil
                :proxy *proxy*)
     destination))

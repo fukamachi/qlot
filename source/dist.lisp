@@ -4,6 +4,8 @@
         #:qlot/source/base)
   (:import-from #:qlot/utils/ql
                 #:make-versioned-distinfo-url)
+  (:import-from #:qlot/utils/https
+                #:https-of)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:export #:source-dist
@@ -31,7 +33,7 @@
           initargs
         (make-instance 'source-dist
                        :project-name project-name
-                       :distribution distribution
+                       :distribution (https-of distribution)
                        :%version version))
     (error ()
       (error 'invalid-definition
@@ -42,7 +44,9 @@
   (when (slot-boundp source 'qlot/source/base::version)
     (setf (slot-value source '%version)
           (subseq (source-version source)
-                  (length (source-version-prefix source))))))
+                  (length (source-version-prefix source)))))
+  (setf (source-distinfo-url source)
+        (https-of (source-distinfo-url source))))
 
 (defmethod print-object ((source source-dist-project) stream)
   (print-unreadable-object (source stream :type t :identity t)
@@ -56,8 +60,11 @@
 (defmethod source= ((source1 source-dist-project) (source2 source-dist-project))
   (and (string= (source-project-name source1)
                 (source-project-name source2))
-       (string= (source-distribution source1)
-                (source-distribution source2))
+       (or (string= (source-distribution source1)
+                    (source-distribution source2))
+           ;; Backward-compatibility
+           (string= (https-of (source-distribution source1))
+                    (https-of (source-distribution source2))))
        (string= (slot-value source1 '%version)
                 (slot-value source2 '%version))))
 

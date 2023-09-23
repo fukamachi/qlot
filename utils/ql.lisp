@@ -14,7 +14,7 @@
 (in-package #:qlot/utils/ql)
 
 (defparameter *quicklisp-distinfo*
-  "http://beta.quicklisp.org/dist/quicklisp.txt")
+  "https://beta.quicklisp.org/dist/quicklisp.txt")
 
 (defun make-versioned-distinfo-url (distinfo-url version)
   (let ((pos (search ".txt" distinfo-url :from-end t
