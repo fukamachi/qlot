@@ -215,20 +215,21 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun dump-source-registry-conf (qlhome file sources)
   (uiop:with-output-file (out file :if-exists :supersede)
-    (prin1
-     `(:source-registry
-       :ignore-inherited-configuration
-       (:also-exclude ".qlot")
-       (:tree ,(probe-file (merge-pathnames #P"../" qlhome)))
-       ,@(loop for source in sources
-               when (typep source 'source-local)
-               collect (progn
-                         (message "Adding ~S located at '~A'."
-                                  (source-project-name source)
-                                  (source-local-path source))
-                         `(:tree ,(source-local-path source)))))
-     out)
-    (fresh-line out)))
+    (let ((*print-pretty* nil)
+          (*print-case* :downcase))
+      (format out
+              "~&(~{~S~^~% ~})~%"
+              `(:source-registry
+                :ignore-inherited-configuration
+                (:also-exclude ".qlot")
+                (:tree ,(probe-file (merge-pathnames #P"../" qlhome)))
+                ,@(loop for source in sources
+                        when (typep source 'source-local)
+                        collect (progn
+                                  (message "Adding ~S located at '~A'."
+                                           (source-project-name source)
+                                           (source-local-path source))
+                                  `(:tree ,(source-local-path source)))))))))
 
 (defun dump-qlfile-lock (file sources)
   (uiop:with-output-file (out file :if-exists :supersede)
