@@ -85,6 +85,12 @@ $ curl -L https://qlot.tech/installer | bash
 
 It requires `curl` and `sbcl` (or `ros`).
 
+To uninstall Qlot, run a Qlot uninstaller like:
+
+```
+$ ~/.qlot/qlot/scripts/qlot-uninstaller.sh
+```
+
 ### via Roswell
 
 If you're already using Roswell, this is the easiest way to install Qlot.

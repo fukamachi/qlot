@@ -23,3 +23,6 @@ systems_directory() {
 
 registry_dir=$(systems_directory)
 rm -f "${registry_dir}qlot.asd"
+
+echo -e "\e[32mQlot has been successfully deleted.\e[0m"
+echo 'Bye!'
