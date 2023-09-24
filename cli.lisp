@@ -167,6 +167,9 @@ in CL_SOURCE_REGISTRY environment variable."
           "~&Usage: ~A COMMAND [ARGS..]
 
 COMMANDS:
+    init
+        Initialize a project to start using Qlot.
+
     install
         Installs libraries to './.qlot'.
 
