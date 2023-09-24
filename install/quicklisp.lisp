@@ -18,7 +18,7 @@
                                             local-init-dir)))))
 
 (defun install-quicklisp (path)
-  (message "Installing Quicklisp to ~A ..." path)
+  (message "Installing Quicklisp to ~A..." path)
   (let ((quicklisp-file (asdf:system-relative-pathname :qlot #P"quicklisp/quicklisp-installer.lisp")))
     (run-lisp (list
                `(let ((*standard-output* (make-broadcast-stream)))

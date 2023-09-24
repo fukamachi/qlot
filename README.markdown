@@ -157,35 +157,35 @@ Roswell doesn't require this setting since it ignores directories starting with 
 
 ## Tutorial
 
-### Adding "qlfile"
-
-Put a file "qlfile" at the root of your project directory.
-
-See [qlfile syntax](#qlfile-syntax) section to know how to write it.
-
-### Installation of libraries
-
-You can install libraries into the project directory via:
+### Start using Qlot
 
 ```
-$ qlot install
+$ qlot init
 ```
 
-It creates `.qlot/` directory in the project directory and a file `qlfile.lock`.
+It creates 2 files "qlfile" and "qlfile.lock", and a directory ".qlot/" at the root of your project directory.
 
 `qlfile.lock` is similar to `qlfile` except the library versions are qualified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
 
-Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository and make the `.qlot/` directory ignored.
+Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository.
 
 ```
-$ echo .qlot/ >> .gitignore
 $ git add qlfile qlfile.lock
 $ git commit -m 'Start using Qlot.'
 ```
 
+### Adding a new dependency
+
+```
+$ qlot add <library name>                 # Add a new library from Quicklisp explicitly
+$ qlot add github <username/repository>   # Add a new library from a GitHub repository
+```
+
+You can also edit a `qlfile` file directly. See [qlfile syntax](#qlfile-syntax) section to know how to write it. Be sure to run `qlot install` to install new dependencies.
+
 ### Updating the project-local Quicklisp
 
-You can update the content of `.qlot/` directory via:
+You can update the version of dependencies via:
 
 ```
 $ qlot update

@@ -4,6 +4,7 @@
   (:import-from #:qlot/install
                 #:install-project
                 #:update-project
+                #:init-project
                 #:*qlot-directory*
                 #:*default-qlfile*)
   (:import-from #:qlot/bundle
@@ -17,7 +18,8 @@
   (:import-from #:qlot/utils
                 #:pathname-in-directory-p
                 #:merge-hash-tables)
-  (:export #:install
+  (:export #:init
+           #:install
            #:update
            #:with-local-quicklisp
            #:quickload
@@ -27,6 +29,9 @@
            #:*logger-message-stream*
            #:*logger-debug-stream*))
 (in-package #:qlot)
+
+(defun init (object)
+  (init-project object))
 
 (defun install (object)
   (install-project object))

@@ -11,6 +11,7 @@
                 #:generate-random-string)
   (:export #:install
            #:update
+           #:init
            #:add
            #:bundle
            #:main))
@@ -44,6 +45,13 @@
                                             (uiop:ensure-absolute-pathname
                                               (uiop:ensure-directory-pathname cache)
                                               *default-pathname-defaults*)))))
+
+(defun init ()
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
+  (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
 
 (defun add (args)
   ;; Use 'ql' as the default source
@@ -273,6 +281,8 @@ OPTIONS:
              (apply #'install (parse-argv argv)))
             ((equal "update" $1)
              (apply #'qlot/cli:update (parse-argv argv)))
+            ((equal "init" $1)
+             (qlot/cli:init))
             ((equal "exec" $1)
              (use-local-quicklisp)
 
