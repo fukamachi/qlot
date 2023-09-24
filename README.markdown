@@ -165,7 +165,9 @@ $ qlot init
 
 It creates 2 files "qlfile" and "qlfile.lock", and a directory ".qlot/" at the root of your project directory.
 
-`qlfile.lock` is similar to `qlfile` except the library versions are qualified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
+`qlfile` is a file clarifying the project dependencies. See [qlfile syntax](#qlfile-syntax) for the detail.
+
+`qlfile.lock` is similar to `qlfile` except the library versions are clarified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
 
 Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository.
 
