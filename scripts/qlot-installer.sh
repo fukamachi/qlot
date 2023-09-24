@@ -33,6 +33,10 @@ qlot_version() {
     --eval '(require :asdf)' --eval "(asdf:load-asd \"$QLOT_SOURCE_DIR/qlot.asd\")" \
     --eval '(progn (princ (asdf:component-version (asdf:find-system :qlot))) (fresh-line))'
 }
+systems_directory() {
+  $lisp --noinform --no-sysinit --no-userinit --non-interactive \
+    --eval '(require :asdf)' --eval '(princ (uiop:native-namestring (uiop:xdg-data-home #P"common-lisp/systems/")))'
+}
 
 check_requirement "curl"
 
@@ -75,6 +79,12 @@ fi
 mkdir -p "$QLOT_BIN_DIR"
 printf '#!/bin/sh\nexec %s/scripts/run.sh "$@"\n' "$QLOT_SOURCE_DIR" > "$QLOT_BIN_DIR/qlot"
 chmod 755 "$QLOT_BIN_DIR/qlot"
+
+registry_dir=$(systems_directory)
+mkdir -p "$registry_dir"
+if [ ! -f "${registry_dir}qlot.asd" ]; then
+  ln -s "$QLOT_SOURCE_DIR/qlot.asd" "${registry_dir}qlot.asd"
+fi
 
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
