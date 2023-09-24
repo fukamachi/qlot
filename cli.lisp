@@ -315,4 +315,7 @@ OPTIONS:
   (destructuring-bind (&optional $0 $1 &rest argv)
       (command-line-arguments)
     (declare (ignore $0))
-    (apply #'qlot-command $1 argv)))
+    (apply #'qlot-command
+           (if (equal $1 "--") ;; Ignore the first '--'
+               argv
+               (cons $1 argv)))))
