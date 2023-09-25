@@ -2,7 +2,7 @@
 
 set -eux
 
-QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" && pwd -P)
+QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 >/dev/null && pwd -P)
 
 errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
 if [ "$(which sbcl)" != "" ]; then
