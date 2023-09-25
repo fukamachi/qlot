@@ -42,11 +42,11 @@ $ cd /path/to/myapp
 # Installing libraries project-locally.
 $ qlot install
 
-# Updating depending libraries of a project.
-$ qlot update
-
 # Updating specific libraries
-$ qlot update --project mito
+$ qlot update mito
+
+# Updating all depending libraries of a project.
+$ qlot update
 
 # Execute a command with a project-local Quicklisp
 $ qlot exec ros -S . run
@@ -199,8 +199,8 @@ You can update the version of dependencies via:
 $ qlot update
 
 # Update a specific project
-$ qlot update --project mito
-$ qlot update --project mito,sxql
+$ qlot update mito
+$ qlot update mito sxql
 ```
 
 It will also overwrite `qlfile.lock`.
@@ -224,8 +224,8 @@ $ qlot install /path/to/myapp/qlfile
 $ qlot update
 
 # Update a specific project
-$ qlot update --project mito
-$ qlot update --project mito,sxql
+$ qlot update mito
+$ qlot update mito sxql
 ```
 
 ### add

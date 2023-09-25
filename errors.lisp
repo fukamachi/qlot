@@ -7,7 +7,10 @@
            #:duplicate-project
            #:qlfile-parse-failed
            #:ros-command-error
-           #:command-not-found))
+           #:command-not-found
+           #:qlot-warning
+           #:qlot-simple-warning
+           #:ros-command-warn))
 (in-package #:qlot/errors)
 
 (define-condition qlot-error (error) ())
@@ -62,3 +65,14 @@
   ((command :initarg :command))
   (:report (lambda (condition stream)
              (format stream "Command not found: ~A" (slot-value condition 'command)))))
+
+(define-condition qlot-warning (warning) ())
+
+(define-condition qlot-simple-warning (qlot-warning simple-warning) ())
+
+(defun ros-command-warn (format-control &rest format-arguments)
+  (restart-case
+      (error 'qlot-simple-warning
+             :format-control format-control
+             :format-arguments format-arguments)
+    (continue ())))

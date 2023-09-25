@@ -17,29 +17,37 @@
            #:main))
 (in-package #:qlot/cli)
 
-(defun install (&optional (object *default-pathname-defaults*) &rest args)
+(defun install (&optional targets &rest options)
+  ;; Requires no targets or a single target
+  (unless (or (null targets)
+              (not (null (cdr targets))))
+    (qlot/errors:ros-command-error "Too many arguments: ~{~A~^, ~}" targets))
   (unless (find-package :qlot/install)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
-  (destructuring-bind (&key install-deps cache) args
-    (uiop:symbol-call '#:qlot/install '#:install-project
-                      (pathname (or object *default-pathname-defaults*))
-                      :install-deps install-deps
-                      :cache-directory (and cache
-                                            (uiop:ensure-absolute-pathname
-                                              (uiop:ensure-directory-pathname cache)
-                                              *default-pathname-defaults*)))))
+  (let ((object (or (first targets)
+                    *default-pathname-defaults*)))
+    (destructuring-bind (&key install-deps cache) options
+      (uiop:symbol-call '#:qlot/install '#:install-project
+                        (pathname object)
+                        :install-deps install-deps
+                        :cache-directory (and cache
+                                              (uiop:ensure-absolute-pathname
+                                               (uiop:ensure-directory-pathname cache)
+                                               *default-pathname-defaults*))))))
 
-(defun update (&optional (object *default-pathname-defaults*) &rest args)
+(defun update (&optional targets &rest args)
   (unless (find-package :qlot/install)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
   (destructuring-bind (&key projects install-deps cache) args
+    (when projects
+      (qlot/errors:ros-command-warn "'--project' option is deprecated. Please use 'qlot update <name>' instead."))
     (uiop:symbol-call '#:qlot/install '#:update-project
-                      (pathname (or object *default-pathname-defaults*))
-                      :projects projects
+                      (pathname *default-pathname-defaults*)
+                      :projects (append targets projects)
                       :install-deps install-deps
                       :cache-directory (and cache
                                             (uiop:ensure-absolute-pathname
@@ -215,7 +223,7 @@ OPTIONS:
           (asdf:component-version (asdf:find-system :qlot))))
 
 (defun parse-argv (argv)
-  (loop with target = nil
+  (loop with targets = nil
         with projects = '()
         with install-deps = t
         with cache = nil
@@ -240,12 +248,13 @@ OPTIONS:
              ("--cache"
               (setf cache (pop argv)))
              (otherwise
-              (if target
+              (if (and (<= 2 (length option))
+                       (string= option "--" :end1 2))
                   (qlot/errors:ros-command-error "'~A' is unknown option" option)
-                  (setf target option))))
+                  (push option targets))))
         finally
            (return
-             (append (list target
+             (append (list targets
                            :install-deps install-deps)
                      (when projects
                        (list :projects projects))
@@ -279,40 +288,46 @@ OPTIONS:
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
 (defun qlot-command (&optional $1 &rest argv)
-  (handler-case
-      (cond ((equal "install" $1)
-             (apply #'install (parse-argv argv)))
-            ((equal "update" $1)
-             (apply #'qlot/cli:update (parse-argv argv)))
-            ((equal "init" $1)
-             (qlot/cli:init))
-            ((equal "exec" $1)
-             (use-local-quicklisp)
+  (handler-bind ((qlot/errors:qlot-warning
+                   (lambda (c)
+                     (format *error-output*
+                             "~&~C[33mWARNING: ~A~C[0m~%"
+                             #\Esc c #\Esc)
+                     (invoke-restart (find-restart 'continue c)))))
+    (handler-case
+        (cond ((equal "install" $1)
+               (apply #'install (parse-argv argv)))
+              ((equal "update" $1)
+               (apply #'qlot/cli:update (parse-argv argv)))
+              ((equal "init" $1)
+               (qlot/cli:init))
+              ((equal "exec" $1)
+               (use-local-quicklisp)
 
-             (let ((command (or (which (first argv))
-                                (first argv))))
-               (exec (cons command (rest argv)))))
-            ((equal "add" $1)
-             (unless argv
-               (qlot/errors:ros-command-error "requires a new library information."))
-             (add argv))
-            ((equal "bundle" $1)
-             (apply #'bundle argv))
-            ((equal "--version" $1)
-             (print-version)
-             (uiop:quit -1))
-            ((null $1)
-             (print-usage)
-             (uiop:quit -1))
-            (t (error 'qlot/errors:command-not-found :command $1)))
-    #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
-    (qlot/errors:command-not-found (e)
-      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
-      (print-usage)
-      (uiop:quit -1))
-    (qlot/errors:qlot-error (e)
-      (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
-      (uiop:quit -1))))
+               (let ((command (or (which (first argv))
+                                  (first argv))))
+                 (exec (cons command (rest argv)))))
+              ((equal "add" $1)
+               (unless argv
+                 (qlot/errors:ros-command-error "requires a new library information."))
+               (add argv))
+              ((equal "bundle" $1)
+               (apply #'bundle argv))
+              ((equal "--version" $1)
+               (print-version)
+               (uiop:quit -1))
+              ((null $1)
+               (print-usage)
+               (uiop:quit -1))
+              (t (error 'qlot/errors:command-not-found :command $1)))
+      #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
+      (qlot/errors:command-not-found (e)
+        (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+        (print-usage)
+        (uiop:quit -1))
+      (qlot/errors:qlot-error (e)
+        (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
+        (uiop:quit -1)))))
 
 (defun main ()
   (destructuring-bind (&optional $0 $1 &rest argv)
