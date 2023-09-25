@@ -314,7 +314,9 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 (defun install-project (object &key (install-deps t) cache-directory)
   (etypecase object
     ((or symbol string)
-     (install-project (asdf:find-system object)))
+     (install-project (asdf:find-system object)
+                      :install-deps install-deps
+                      :cache-directory cache-directory))
     (asdf:system
       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                       :quicklisp-home (asdf:system-relative-pathname
@@ -331,7 +333,10 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                    cache-directory)
   (etypecase object
     ((or symbol string)
-     (update-project (asdf:find-system object) :projects projects))
+     (update-project (asdf:find-system object)
+                     :projects projects
+                     :install-deps install-deps
+                     :cache-directory cache-directory))
     (asdf:system
       (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
