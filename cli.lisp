@@ -181,10 +181,8 @@ COMMANDS:
     install
         Installs libraries to './.qlot'.
 
-    update
-        Makes './.qlot' up-to-date and update 'qlfile.lock'.
-        Possible to update specific projects with --project option.
-        ex) qlot update --project mito
+    update [project name..]
+        Update specific projects and rewrite their versions in 'qlfile.lock'.
 
     add [project name]
     add [source] [project name] [arg1, arg2..]
