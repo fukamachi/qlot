@@ -8,6 +8,8 @@
                 #:source-version-prefix)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:progress)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt
@@ -50,10 +52,12 @@
                (uiop:file-exists-p (merge-pathnames "archive.tar.gz"
                                                     (source-metadata-destination source destination))))
     (uiop:with-temporary-file (:pathname tmp-archive :direction :io)
+      (progress "Downloading ~S" (source-http-url source))
       (dex:fetch (source-http-url source) tmp-archive
                  :if-exists :supersede
                  :proxy *proxy*)
 
+      (progress "Calculating the MD5 of the archive.")
       (let ((archive-md5 (byte-array-to-hex-string
                            (digest-file :md5 tmp-archive))))
         (when (and (source-http-archive-md5 source)
@@ -73,13 +77,15 @@
                                            (source-metadata-destination source destination))))
         (ensure-directories-exist archive-file)
         (unless (uiop:file-exists-p archive-file)
-          (rename-file tmp-archive archive-file)))))
+          (rename-file tmp-archive archive-file))
+        (progress "Downloaded ~S." archive-file))))
 
   (let* ((*default-pathname-defaults*
            (source-metadata-destination source destination))
          (archive-file (merge-pathnames "archive.tar.gz")))
     (ensure-directories-exist *default-pathname-defaults*)
 
+    (progress "Writing the distinfo to ~S." destination)
     (write-source-distinfo source destination)
 
     (when distinfo-only
@@ -89,11 +95,12 @@
                  (uiop:file-exists-p "releases.txt"))
       (with-tmp-directory (softwares-dir)
         (let ((source-directory (extract-tarball archive-file softwares-dir)))
-
+          (progress "Writing the systems.txt.")
           (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
             (princ (systems.txt (source-project-name source)
                                 source-directory)
                    out))
+          (progress "Writing the releases.txt.")
           (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
             (princ (releases.txt (source-project-name source)
                                  (source-version source)

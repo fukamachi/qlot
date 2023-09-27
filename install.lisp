@@ -19,13 +19,15 @@
                 #:run-distify-source-process)
   (:import-from #:qlot/logger
                 #:message
-                #:debug-log)
+                #:debug-log
+                #:progress)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/https
-                #:with-secure-installer)
+                #:with-secure-installer
+                #:with-download-logs)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
@@ -89,7 +91,7 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
-    (with-secure-installer ()
+    (with-secure-installer (:no-logs t)
       (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
           (list *proxy*)
         (apply-qlfile-to-qlhome qlfile quicklisp-home
@@ -97,7 +99,8 @@
 
       ;; Install project dependencies
       (when install-deps
-        (install-dependencies project-root quicklisp-home)))
+        (with-download-logs
+          (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
 
@@ -173,17 +176,21 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun install-all-releases (source)
   (unless (typep source 'source-dist)
-    (with-package-functions #:ql-dist (find-dist provided-releases)
+    (with-package-functions #:ql-dist (find-dist provided-releases name)
       (let ((dist (find-dist (source-dist-name source))))
+        (progress "Getting the list of releases.")
         (let ((releases (provided-releases dist)))
           (dolist (release releases)
+            (progress "Installing a new release ~S." (name release))
             (install-release release)))))))
 
 (defun install-source (source)
   (with-package-functions #:ql-dist (install-dist version)
-    (let ((new-dist (install-dist (source-install-url source)
-                                  :prompt nil
-                                  :replace nil)))
+    (progress "Installing the new dist.")
+    (let ((new-dist (let ((*standard-output* (make-broadcast-stream)))
+                      (install-dist (source-install-url source)
+                                    :prompt nil
+                                    :replace nil))))
       (setf (source-version source) (version new-dist))
       (install-all-releases source)
       new-dist)))
@@ -206,7 +213,10 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (let ((*trace-output* (make-broadcast-stream)))
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
-              (install-all-releases source))
+              (install-all-releases source)
+              (message "=> Updated dist ~S to version ~S."
+                       (source-project-name source)
+                       (source-version source)))
             (progn
               (setf (source-version source) (version (find-dist (source-dist-name source))))
               (message "Already have dist ~S version ~S."
@@ -258,23 +268,36 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (let ((dist (find-dist (source-dist-name source))))
                   (cond
                     ((not dist)
+                     (message "Installing dist ~S." (source-project-name source))
                      (with-quicklisp-home system-qlhome
                        (with-qlot-server (source qlhome tmp-dir)
                          (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (install-source source))))
+                         (install-source source)))
+                     (message "=> Newly installed ~S version ~S."
+                              (source-project-name source)
+                              (source-version source)))
                     ((and (slot-boundp source 'qlot/source/base::version)
                           (equal (version dist)
                                  (source-version source)))
                      (message "Already have dist ~S version ~S."
-                              (source-dist-name source)
+                              (source-project-name source)
                               (source-version source)))
                     ((string= (source-dist-name source) "quicklisp")
-                     (with-package-functions #:ql-dist (uninstall)
-                       (uninstall (find-dist "quicklisp")))
-                     (with-quicklisp-home system-qlhome
-                       (with-qlot-server (source qlhome tmp-dir)
-                         (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (install-source source))))
+                     (message "Installing dist ~S." (source-project-name source))
+                     (with-package-functions #:ql-dist (uninstall version)
+                       (let* ((current-dist (find-dist "quicklisp"))
+                              (current-version (version current-dist)))
+                         (uninstall (find-dist "quicklisp"))
+                         (with-quicklisp-home system-qlhome
+                           (with-qlot-server (source qlhome tmp-dir)
+                             (debug-log "Using temporary directory '~A'" tmp-dir)
+                             (install-source source)))
+                         (if (equal current-version (source-version source))
+                             (message "=> No update on dist \"quicklisp\" version ~S."
+                                      current-version)
+                             (message "=> Updated dist \"quicklisp\" version ~S -> ~S."
+                                      current-version
+                                      (source-version source))))))
                     (t
                      (with-quicklisp-home system-qlhome
                        (with-qlot-server (source qlhome tmp-dir t)

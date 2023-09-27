@@ -2,15 +2,20 @@
   (:use #:cl)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:progress)
   (:import-from #:qlot/utils/shell
                 #:launch-lisp)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:export #:https-of
-           #:with-secure-installer))
+           #:with-secure-installer
+           #:with-download-logs
+           #:without-download-logs))
 (in-package #:qlot/utils/https)
 
 (defvar *install-process* nil)
+(defvar *enable-logging* t)
 
 (defun https-of (url)
   (if (and (stringp url)
@@ -23,13 +28,12 @@
   (declare (ignore args))
   (assert *install-process*)
   (let ((url (https-of url)))
-    (format t "~&Downloading '~A'..." url)
-    (force-output)
+    (progress "Downloading ~S." url)
     (let ((stream (uiop:process-info-input *install-process*)))
       (format stream "~A~%~A~%" url file)
       (force-output stream))
     (let ((result (read-line (uiop:process-info-output *install-process*))))
-      (format t "~CDownloaded '~A'.   ~%" #\Return url)
+      (progress "Downloaded ~S." url)
       (values t (probe-file result)))))
 
 (defun launch-fetch-process ()
@@ -53,8 +57,15 @@
                         (force-output)))))
                  :without-quicklisp t)))
 
-(defmacro with-secure-installer (() &body body)
-  `(let ((*install-process* (launch-fetch-process)))
+(defmacro with-download-logs (&body body)
+  `(let ((*enable-logging* t)) ,@body))
+
+(defmacro without-download-logs (&body body)
+  `(let ((*enable-logging* nil)) ,@body))
+
+(defmacro with-secure-installer ((&key no-logs) &body body)
+  `(let ((*install-process* (launch-fetch-process))
+         (*enable-logging* (not ,no-logs)))
      (unwind-protect
           (progv (list (intern #.(string :*fetch-scheme-functions*) '#:ql-http))
               (list

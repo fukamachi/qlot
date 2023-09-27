@@ -6,11 +6,14 @@
         #:qlot/distify/github
         #:qlot/distify/dist)
   (:import-from #:qlot/source
+                #:source-project-name
                 #:source-git
                 #:source-github
                 #:source-http
                 #:source-dist
                 #:source-dist-project)
+  (:import-from #:qlot/logger
+                #:progress)
   (:export #:distify))
 (in-package #:qlot/distify)
 
@@ -28,4 +31,5 @@
              source
              destination
              :distinfo-only distinfo-only))
+  (progress "Generated dist files.")
   destination)

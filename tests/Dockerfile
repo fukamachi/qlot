@@ -3,7 +3,7 @@ FROM fukamachi/sbcl
 WORKDIR /app
 
 RUN set -x; \
-  apt-get update && apt-get -y install --no-install-recommends git && \
+  apt-get update && apt-get -y install --no-install-recommends git curl && \
   rm -rf /var/lib/apt/lists/*
 
 RUN set -x; \
@@ -14,4 +14,4 @@ RUN set -x; \
 RUN set -x; \
   ros install rove
 
-ENTRYPOINT ["rove", "qlot.asd"]
+ENTRYPOINT ["/bin/bash"]

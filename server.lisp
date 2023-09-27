@@ -6,6 +6,8 @@
                 #:source-initargs
                 #:source-frozen-slots
                 #:defrost-source)
+  (:import-from #:qlot/color
+                #:*enable-color*)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/shell
@@ -52,6 +54,7 @@
                    (when quicklisp-home
                      (list `(let ((*error-output* (make-broadcast-stream)))
                               (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
+                   (list `(setf *enable-color* ,*enable-color*))
                    (list `(uiop:symbol-call :qlot/distify :distify
                                             ;; Call defrost-source to set '%version' from 'source-version'.
                                             (defrost-source

@@ -87,7 +87,8 @@
                        (uiop:symbol-call :qlot/utils/quickdocs :project-upstream-url
                                          ,(source-project-name source))))
                     :systems '("qlot/utils/quickdocs")
-                    :source-registry (asdf:system-source-directory :qlot)))))
+                    :source-registry (asdf:system-source-directory :qlot)
+                    :output :string))))
 
 (defmethod source-frozen-slots ((source source-ql-upstream))
   (append (call-next-method)
