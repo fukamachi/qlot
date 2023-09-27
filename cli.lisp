@@ -3,6 +3,8 @@
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors)
+  (:import-from #:qlot/color
+                #:*enable-color*)
   (:import-from #:qlot/utils/cli
                 #:exec
                 #:which
@@ -331,7 +333,8 @@ OPTIONS:
   (destructuring-bind (&optional $0 $1 &rest argv)
       (command-line-arguments)
     (declare (ignore $0))
-    (apply #'qlot-command
-           (if (equal $1 "--") ;; Ignore the first '--'
-               argv
-               (cons $1 argv)))))
+    (let ((*enable-color* t))
+      (apply #'qlot-command
+             (if (equal $1 "--") ;; Ignore the first '--'
+                 argv
+                 (cons $1 argv))))))

@@ -12,6 +12,8 @@
                 #:source-github-url)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:progress)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt
@@ -64,6 +66,7 @@
 
 (defun load-source-github-version (source)
   (unless (ignore-errors (source-github-ref source))
+    (progress "Retrieving the git ref from GitHub.")
     (setf (source-github-ref source)
           (retrieve-source-git-ref-from-github source)))
   (unless (ignore-errors (source-version source))
@@ -82,7 +85,9 @@
               destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
+    (progress "Writing the distinfo to ~S." destination)
     (write-source-distinfo source destination)
+    (progress "Wrote the distinfo to ~S." destination)
 
     (when distinfo-only
       (return-from distify-github))
@@ -90,21 +95,26 @@
     (with-tmp-directory (softwares-dir)
       (let ((archive-file (merge-pathnames "archive.tar.gz")))
         (unless (uiop:file-exists-p archive-file)
+          (progress "Downloading ~S." (source-github-url source))
           (let ((cred (github-credentials)))
             (apply #'dex:fetch (source-github-url source) archive-file
                    :proxy *proxy*
                    :want-stream t
                    :allow-other-keys t   ;; Old Dexador doesn't accept :basic-auth
                    (when cred
-                     `(:basic-auth ,cred)))))
+                     `(:basic-auth ,cred))))
+          (progress "Downloaded ~S." (source-github-url source)))
 
         (unless (and (uiop:file-exists-p "systems.txt")
                      (uiop:file-exists-p "releases.txt"))
+          (progress "Extracting a tarball.")
           (let ((source-directory (extract-tarball archive-file softwares-dir)))
+            (progress "Writing systems.txt.")
             (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
               (princ (systems.txt (source-project-name source)
                                   source-directory)
                      out))
+            (progress "Writing releases.txt.")
             (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
               (princ (releases.txt (source-project-name source)
                                    (source-version source)

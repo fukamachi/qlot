@@ -8,6 +8,8 @@
                 #:source-distribution)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:progress)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
                 #:parse-space-delimited-stream)
@@ -23,6 +25,7 @@
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
+  (progress "Getting the distinfo.")
   (let* ((body-stream (handler-case (dex:get (source-distinfo-url source)
                                              :keep-alive nil
                                              :want-stream t
@@ -39,6 +42,7 @@
     (check-type release-index-url string)
     (check-type version string)
     ;; Check if the project is available
+    (progress "Getting the release metadata.")
     (let ((stream (dex:get (https-of release-index-url)
                            :want-stream t
                            :keep-alive nil
@@ -59,6 +63,7 @@
                   version))))
 
 (defun distify-ql (source destination &key distinfo-only)
+  (progress "Determining the distinfo URL.")
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
@@ -72,6 +77,7 @@
               destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
+    (progress "Writing the distinfo.")
     (write-source-distinfo source destination)
 
     (when distinfo-only
@@ -79,11 +85,13 @@
 
     (unless (and (uiop:file-exists-p "systems.txt")
                  (uiop:file-exists-p "releases.txt"))
+      (progress "Getting the distinfo.")
       (let ((original-distinfo
               (parse-distinfo-stream (dex:get (source-distinfo-url source)
                                               :want-stream t
                                               :keep-alive nil
                                               :proxy *proxy*))))
+        (progress "Getting the metadata files.")
         (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
                                  ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair

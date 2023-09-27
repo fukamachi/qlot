@@ -15,6 +15,8 @@
                 #:source-git-identifier)
   (:import-from #:qlot/source/ql
                 #:source-ql-upstream)
+  (:import-from #:qlot/logger
+                #:progress)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt
@@ -64,9 +66,11 @@
 
   (when (typep source 'source-ql-upstream)
     (unless (source-git-remote-url source)
+      (progress "Determining the upstream URL.")
       (setf (source-git-remote-url source)
             (project-upstream-url (source-project-name source)))))
 
+  (progress "Determining the project version.")
   (load-source-git-version source)
 
   (let ((*default-pathname-defaults*
@@ -76,6 +80,7 @@
               destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
+    (progress "Writing the distinfo.")
     (write-source-distinfo source destination)
 
     (when distinfo-only
@@ -90,22 +95,27 @@
                                                               (source-project-name source)
                                                               (source-git-identifier source))
                                                       softwares-dir))))
+             (progress "Running git clone.")
              (git-clone (source-git-remote-access-url source)
                         source-directory
                         :checkout-to (or (source-git-branch source)
                                          (source-git-tag source))
                         :ref (source-git-ref source))
 
+             (progress "Creating a tarball.")
              (create-git-tarball source-directory
                                  archive-file
                                  (source-git-ref source))
              (unless (and (uiop:file-exists-p "systems.txt")
                           (uiop:file-exists-p "releases.txt"))
+               (progress "Writing metadata files.")
                (write-metadata-files source *default-pathname-defaults* source-directory archive-file)))))
         ((not (and (uiop:file-exists-p "systems.txt")
                    (uiop:file-exists-p "releases.txt")))
          (with-tmp-directory (softwares-dir)
+           (progress "Extracting a tarball.")
            (let ((source-directory (extract-tarball archive-file softwares-dir)))
+             (progress "Writing metadata files.")
              (write-metadata-files source *default-pathname-defaults* source-directory archive-file))))))
 
     *default-pathname-defaults*))

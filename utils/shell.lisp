@@ -29,7 +29,7 @@
              (slot-value condition 'code)
              (slot-value condition 'stderr)))))
 
-(defun safety-shell-command (program args)
+(defun safety-shell-command (program args &key (output :string))
   (setf args (mapcar #'princ-to-string args))
   (debug-log "Running shell command: ~A ~{~S~^ ~}" program args)
   (uiop:with-temporary-file (:pathname stderr
@@ -37,7 +37,7 @@
     (handler-case
         (uiop:run-program (cons program args)
                           :input :interactive
-                          :output :string
+                          :output output
                           :error-output (if *debug*
                                             :interactive
                                             stderr))
@@ -172,9 +172,11 @@
    :output :stream
    :error-output (and *debug* :interactive)))
 
-(defun run-lisp (forms &rest args &key systems source-registry without-quicklisp)
+(defun run-lisp (forms &rest args &key systems source-registry without-quicklisp (output :interactive))
   (declare (ignore systems source-registry without-quicklisp))
+  (remf args :output)
   (safety-shell-command #-ros.init *current-lisp-path*
                         #+ros.init (or (ros:opt "wargv0")
                                        (ros:opt "argv0"))
-                        (command-options forms args)))
+                        (command-options forms args)
+                        :output output))

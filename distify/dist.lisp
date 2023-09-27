@@ -7,6 +7,8 @@
                 #:source-project-name)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:progress)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url)
   (:import-from #:dexador)
@@ -16,10 +18,12 @@
 (defun distify-dist (source destination &key distinfo-only)
   (declare (ignore distinfo-only))
   (check-type source source-dist)
+  (progress "Determining the distinfo URL.")
   (unless (source-distinfo-url source)
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
                             (slot-value source 'qlot/source/dist::%version))))
+  (progress "Fetching the distinfo.")
   (let* ((destination (truename destination))
          (relative-path
            ;; distribution name may include slashes
