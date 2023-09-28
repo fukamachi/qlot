@@ -12,7 +12,7 @@
 (in-package #:qlot/utils/http)
 
 (defmacro with-retry (() &body body)
-  `(let ((retry-request (dex:retry-request 5 :interval 3)))
+  `(let ((retry-request (dex:retry-request 2 :interval 3)))
      (handler-bind ((dex:http-request-failed retry-request)
                     #-windows
                     (cl+ssl::ssl-error retry-request))
