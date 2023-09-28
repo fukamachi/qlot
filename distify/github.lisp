@@ -10,8 +10,6 @@
                 #:source-github-tag
                 #:source-github-identifier
                 #:source-github-url)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
   (:import-from #:qlot/logger
                 #:progress)
   (:import-from #:qlot/utils/distify
@@ -22,7 +20,7 @@
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
-  (:import-from #:dexador)
+  (:import-from #:qlot/utils/http)
   (:import-from #:yason)
   (:export #:distify-github))
 (in-package #:qlot/distify/github)
@@ -36,10 +34,9 @@
 (defun retrieve-from-github (repos &optional action)
   (let ((cred (github-credentials)))
     (yason:parse
-      (apply #'dex:get
+      (apply #'qdex:get
              (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
              :want-stream t
-             :proxy *proxy*
              (when cred
                `(:basic-auth ,cred))))))
 
@@ -97,10 +94,7 @@
         (unless (uiop:file-exists-p archive-file)
           (progress "Downloading ~S." (source-github-url source))
           (let ((cred (github-credentials)))
-            (apply #'dex:fetch (source-github-url source) archive-file
-                   :proxy *proxy*
-                   :want-stream t
-                   :allow-other-keys t   ;; Old Dexador doesn't accept :basic-auth
+            (apply #'qdex:fetch (source-github-url source) archive-file
                    (when cred
                      `(:basic-auth ,cred))))
           (progress "Downloaded ~S." (source-github-url source)))

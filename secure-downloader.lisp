@@ -39,14 +39,12 @@
                      `(let ((*error-output* (make-broadcast-stream)))
                         (load ,(merge-pathnames #P"setup.lisp"
                                                 (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))))
-                  `((uiop:symbol-call :ql :quickload :dexador :silent t)
+                  `((uiop:symbol-call :ql :quickload :qlot/utils/http :silent t)
                     (loop
                       (let ((,url-var (read-line))
                             (,file-var (read-line)))
-                        (uiop:symbol-call :dexador :fetch ,url-var
-                                          ,file-var
-                                          :if-exists :supersede
-                                          :proxy ,*proxy*)
+                        (uiop:symbol-call :qlot/utils/http :fetch ,url-var
+                                          ,file-var)
                         (format t "~A~%" ,file-var)
                         (force-output)))))
                  :without-quicklisp t)))

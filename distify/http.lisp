@@ -6,8 +6,6 @@
                 #:source-http-archive-md5
                 #:source-version
                 #:source-version-prefix)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
   (:import-from #:qlot/logger
                 #:progress)
   (:import-from #:qlot/utils/distify
@@ -20,7 +18,7 @@
                 #:parse-distinfo-file)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
-  (:import-from #:dexador)
+  (:import-from #:qlot/utils/http)
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
                 #:digest-file)
@@ -35,9 +33,9 @@
 
 (defun distify-http (source destination &key distinfo-only)
   (let ((distinfo.txt (merge-pathnames
-                        (make-pathname :name (source-project-name source)
-                                       :type "txt")
-                        destination)))
+                       (make-pathname :name (source-project-name source)
+                                      :type "txt")
+                       destination)))
 
     (when (and (not (ignore-errors (source-version source)))
                (uiop:file-exists-p distinfo.txt))
@@ -53,13 +51,11 @@
                                                     (source-metadata-destination source destination))))
     (uiop:with-temporary-file (:pathname tmp-archive :direction :io)
       (progress "Downloading ~S" (source-http-url source))
-      (dex:fetch (source-http-url source) tmp-archive
-                 :if-exists :supersede
-                 :proxy *proxy*)
+      (qdex:fetch (source-http-url source) tmp-archive)
 
       (progress "Calculating the MD5 of the archive.")
       (let ((archive-md5 (byte-array-to-hex-string
-                           (digest-file :md5 tmp-archive))))
+                          (digest-file :md5 tmp-archive))))
         (when (and (source-http-archive-md5 source)
                    (not (string= (source-http-archive-md5 source) archive-md5)))
           (cerror "Ignore and continue."
