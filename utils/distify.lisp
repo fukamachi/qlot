@@ -11,7 +11,7 @@
                 #:parse-distinfo-stream
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
-  (:import-from #:qlot/utils/https
+  (:import-from #:qlot/utils
                 #:https-of)
   (:import-from #:qlot/source
                 #:source-distinfo-url

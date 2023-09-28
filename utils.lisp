@@ -10,7 +10,8 @@
            #:with-package-functions
            #:pathname-in-directory-p
            #:merge-hash-tables
-           #:octets-stream-to-string))
+           #:octets-stream-to-string
+           #:https-of))
 (in-package #:qlot/utils)
 
 (defun make-keyword (text)
@@ -88,3 +89,10 @@ with the same key."
       (loop for read-bytes = (read-sequence buffer stream)
             do (write-string (map 'string #'code-char buffer) s)
             while (= read-bytes 1024)))))
+
+(defun https-of (url)
+  (if (and (stringp url)
+           (<= 7 (length url))
+           (search "http://" url :end2 7))
+      (format nil "https://~A" (subseq url 7))
+      url))

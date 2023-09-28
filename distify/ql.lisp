@@ -16,7 +16,7 @@
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url
                 #:write-source-distinfo)
-  (:import-from #:qlot/utils/https
+  (:import-from #:qlot/utils
                 #:https-of)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
