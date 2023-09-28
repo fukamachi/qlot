@@ -1,28 +1,23 @@
-(defpackage #:qlot/utils/https
+(defpackage #:qlot/secure-downloader
   (:use #:cl)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/logger
                 #:progress)
+  (:import-from #:qlot/utils
+                #:https-of)
   (:import-from #:qlot/utils/shell
+                #:*qlot-source-directory*
                 #:launch-lisp)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
-  (:export #:https-of
-           #:with-secure-installer
+  (:export #:with-secure-installer
            #:with-download-logs
            #:without-download-logs))
-(in-package #:qlot/utils/https)
+(in-package #:qlot/secure-downloader)
 
 (defvar *install-process* nil)
 (defvar *enable-logging* t)
-
-(defun https-of (url)
-  (if (and (stringp url)
-           (<= 7 (length url))
-           (search "http://" url :end2 7))
-      (format nil "https://~A" (subseq url 7))
-      url))
 
 (defun https-fetch (url file &rest args)
   (declare (ignore args))
@@ -45,16 +40,16 @@
                      `(let ((*error-output* (make-broadcast-stream)))
                         (load ,(merge-pathnames #P"setup.lisp"
                                                 (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))))
-                  `((uiop:symbol-call :ql :quickload :dexador :silent t)
+                  `((uiop:symbol-call :ql :quickload :qlot/utils/http :silent t)
                     (loop
                       (let ((,url-var (read-line))
                             (,file-var (read-line)))
-                        (uiop:symbol-call :dexador :fetch ,url-var
-                                          ,file-var
-                                          :if-exists :supersede
-                                          :proxy ,*proxy*)
+                        (uiop:symbol-call :qlot/utils/http :fetch ,url-var
+                                          ,file-var)
                         (format t "~A~%" ,file-var)
                         (force-output)))))
+                 :source-registry (or *qlot-source-directory*
+                                      (asdf:system-source-directory :qlot))
                  :without-quicklisp t)))
 
 (defmacro with-download-logs (&body body)
@@ -67,11 +62,13 @@
   `(let ((*install-process* (launch-fetch-process))
          (*enable-logging* (not ,no-logs)))
      (unwind-protect
-          (progv (list (intern #.(string :*fetch-scheme-functions*) '#:ql-http))
+          (progv (list (intern #.(string '#:*fetch-scheme-functions*) '#:ql-http)
+                       (intern #.(string '#:*proxy-url*) '#:ql-http))
               (list
                (append `(("http" . https-fetch)
                          ("https" . https-fetch))
-                       (symbol-value (intern #.(string :*fetch-scheme-functions*) '#:ql-http))))
+                       (symbol-value (intern #.(string '#:*fetch-scheme-functions*) '#:ql-http)))
+               *proxy*)
             ,@body)
        (when (uiop:process-alive-p *install-process*)
          (uiop:terminate-process *install-process*)))))

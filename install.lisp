@@ -21,13 +21,11 @@
                 #:message
                 #:debug-log
                 #:progress)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
-  (:import-from #:qlot/utils
-                #:with-package-functions)
-  (:import-from #:qlot/utils/https
+  (:import-from #:qlot/secure-downloader
                 #:with-secure-installer
                 #:with-download-logs)
+  (:import-from #:qlot/utils
+                #:with-package-functions)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
@@ -92,10 +90,8 @@
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (with-secure-installer (:no-logs t)
-      (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
-          (list *proxy*)
-        (apply-qlfile-to-qlhome qlfile quicklisp-home
-                                :cache-directory cache-directory))
+      (apply-qlfile-to-qlhome qlfile quicklisp-home
+                              :cache-directory cache-directory)
 
       ;; Install project dependencies
       (when install-deps
@@ -126,12 +122,10 @@
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (with-secure-installer ()
-      (progv (list (intern (string '#:*proxy-url*) '#:ql-http))
-          (list *proxy*)
-        (apply-qlfile-to-qlhome qlfile quicklisp-home
-                                :ignore-lock t
-                                :projects projects
-                                :cache-directory cache-directory))
+      (apply-qlfile-to-qlhome qlfile quicklisp-home
+                              :ignore-lock t
+                              :projects projects
+                              :cache-directory cache-directory)
 
       ;; Install project dependencies
       (when install-deps

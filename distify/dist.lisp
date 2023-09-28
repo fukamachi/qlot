@@ -5,13 +5,11 @@
                 #:source-distribution
                 #:source-distinfo-url
                 #:source-project-name)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
   (:import-from #:qlot/logger
                 #:progress)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url)
-  (:import-from #:dexador)
+  (:import-from #:qlot/utils/http)
   (:export #:distify-dist))
 (in-package #:qlot/distify/dist)
 
@@ -35,9 +33,5 @@
                        relative-path
                        destination)))
     (ensure-directories-exist target-path)
-    (dex:fetch (source-distinfo-url source)
-               target-path
-               :if-exists :supersede
-               :keep-alive nil
-               :proxy *proxy*)
+    (qdex:fetch (source-distinfo-url source) target-path)
     destination))

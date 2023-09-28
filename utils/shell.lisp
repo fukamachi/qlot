@@ -124,7 +124,7 @@
 
 #+ros.init
 (defun precommand-options ()
-  '("+Q" "-L" "sbcl-bin"))
+  '("+Q"))
 
 #-ros.init
 (defun precommand-options ()

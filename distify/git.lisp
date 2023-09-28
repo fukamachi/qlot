@@ -31,10 +31,6 @@
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
-  (:import-from #:ironclad
-                #:byte-array-to-hex-string
-                #:digest-file
-                #:digest-sequence)
   (:export #:distify-git))
 (in-package #:qlot/distify/git)
 

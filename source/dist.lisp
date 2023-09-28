@@ -4,7 +4,7 @@
         #:qlot/source/base)
   (:import-from #:qlot/utils/ql
                 #:make-versioned-distinfo-url)
-  (:import-from #:qlot/utils/https
+  (:import-from #:qlot/utils
                 #:https-of)
   (:import-from #:qlot/errors
                 #:invalid-definition)

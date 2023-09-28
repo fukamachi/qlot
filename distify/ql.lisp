@@ -6,8 +6,6 @@
                 #:source-version-prefix
                 #:source-distinfo-url
                 #:source-distribution)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
   (:import-from #:qlot/logger
                 #:progress)
   (:import-from #:qlot/utils/ql
@@ -16,20 +14,18 @@
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url
                 #:write-source-distinfo)
-  (:import-from #:qlot/utils/https
+  (:import-from #:qlot/utils
                 #:https-of)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
-  (:import-from #:dexador)
+  (:import-from #:qlot/utils/http)
   (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
 
 (defun load-source-ql-version (source)
   (progress "Getting the distinfo.")
-  (let* ((body-stream (handler-case (dex:get (source-distinfo-url source)
-                                             :keep-alive nil
-                                             :want-stream t
-                                             :proxy *proxy*)
+  (let* ((body-stream (handler-case (qdex:get (source-distinfo-url source)
+                                              :want-stream t)
                         (dex:http-request-failed (e)
                           (error 'qlot-simple-error
                                  :format-control "Not available dist: ~A (~A)"
@@ -43,10 +39,7 @@
     (check-type version string)
     ;; Check if the project is available
     (progress "Getting the release metadata.")
-    (let ((stream (dex:get (https-of release-index-url)
-                           :want-stream t
-                           :keep-alive nil
-                           :proxy *proxy*)))
+    (let ((stream (qdex:get (https-of release-index-url) :want-stream t)))
       (block nil
         (parse-space-delimited-stream stream
                                       :test (lambda (data)
@@ -87,16 +80,14 @@
                  (uiop:file-exists-p "releases.txt"))
       (progress "Getting the distinfo.")
       (let ((original-distinfo
-              (parse-distinfo-stream (dex:get (source-distinfo-url source)
-                                              :want-stream t
-                                              :keep-alive nil
-                                              :proxy *proxy*))))
+              (parse-distinfo-stream (qdex:get (source-distinfo-url source)
+                                               :want-stream t))))
         (progress "Getting the metadata files.")
         (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
                                  ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair
             (check-type url string)
-            (let ((data (parse-space-delimited-stream (dex:get (https-of url) :want-stream t :proxy *proxy* :keep-alive nil)
+            (let ((data (parse-space-delimited-stream (qdex:get (https-of url) :want-stream t)
                                                       :test (lambda (data)
                                                               (equal (first data) (source-project-name source)))
                                                       :include-header t)))
