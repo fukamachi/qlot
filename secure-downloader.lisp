@@ -7,6 +7,7 @@
   (:import-from #:qlot/utils
                 #:https-of)
   (:import-from #:qlot/utils/shell
+                #:*qlot-source-directory*
                 #:launch-lisp)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
@@ -47,6 +48,8 @@
                                           ,file-var)
                         (format t "~A~%" ,file-var)
                         (force-output)))))
+                 :source-registry (or *qlot-source-directory*
+                                      (asdf:system-source-directory :qlot))
                  :without-quicklisp t)))
 
 (defmacro with-download-logs (&body body)
