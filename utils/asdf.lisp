@@ -198,7 +198,10 @@
            (if (listp object)
                (car object)
                object)))
-    (let* ((defpackage-form (asdf/package-inferred-system::file-defpackage-form file))
+    (let* ((defpackage-form
+               ;; Prevent errors when loading a file without defpackage form
+               (ignore-errors
+                 (asdf/package-inferred-system::file-defpackage-form file)))
            (defpackage-form (remove-if (lambda (key)
                                          (find key '(:local-nicknames :lock)
                                                :test 'equal))
