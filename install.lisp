@@ -8,6 +8,7 @@
                 #:source-dist-name
                 #:source-local
                 #:source-local-path
+                #:source-local-registry-directive
                 #:source-project-name
                 #:source-version
                 #:source-install-url
@@ -218,7 +219,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (source-version source))))
         new-dist))))
 
-(defun dump-source-registry-conf (qlhome file sources)
+(defun dump-source-registry-conf (file sources)
   (uiop:with-output-file (out file :if-exists :supersede)
     (let ((*print-pretty* nil)
           (*print-case* :downcase))
@@ -233,7 +234,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                   (message "Adding ~S located at '~A'."
                                            (source-project-name source)
                                            (source-local-path source))
-                                  `(:tree ,(source-local-path source)))))))))
+                                  `(:tree ,(source-local-registry-directive source)))))))))
 
 (defun dump-qlfile-lock (file sources)
   (uiop:with-output-file (out file :if-exists :supersede)
@@ -309,8 +310,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (message "Removing dist ~S." (name dist))
               (uninstall dist))))))
 
-    (dump-source-registry-conf qlhome
-                               (merge-pathnames #P"source-registry.conf" qlhome)
+    (dump-source-registry-conf (merge-pathnames #P"source-registry.conf" qlhome)
                                sources)
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
                                      :type "lock"

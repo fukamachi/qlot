@@ -5,15 +5,30 @@
                 #:initargs)
   (:import-from #:qlot/errors
                 #:invalid-definition)
+  (:import-from #:qlot/utils
+                #:starts-with)
   (:export #:source-local
-           #:source-local-path))
+           #:source-local-path
+           #:source-local-registry-directive))
 (in-package #:qlot/source/local)
 
 (defclass source-local (source)
   ((path :initarg :path
-         :accessor source-local-path))
+         :reader source-local-path))
   (:default-initargs
    :version "none"))
+
+(defun convert-local-path (path)
+  (etypecase path
+    (string
+     (if (starts-with "~/" path)
+         `(:home ,(uiop:ensure-directory-pathname (subseq path 2)))
+         (uiop:ensure-directory-pathname path)))
+    (pathname path)))
+
+(defun source-local-registry-directive (source)
+  (check-type source source-local)
+  (convert-local-path (source-local-path source)))
 
 (defmethod make-source ((source (eql :local)) &rest initargs)
   (handler-case
@@ -22,7 +37,7 @@
         (check-type path (or string pathname))
         (make-instance 'source-local
                        :project-name project-name
-                       :path (uiop:ensure-directory-pathname path)))
+                       :path path))
     (error ()
       (error 'invalid-definition
              :source :local
