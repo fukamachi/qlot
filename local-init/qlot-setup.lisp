@@ -1,4 +1,3 @@
-
 (defpackage #:qlot/local-init/qlot-setup
   (:use #:cl))
 (in-package #:qlot/local-init/qlot-setup)
