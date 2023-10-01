@@ -1,11 +1,19 @@
 #!/bin/bash
 
 VERSION=${VERSION:-heads/master}
-QLOT_HOME=${QLOT_HOME:-~/.qlot}
-QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
 
-QLOT_LOGS_DIR="$QLOT_HOME/logs"
-QLOT_BIN_DIR="$QLOT_HOME/bin"
+if [ `id -u` == "0" ]; then
+  QLOT_BASE=${QLOT_BASE:-/usr/local}
+  QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
+  QLOT_SOURCE_DIR="$QLOT_HOME"
+  QLOT_LOGS_DIR=/tmp/qlot/logs
+  QLOT_BIN_DIR="$QLOT_BASE/bin"
+else
+  QLOT_HOME=${QLOT_HOME:-~/.qlot}
+  QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
+  QLOT_LOGS_DIR="$QLOT_HOME/logs"
+  QLOT_BIN_DIR="$QLOT_HOME/bin"
+fi
 
 errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
 notice() { echo -e "\e[33m$1\e[0m"; }
@@ -90,10 +98,7 @@ echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
 echo ''
 
-if [ `id -u` == "0" ]; then
-  cp "$QLOT_BIN_DIR/qlot" /usr/local/bin
-  echo "The executable script is located at '/usr/local/bin/qlot'."
-else
+if [ `id -u` != "0" ]; then
   echo "The executable script is located at '$QLOT_BIN_DIR/qlot'."
   echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
   echo ''
@@ -102,6 +107,6 @@ else
   echo 'Or, copy the script to a searchable directory such as /usr/local/bin.'
   echo ''
   echo "    sudo cp $QLOT_BIN_DIR/qlot /usr/local/bin"
+  echo ''
 fi
-echo ''
 echo 'Enjoy!'
