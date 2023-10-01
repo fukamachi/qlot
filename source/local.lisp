@@ -29,8 +29,9 @@
              :usage "local <project name> <directory path>"))))
 
 (defmethod initialize-instance :after ((source source-local) &rest initargs)
+  (declare (ignore initargs))
   (setf (slot-value source 'initargs)
-        (loop for (k v) on initargs by #'cddr
+        (loop for (k v) on (slot-value source 'initargs) by #'cddr
               unless (eq k :version)
               append (list k v))))
 
