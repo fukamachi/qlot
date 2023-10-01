@@ -227,7 +227,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               `(:source-registry
                 :ignore-inherited-configuration
                 (:also-exclude ".qlot")
-                (:tree ,(probe-file (merge-pathnames #P"../" qlhome)))
                 ,@(loop for source in sources
                         when (typep source 'source-local)
                         collect (progn
