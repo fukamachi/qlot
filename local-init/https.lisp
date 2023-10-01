@@ -14,13 +14,30 @@
       (format nil "https://~A" (subseq url 7))
       url))
 
-(defun run-fetch (url file)
-  (uiop:run-program (list *fetch-script*
-                          (https-of url)
-                          (uiop:native-namestring
-                           (uiop:ensure-absolute-pathname file *default-pathname-defaults*)))
-                    :output :interactive
-                    :error-output :interactive))
+(defmacro with-logging ((url file &key quietly) &body body)
+  (let ((now (gensym "NOW")))
+    `(let ((,now (get-internal-real-time)))
+       (unless ,quietly
+         (format t "~&; Fetching '~A'.~%" ,url))
+       (prog1 (progn ,@body)
+         (unless ,quietly
+           (format t "~&; Done '~A' (~$KB) in ~A seconds.~%"
+                   (file-namestring ,file)
+                   (/ (ql-util:file-size ,file) 1024)
+                   (coerce
+                    (/ (- (get-internal-real-time) ,now)
+                       internal-time-units-per-second)
+                    'float)))))))
+
+(defun run-fetch (url file &rest args &key quietly &allow-other-keys)
+  (declare (ignore args))
+  (let ((url (https-of url)))
+    (with-logging (url file :quietly quietly)
+      (uiop:run-program (list *fetch-script*
+                              url
+                              (uiop:native-namestring
+                               (uiop:ensure-absolute-pathname file *default-pathname-defaults*)))
+                        :error-output :interactive))))
 
 (defun which (cmd)
   (handler-case
@@ -31,20 +48,19 @@
     (uiop/run-program:subprocess-error ()
       nil)))
 
-(defun curl-fetch (url file &rest args)
+(defun curl-fetch (url file &rest args &key quietly &allow-other-keys)
   (declare (ignore args))
   (let ((url (https-of url)))
-    (format t "~&; Fetching '~A'.~%" url)
-    (let ((now (get-internal-real-time)))
+    (with-logging (url file :quietly quietly)
       (uiop:run-program (list "curl" "-sSL" url "-o" (uiop:native-namestring file))
-                        :error-output :interactive)
-      (format t "~&; Done '~A' (~$KB) in ~A seconds.~%"
-              (file-namestring file)
-              (/ (ql-util:file-size file) 1024)
-              (coerce
-               (/ (- (get-internal-real-time) now)
-                  internal-time-units-per-second)
-               'float)))))
+                        :error-output :interactive))))
+
+(defun wget-fetch (url file &rest args &key quietly &allow-other-keys)
+  (declare (ignore args))
+  (let ((url (https-of url)))
+    (with-logging (url file :quietly quietly)
+      (uiop:run-program (list "wget" url "-O" (uiop:native-namestring file))
+                        :error-output :interactive))))
 
 (defun add-to-fetch-scheme-functions ()
   (let ((fn (cond
@@ -54,7 +70,9 @@
                      (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp")))
                'run-fetch)
               ((which "curl")
-               'curl-fetch))))
+               'curl-fetch)
+              ((which "wget")
+               'wget-fetch))))
     (when fn
       (setf ql-http:*fetch-scheme-functions*
             (append `(("https" . ,fn)
