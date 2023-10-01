@@ -63,16 +63,18 @@
                         :error-output :interactive))))
 
 (defun add-to-fetch-scheme-functions ()
-  (let ((fn (cond
-              ((and *fetch-script*
-                    (uiop:file-exists-p *fetch-script*)
-                    (uiop:file-exists-p
-                     (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp")))
-               'run-fetch)
-              ((which "curl")
-               'curl-fetch)
-              ((which "wget")
-               'wget-fetch))))
+  (let* ((preference (uiop:getenv "QLOT_FETCH"))
+         (fn (cond
+               ((and (null preference)
+                     *fetch-script*
+                     (uiop:file-exists-p *fetch-script*)
+                     (uiop:file-exists-p
+                      (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp")))
+                'run-fetch)
+               ((which "curl")
+                'curl-fetch)
+               ((which "wget")
+                'wget-fetch))))
     (when fn
       (setf ql-http:*fetch-scheme-functions*
             (append `(("https" . ,fn)
