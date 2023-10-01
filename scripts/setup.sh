@@ -14,8 +14,6 @@ else
   exit 1
 fi
 
-export QLOT_FETCH=curl
-
 if [ ! -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
     --eval '(require :asdf)' \

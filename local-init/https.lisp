@@ -3,8 +3,9 @@
 (in-package #:qlot/local-init/https)
 
 (defvar *fetch-script*
-  (uiop:native-namestring
-   (asdf:system-relative-pathname :qlot #P"scripts/fetch.sh")))
+  (and (asdf:find-system :qlot nil)
+       (uiop:native-namestring
+        (asdf:system-relative-pathname :qlot #P"scripts/fetch.sh"))))
 
 (defun https-of (url)
   (if (and (stringp url)
@@ -46,18 +47,14 @@
                'float)))))
 
 (defun add-to-fetch-scheme-functions ()
-  (let* ((preference (uiop:getenv "QLOT_FETCH"))
-         (fn (cond
-               ((and (or (null preference)
-                         (equal preference "dexador"))
-                     (and (uiop:file-exists-p *fetch-script*)
-                          (uiop:file-exists-p
-                           (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp"))))
-                'run-fetch)
-               ((and (or (null preference)
-                         (equal preference "curl"))
-                     (which "curl"))
-                'curl-fetch))))
+  (let ((fn (cond
+              ((and *fetch-script*
+                    (uiop:file-exists-p *fetch-script*)
+                    (uiop:file-exists-p
+                     (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp")))
+               'run-fetch)
+              ((which "curl")
+               'curl-fetch))))
     (when fn
       (setf ql-http:*fetch-scheme-functions*
             (append `(("https" . ,fn)
