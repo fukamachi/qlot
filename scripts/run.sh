@@ -1,6 +1,6 @@
 #!/bin/bash
 
-QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" && pwd -P)
+QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
 command=$1
 
 check_qlot_directory() {

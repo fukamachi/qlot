@@ -83,7 +83,7 @@ This is what Qlot is trying to solve.
 $ curl -L https://qlot.tech/installer | bash
 ```
 
-It requires `curl` and `sbcl` (or `ros`).
+It also requires `curl` and `tar`.
 
 To uninstall Qlot, run a Qlot uninstaller like:
 
@@ -93,7 +93,7 @@ $ ~/.qlot/qlot/scripts/qlot-uninstaller.sh
 
 ### via Roswell
 
-If you're already using Roswell, this is the easiest way to install Qlot.
+If you're already using Roswell, Qlot can be installed by `ros install`.
 
 ```shell
 $ ros install qlot              # Install from the Quicklisp dist
@@ -111,7 +111,7 @@ Run `ros update qlot` to update Qlot.
 
 ### via Quicklisp
 
-If [Quicklisp](https://www.quicklisp.org/) is set up on your home directory, this is the best way to install Qlot.
+If [Quicklisp](https://www.quicklisp.org/) is set up on your home directory, Qlot can be installed by `ql:quickload`.
 
 ```shell
 $ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
@@ -121,7 +121,7 @@ $ sudo chmod u+x /usr/local/bin/qlot
 
 To update Qlot, run `(ql:update-all-dists)` in the REPL.
 
-### Install from source
+### Manual installation
 
 If you don't use both of Roswell and Quicklisp for some reason, Qlot also can be installed from the source code.
 

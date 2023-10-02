@@ -14,6 +14,8 @@ else
   exit 1
 fi
 
+export QLOT_FETCH=curl
+
 if [ ! -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
     --eval '(require :asdf)' \
@@ -30,3 +32,13 @@ $lisp --noinform --no-sysinit --no-userinit --non-interactive \
   --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
   --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
   --eval '(ql:quickload (list :qlot :qlot/distify))'
+
+systems_directory() {
+  $lisp --noinform --no-sysinit --no-userinit --non-interactive \
+    --eval '(require :asdf)' --eval '(princ (uiop:native-namestring (uiop:xdg-data-home #P"common-lisp/systems/")))'
+}
+registry_dir=$(systems_directory)
+mkdir -p "$registry_dir"
+if [ ! -f "${registry_dir}qlot.asd" ]; then
+  ln -s "$QLOT_SOURCE_DIR/qlot.asd" "${registry_dir}qlot.asd"
+fi
