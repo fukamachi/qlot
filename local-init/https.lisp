@@ -32,12 +32,13 @@
 (defun run-fetch (url file &rest args &key quietly &allow-other-keys)
   (declare (ignore args))
   (let ((url (https-of url)))
-    (with-logging (url file :quietly quietly)
-      (uiop:run-program (list *fetch-script*
-                              url
-                              (uiop:native-namestring
-                               (uiop:ensure-absolute-pathname file *default-pathname-defaults*)))
-                        :error-output :interactive))))
+    (uiop:run-program (list *fetch-script*
+                            url
+                            (uiop:native-namestring
+                             (uiop:ensure-absolute-pathname file *default-pathname-defaults*)))
+                      :output (and (not quietly)
+                                   :interactive)
+                      :error-output :interactive)))
 
 (defun which (cmd)
   (handler-case

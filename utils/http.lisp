@@ -27,11 +27,9 @@
            (and basic-auth
                 (list :basic-auth basic-auth)))))
 
-(defun get (url &key want-stream basic-auth)
+(defun get (url &rest args)
   (with-retry ()
     (apply #'dex:get url
            :keep-alive nil
-           :want-stream want-stream
            :proxy *proxy*
-           (and basic-auth
-                (list :basic-auth basic-auth)))))
+           args)))
