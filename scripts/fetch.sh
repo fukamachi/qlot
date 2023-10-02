@@ -3,10 +3,10 @@
 QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
 
 errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
-if [ "$(which sbcl)" != "" ]; then
-  lisp="sbcl"
-elif [ "$(which ros)" != "" ]; then
+if [ "$(which ros)" != "" ]; then
   lisp="ros without-roswell=t -L sbcl-bin run --"
+elif [ "$(which sbcl)" != "" ]; then
+  lisp="sbcl"
 else
   errmsg "sbcl is required by Qlot."
   exit 1
