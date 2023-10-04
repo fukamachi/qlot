@@ -56,11 +56,13 @@
         (text (apply #'format nil format-control format-arguments)))
     (write-string text out)
     (fill-spaces-to-clear-progress text)
-    (write-char #\Newline out)))
+    (write-char #\Newline out))
+  (values))
 
 (defun debug-log (format-control &rest format-arguments)
   (when *debug*
     (clear-progress)
     (format *logger-debug-stream*
             "[debug] ~A~%"
-            (apply #'format nil format-control format-arguments))))
+            (apply #'format nil format-control format-arguments)))
+  (values))
