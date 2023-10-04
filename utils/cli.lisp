@@ -39,8 +39,13 @@
         (sb-alien:free-alien a-args)))))
 
 (defun exec (args)
+  (assert args)
   #+(and unix sbcl)
-  (execvp (first args) args))
+  (execvp (first args) args)
+  #-(and unix sbcl)
+  (uiop:run-program args
+                    :output t
+                    :error-output t))
 
 (defun which (cmd)
   (handler-case
