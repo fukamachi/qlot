@@ -302,6 +302,9 @@ OPTIONS:
               ((equal "init" $1)
                (qlot/cli:init))
               ((equal "exec" $1)
+               (unless argv
+                 (qlot/errors:ros-command-error "no command given to exec"))
+
                (use-local-quicklisp)
 
                (let ((command (or (which (first argv))
