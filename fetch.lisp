@@ -41,6 +41,7 @@
                                                   (/ current-read-bytes body-size))))))
                        (loop repeat (- new-progress current-progress)
                              do (write-char #\#))
+                       (force-output)
                        (setf current-progress new-progress)))))))
     (format t "~&; Done '~A' (~$KB) in ~A seconds.~%"
             (file-namestring file)
