@@ -11,6 +11,8 @@
                 #:launch-lisp)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
+  (:import-from #:qlot/errors
+                #:qlot-simple-error)
   (:export #:with-secure-installer
            #:with-download-logs
            #:without-download-logs))
@@ -22,9 +24,17 @@
 (defun check-install-process ()
   (assert *install-process*)
   (unless (uiop:process-alive-p *install-process*)
-    (error "Qlot secure downloader was unexpectedly terminated.~%~A"
-           (uiop:slurp-stream-string
-            (uiop:process-info-error-output *install-process*)))))
+    (uiop:with-temporary-file (:pathname error-log
+                               :stream errout
+                               :direction :output
+                               :keep t)
+      (princ
+       (uiop:slurp-stream-string
+        (uiop:process-info-error-output *install-process*))
+       errout)
+      (error 'qlot-simple-error
+             :format-control "Qlot secure downloader was unexpectedly terminated.~%See error logs at '~A'."
+             :format-arguments (list error-log)))))
 
 (defun https-fetch (url file &rest args)
   (declare (ignore args))
