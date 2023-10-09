@@ -19,17 +19,29 @@
 (defvar *install-process* nil)
 (defvar *enable-logging* t)
 
+(defun check-install-process ()
+  (assert *install-process*)
+  (unless (uiop:process-alive-p *install-process*)
+    (error "Qlot secure downloader was unexpectedly terminated.~%~A"
+           (uiop:slurp-stream-string
+            (uiop:process-info-error-output *install-process*)))))
+
 (defun https-fetch (url file &rest args)
   (declare (ignore args))
-  (assert *install-process*)
+  (check-install-process)
   (let ((url (https-of url)))
     (progress "Downloading ~S." url)
     (let ((stream (uiop:process-info-input *install-process*)))
       (format stream "~A~%~A~%" url file)
       (force-output stream))
-    (let ((result (read-line (uiop:process-info-output *install-process*))))
-      (progress "Downloaded ~S." url)
-      (values t (probe-file result)))))
+    (let ((result (read-line (uiop:process-info-output *install-process*) nil nil)))
+      (if result
+          (progn
+            (progress "Downloaded ~S." url)
+            (values t (probe-file result)))
+          (progn
+            (progress "Failed to download ~S." url)
+            (values nil nil))))))
 
 (defun launch-fetch-process ()
   (let ((url-var (intern (string :url) :cl-user))
