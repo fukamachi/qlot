@@ -31,7 +31,7 @@
 
 (defun safety-shell-command (program args &key (output :string))
   (setf args (mapcar #'princ-to-string args))
-  (debug-log "Running shell command: ~A ~{~S~^ ~}" program args)
+  (debug-log "Running shell command: ~A~{ ~S~}" program args)
   (uiop:with-temporary-file (:pathname stderr
                              :direction :output)
     (handler-case
@@ -46,6 +46,14 @@
                :command (cons program args)
                :code (uiop/run-program:subprocess-error-code e)
                :stderr (uiop:read-file-string stderr))))))
+
+(defun safety-background-command (program args &key input output)
+  (setf args (mapcar #'princ-to-string args))
+  (debug-log "Running a background command: ~A~{ ~S~}" program args)
+  (uiop:launch-program (cons program args)
+                       :input input
+                       :output output
+                       :error-output :stream))
 
 (defvar *current-lisp-path*
   (or #+ccl (car ccl:*command-line-argument-list*)
@@ -163,14 +171,13 @@
 
 (defun launch-lisp (forms &rest args &key systems source-registry without-quicklisp)
   (declare (ignore systems source-registry without-quicklisp))
-  (uiop:launch-program
-   (cons #-ros.init *current-lisp-path*
-         #+ros.init (or (ros:opt "wargv0")
-                        (ros:opt "argv0"))
-         (command-options forms args))
+  (safety-background-command
+   #-ros.init *current-lisp-path*
+   #+ros.init (or (ros:opt "wargv0")
+                  (ros:opt "argv0"))
+   (command-options forms args)
    :input :stream
-   :output :stream
-   :error-output (and *debug* :interactive)))
+   :output :stream))
 
 (defun run-lisp (forms &rest args &key systems source-registry without-quicklisp (output :interactive))
   (declare (ignore systems source-registry without-quicklisp))
