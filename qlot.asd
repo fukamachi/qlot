@@ -1,6 +1,6 @@
 (defsystem "qlot"
   :class :package-inferred-system
-  :version "1.2.10"
+  :version "1.2.11"
   :author "Eitaro Fukamachi"
   :license "MIT"
   :description "A project-local library installer"
