@@ -27,6 +27,9 @@
     (uiop:with-temporary-file (:pathname error-log
                                :stream errout
                                :direction :output
+                               :type "log"
+                               :prefix "qlot-install-"
+                               :suffix ""
                                :keep t)
       (princ
        (uiop:slurp-stream-string
