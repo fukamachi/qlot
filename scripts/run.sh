@@ -12,9 +12,9 @@ check_qlot_directory() {
 }
 errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
 
-if [ "$(which ros)" != "" ]; then
+if [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros without-roswell=t -L sbcl-bin run --"
-elif [ "$(which sbcl)" != "" ]; then
+elif [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
 else
   errmsg "sbcl is required to run Qlot."

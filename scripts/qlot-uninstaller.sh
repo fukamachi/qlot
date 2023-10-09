@@ -8,9 +8,9 @@ if [ `id -u` == "0" ]; then
   rm /usr/local/bin/qlot
 fi
 
-if [ "$(which sbcl)" != "" ]; then
+if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
-elif [ "$(which ros)" != "" ]; then
+elif [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros without-roswell=t -L sbcl-bin run --"
 else
   exit

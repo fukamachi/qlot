@@ -21,15 +21,15 @@ success() { echo -e "\e[32m$1\e[0m"; }
 
 check_requirement() {
   cmd=$1
-  if [ "$(which "$cmd")" == "" ]; then
+  if [ "$(which "$cmd" 2>/dev/null)" == "" ]; then
     errmsg "$cmd is required to install Qlot"
     exit 1
   fi
 }
 
-if [ "$(which sbcl)" != "" ]; then
+if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
-elif [ "$(which ros)" != "" ]; then
+elif [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros without-roswell=t -L sbcl-bin run --"
 else
   errmsg "sbcl is required to setup Qlot."
