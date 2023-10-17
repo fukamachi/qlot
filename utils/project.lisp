@@ -66,13 +66,13 @@
                         append (lisp-file-dependencies file))))
             (setf dependencies
                   (delete-duplicates
-                    (nconc dependencies pis-dependencies)
+                    (mapcar #'string-downcase
+                            (nconc dependencies pis-dependencies))
                     :test 'equal))))
         (let ((dependencies (remove-if-not #'find-system dependencies)))
           (debug-log "'~A' requires ~S" system-name dependencies)
           (setf all-dependencies
-                (nconc all-dependencies
-                       (remove-if-not #'find-system dependencies)))))
+                (nconc all-dependencies dependencies))))
       (with-package-functions #:ql-dist (required-systems name)
         (let ((already-seen (make-hash-table :test 'equal)))
           (labels ((find-system-with-fallback (system-name)
