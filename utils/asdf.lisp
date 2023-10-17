@@ -203,7 +203,7 @@
                (ignore-errors
                  (asdf/package-inferred-system::file-defpackage-form file)))
            (defpackage-form (remove-if (lambda (key)
-                                         (find key '(:local-nicknames :lock)
+                                         (find key '(:local-nicknames :lock :implement)
                                                :test 'equal))
                                        defpackage-form
                                        :key #'ensure-car)))
