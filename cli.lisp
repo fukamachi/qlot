@@ -261,6 +261,20 @@ OPTIONS:
                      (when cache
                        (list :cache cache))))))
 
+(defun parse-bundle-argv (argv)
+  (loop with project-root = *default-pathname-defaults*
+        for option = (pop argv)
+        while option
+        do (case-equal option
+             ("--debug"
+              (setf qlot/logger:*debug* t))
+             (project-root
+              (qlot/errors:ros-command-error "'~A' is invalid argument" option))
+             (otherwise
+              (setf project-root option)))
+        finally
+        (return (list project-root))))
+
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
   (unless (uiop:getenv "QUICKLISP_HOME")
@@ -315,7 +329,7 @@ OPTIONS:
                  (qlot/errors:ros-command-error "requires a new library information."))
                (add argv))
               ((equal "bundle" $1)
-               (apply #'bundle argv))
+               (apply #'bundle (parse-bundle-argv argv)))
               ((equal "--version" $1)
                (print-version)
                (uiop:quit -1))
