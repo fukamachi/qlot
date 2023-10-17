@@ -248,7 +248,7 @@ $ qlot add github fukamachi/datafly      # github datafly fukamachi/datafly
 * adds Roswell's `bin` directory to the `PATH` environment variable;
 * executes given command with arguments.
 
-Here are few usefull commands:
+Here are few useful commands:
 
 * `qlot exec ros emacs` - starts Emacs for development. Inferior lisp will use only
   systems, installed by `qlot install`. If you want to use systems from directories other than
