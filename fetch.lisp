@@ -37,7 +37,7 @@
                    (when (and body-size (not quietly))
                      (let ((new-progress (round
                                           (* width
-                                             (max 1.0
+                                             (min 1.0
                                                   (/ current-read-bytes body-size))))))
                        (loop repeat (- new-progress current-progress)
                              do (write-char #\#))
