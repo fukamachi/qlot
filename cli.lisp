@@ -262,18 +262,18 @@ OPTIONS:
                        (list :cache cache))))))
 
 (defun parse-bundle-argv (argv)
-  (loop with project-root = *default-pathname-defaults*
+  (loop with project-root = nil
         for option = (pop argv)
         while option
         do (case-equal option
              ("--debug"
               (setf qlot/logger:*debug* t))
-             (project-root
-              (qlot/errors:ros-command-error "'~A' is invalid argument" option))
              (otherwise
-              (setf project-root option)))
+              (if project-root
+                  (qlot/errors:ros-command-error "'~A' is invalid argument" option)
+                  (setf project-root option))))
         finally
-        (return (list project-root))))
+        (return (list (or project-root *default-pathname-defaults*)))))
 
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
