@@ -39,7 +39,7 @@
       (merge-pathnames *qlot-directory* project-root)
       *default-pathname-defaults*)))
 
-(defun project-dependencies (project-root &key exclude)
+(defun project-dependencies (project-root &key test)
   (with-package-functions #:ql-dist (find-system name)
     (let ((all-dependencies '())
           (pis-already-seen-files '())
@@ -47,7 +47,7 @@
           (project-system-names '()))
       (with-directory (system-file system-name dependencies) project-root
         (pushnew system-name project-system-names :test 'equal)
-        (unless (member system-name exclude :test 'equal)
+        (when (funcall test system-name)
           (unless (find system-file loaded-asd-files :test 'equal)
             (push system-file loaded-asd-files)
             (message "Loading '~A'..." system-file)
@@ -71,16 +71,14 @@
                    (pis-dependencies
                     (loop for file in lisp-files
                           for (file-deps pkg-name) = (multiple-value-list
-                                                      (lisp-file-dependencies file :exclude exclude))
+                                                      (lisp-file-dependencies file :test test))
                           when pkg-name
                           append (progn (debug-log "'~A' requires ~S" pkg-name file-deps)
                                         file-deps))))
               (setf dependencies
                     (delete-duplicates
-                     (remove-if (lambda (dep-name)
-                                  (member dep-name exclude :test 'equal))
-                                (mapcar #'string-downcase
-                                        (nconc dependencies pis-dependencies)))
+                     (remove-if-not test
+                                    (nconc dependencies pis-dependencies))
                      :test 'equal))
               (setf pis-already-seen-files
                     (append pis-already-seen-files lisp-files))))

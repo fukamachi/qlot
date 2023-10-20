@@ -189,7 +189,7 @@
               (when system-name
                 (string-downcase system-name)))))))))
 
-(defun lisp-file-dependencies (file &key exclude)
+(defun lisp-file-dependencies (file &key test)
   (flet ((ensure-car (object)
            (if (listp object)
                (car object)
@@ -206,7 +206,7 @@
       (and defpackage-form
            (typep (second defpackage-form) '(or symbol string))
            (let ((package-name (string-downcase (second defpackage-form))))
-             (and (not (member package-name exclude :test 'equal))
+             (and (funcall test package-name)
                   (values
                    (mapcar (lambda (name)
                              (let ((name-str (typecase name

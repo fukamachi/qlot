@@ -19,11 +19,14 @@
    because it upcases text before making it a keyword."
   (intern (string-upcase text) :keyword))
 
-(defun starts-with (prefix value)
+(defun starts-with (prefix value &key (start 0))
   (check-type prefix string)
   (check-type value string)
-  (and (<= (length prefix) (length value))
-       (string= prefix value :end2 (length prefix))))
+  (check-type start (integer 0))
+  (and (<= (length prefix) (- (length value) start))
+       (string= prefix value
+                :start2 start
+                :end2 (+ start (length prefix)))))
 
 (defun split-with (delimiter value &key limit)
   (check-type delimiter character)
