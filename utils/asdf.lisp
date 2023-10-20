@@ -206,7 +206,8 @@
       (and defpackage-form
            (typep (second defpackage-form) '(or symbol string))
            (let ((package-name (string-downcase (second defpackage-form))))
-             (and (funcall test package-name)
+             (and (or (null test)
+                      (funcall test package-name))
                   (values
                    (mapcar (lambda (name)
                              (let ((name-str (typecase name

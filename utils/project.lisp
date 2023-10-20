@@ -47,7 +47,8 @@
           (project-system-names '()))
       (with-directory (system-file system-name dependencies) project-root
         (pushnew system-name project-system-names :test 'equal)
-        (when (funcall test system-name)
+        (when (or (null test)
+                  (funcall test system-name))
           (unless (find system-file loaded-asd-files :test 'equal)
             (push system-file loaded-asd-files)
             (message "Loading '~A'..." system-file)
@@ -77,7 +78,7 @@
                                         file-deps))))
               (setf dependencies
                     (delete-duplicates
-                     (remove-if-not test
+                     (remove-if-not (or test #'identity)
                                     (nconc dependencies pis-dependencies))
                      :test 'equal))
               (setf pis-already-seen-files

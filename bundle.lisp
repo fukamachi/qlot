@@ -61,10 +61,11 @@
       (let* ((exclude-functions (mapcar #'compile-exclude-rule exclude))
              (dependencies (project-dependencies project-root
                                                  :test
-                                                 (lambda (system-name)
-                                                   (not (some (lambda (fn)
-                                                                (funcall fn system-name))
-                                                              exclude-functions)))))
+                                                 (and exclude-functions
+                                                      (lambda (system-name)
+                                                        (not (some (lambda (fn)
+                                                                     (funcall fn system-name))
+                                                                   exclude-functions))))))
              (dep-releases (with-package-functions #:ql-dist (release name)
                              (delete-duplicates
                               (mapcar #'release dependencies)
