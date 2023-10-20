@@ -20,6 +20,8 @@
   (intern (string-upcase text) :keyword))
 
 (defun starts-with (prefix value)
+  (check-type prefix string)
+  (check-type value string)
   (and (<= (length prefix) (length value))
        (string= prefix value :end2 (length prefix))))
 

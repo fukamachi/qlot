@@ -1,5 +1,7 @@
 (defpackage #:qlot/utils/asdf
   (:use #:cl)
+  (:import-from #:qlot/utils
+                #:starts-with)
   (:export #:with-autoload-on-missing
            #:directory-system-files
            #:system-class-name
@@ -156,12 +158,6 @@
                            (char= (aref dir-name 0) #\.))
                 append (directory-lisp-files subdir))))
 
-(defun starts-with (prefix value)
-  (check-type prefix string)
-  (check-type value string)
-  (and (<= (length prefix) (length value))
-       (string= prefix value :end2 (length prefix))))
-
 (defun lisp-file-system-name (file root primary-system-name)
   (block nil
     (handler-bind ((error
@@ -193,7 +189,7 @@
               (when system-name
                 (string-downcase system-name)))))))))
 
-(defun lisp-file-dependencies (file)
+(defun lisp-file-dependencies (file &key exclude)
   (flet ((ensure-car (object)
            (if (listp object)
                (car object)
@@ -208,15 +204,23 @@
                                        defpackage-form
                                        :key #'ensure-car)))
       (and defpackage-form
-           (mapcar (lambda (name)
-                     (let ((name-str (typecase name
-                                       (symbol (symbol-name name))
-                                       (string name))))
-                       (or (and name-str
-                                (gethash name-str *package-system*))
-                           name)))
-                   (remove-if (lambda (dep-name)
-                                (or (sbcl-contrib-p dep-name)
-                                    (member (princ-to-string dep-name) '("cl" "common-lisp")
-                                            :test 'string-equal)))
-                              (asdf/package-inferred-system::package-dependencies defpackage-form)))))))
+           (typep (second defpackage-form) '(or symbol string))
+           (let ((package-name (string-downcase (second defpackage-form))))
+             (and (not (member package-name exclude :test 'equal))
+                  (values
+                   (mapcar (lambda (name)
+                             (let ((name-str (typecase name
+                                               (symbol (and name
+                                                            (symbol-name name)))
+                                               (string name))))
+                               (string-downcase
+                                (or (and name-str
+                                         (gethash name-str *package-system*))
+                                    name))))
+                           (remove-if (lambda (dep-name)
+                                        (or (sbcl-contrib-p dep-name)
+                                            (member (string-downcase dep-name)
+                                                    '("cl" "common-lisp")
+                                                    :test 'string=)))
+                                      (asdf/package-inferred-system::package-dependencies defpackage-form)))
+                   package-name)))))))

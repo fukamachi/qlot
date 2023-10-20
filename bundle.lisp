@@ -17,7 +17,7 @@
 
 (defvar *bundle-directory* #P".bundle-libs/")
 
-(defun %bundle-project (project-root)
+(defun %bundle-project (project-root &key exclude)
   (assert (uiop:absolute-pathname-p project-root))
 
   (unless (local-quicklisp-installed-p project-root)
@@ -29,7 +29,7 @@
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (with-quicklisp-home quicklisp-home
-      (let* ((dependencies (project-dependencies project-root))
+      (let* ((dependencies (project-dependencies project-root :exclude exclude))
              (dep-releases (with-package-functions #:ql-dist (release name)
                              (delete-duplicates
                               (mapcar #'release dependencies)
@@ -46,11 +46,11 @@
                                 :to bundle-directory))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
-(defun bundle-project (object)
+(defun bundle-project (object &key exclude)
   (etypecase object
     ((or symbol string)
-     (bundle-project (asdf:find-system object)))
+     (bundle-project (asdf:find-system object) :exclude exclude))
     (asdf:system
-      (%bundle-project (asdf:system-source-directory object)))
+     (%bundle-project (asdf:system-source-directory object) :exclude exclude))
     (pathname
-      (%bundle-project object))))
+     (%bundle-project object :exclude exclude))))
