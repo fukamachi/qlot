@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           PATH="/c/roswell/bin:$PATH"
-          curl -L https://raw.githubusercontent.com/fukamachi/roswell/windows-source-registry-settings/scripts/install-for-ci.sh | sh
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
       - name: Install Ultralisp
         shell: bash
         run: /c/roswell/bin/ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
