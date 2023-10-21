@@ -35,6 +35,7 @@
        (uiop:slurp-stream-string
         (uiop:process-info-error-output *install-process*))
        errout)
+      (force-output errout)
       (error 'qlot-simple-error
              :format-control "Qlot secure downloader was unexpectedly terminated.~%See error logs at '~A'."
              :format-arguments (list error-log)))))
