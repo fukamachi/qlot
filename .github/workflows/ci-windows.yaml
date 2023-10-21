@@ -14,29 +14,30 @@ jobs:
         lisp: [sbcl-bin]
         os: [windows-latest]
 
+    defaults:
+      run:
+        shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v1
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            git
+      - uses: actions/checkout@v3
       - name: Install Roswell
         env:
           LISP: ${{ matrix.lisp }}
-          ROSWELL_INSTALL_DIR: /c/roswell
-        shell: bash
         run: |
-          PATH="/c/roswell/bin:$PATH"
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
       - name: Install Ultralisp
-        shell: bash
-        run: /c/roswell/bin/ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
+        run: ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
       - name: Install Rove
-        shell: bash
-        run: /c/roswell/bin/ros install fukamachi/rove
+        run: |
+          ros install fukamachi/rove
       - name: Install dependencies
-        shell: bash
-        run: /c/roswell/bin/ros install fukamachi/dexador
+        run: ros install fukamachi/dexador
       - name: Run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
         run: |
-          PATH="~/.roswell/bin:/c/roswell/bin:$PATH"
-          rove qlot.asd
+          ros -s rove -e '(or (rove:run :qlot/tests) (uiop:quit -1))'
