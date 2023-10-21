@@ -48,11 +48,12 @@
 (defvar *system-quicklisp-home*)
 
 (defun run-distify-source-process (source destination &key quicklisp-home distinfo-only)
-  (let (#+quicklisp (ql:*quicklisp-home* *system-quicklisp-home*))
-    (handler-case
+  (handler-case
         (run-lisp (append
                    (when quicklisp-home
                      (list `(let ((*error-output* (make-broadcast-stream)))
+                              (when (find :quicklisp *features*)
+                                (set (intern (string :*quicklisp-home*) :ql) ,quicklisp-home))
                               (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
                    (list `(setf *enable-color* ,*enable-color*))
                    (list `(uiop:symbol-call :qlot/distify :distify
@@ -66,12 +67,14 @@
                                                                ,@(source-frozen-slots source)))
                                             ,destination
                                             :distinfo-only ,distinfo-only)))
+                  :load (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
+                            #+quicklisp (merge-pathnames #P"setup.lisp" *system-quicklisp-home*))
                   :systems '("qlot/distify")
                   :source-registry (or *qlot-source-directory*
                                        (asdf:system-source-directory :qlot)))
       (shell-command-error (e)
         (error 'qlot-simple-error
-               :format-control (shell-command-error-output e))))))
+               :format-control (shell-command-error-output e)))))
 
 (defmacro with-qlot-server ((source &optional qlhome destination distinfo-only) &body body)
   (let ((g-source (gensym "SOURCE"))

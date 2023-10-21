@@ -26,7 +26,6 @@
                "(setf quicklisp-quickstart:*after-initial-setup-message* \"\")"
                (format nil "(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (quicklisp-quickstart:install :path #P\"~A\"~@[ :proxy \"~A\"~]))"
                        path
-                       *proxy*))
-              :without-quicklisp t)
+                       *proxy*)))
     (copy-local-init-files path)
     t))

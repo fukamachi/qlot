@@ -59,23 +59,19 @@
 (defun launch-fetch-process ()
   (let ((url-var (intern (string :url) :cl-user))
         (file-var (intern (string :file) :cl-user)))
-    (launch-lisp (append
-                  (when (find :quicklisp *features*)
-                    (list
-                     `(let ((*error-output* (make-broadcast-stream)))
-                        (load ,(merge-pathnames #P"setup.lisp"
-                                                (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))))
-                  `((uiop:symbol-call :ql :quickload :qlot/utils/http :silent t)
-                    (loop
-                      (let ((,url-var (read-line))
-                            (,file-var (read-line)))
-                        (uiop:symbol-call :qlot/utils/http :fetch ,url-var
-                                          ,file-var)
-                        (format t "~A~%" ,file-var)
-                        (force-output)))))
+    (launch-lisp `((loop
+                     (let ((,url-var (read-line))
+                           (,file-var (read-line)))
+                       (uiop:symbol-call :qlot/utils/http :fetch ,url-var
+                                         ,file-var)
+                       (format t "~A~%" ,file-var)
+                       (force-output))))
+
+                 :load (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
+                           #+quicklisp (merge-pathnames #P"setup.lisp" ql:*quicklisp-home*))
+                 :systems '("qlot/utils/http")
                  :source-registry (or *qlot-source-directory*
-                                      (asdf:system-source-directory :qlot))
-                 :without-quicklisp t)))
+                                      (asdf:system-source-directory :qlot)))))
 
 (defmacro with-download-logs (&body body)
   `(let ((*enable-logging* t)) ,@body))
