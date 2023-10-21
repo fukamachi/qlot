@@ -111,7 +111,7 @@
                         asdf::system-source-registry-directory))))
 
     (when load
-      (-e `(load ,(uiop:native-namestring load))))
+      (-e `(load ,load)))
 
     (loop for system in systems
           append (-e
