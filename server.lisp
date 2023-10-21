@@ -48,33 +48,34 @@
 (defvar *system-quicklisp-home*)
 
 (defun run-distify-source-process (source destination &key quicklisp-home distinfo-only)
-  (handler-case
-        (run-lisp (append
-                   (when quicklisp-home
-                     (list `(let ((*error-output* (make-broadcast-stream)))
-                              (when (find :quicklisp *features*)
-                                (set (intern (string :*quicklisp-home*) :ql) ,quicklisp-home))
-                              (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
-                   (list `(setf *enable-color* ,*enable-color*))
-                   (list `(uiop:symbol-call :qlot/distify :distify
-                                            ;; Call defrost-source to set '%version' from 'source-version'.
-                                            (defrost-source
-                                                (make-instance ',(type-of source)
-                                                               :project-name ,(source-project-name source)
-                                                               ,@(source-initargs source)
-                                                               ,@(and (slot-boundp source 'qlot/source/base::version)
-                                                                      `(:version ,(source-version source)))
-                                                               ,@(source-frozen-slots source)))
-                                            ,destination
-                                            :distinfo-only ,distinfo-only)))
-                  :load (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
-                            #+quicklisp (merge-pathnames #P"setup.lisp" *system-quicklisp-home*))
-                  :systems '("qlot/distify")
-                  :source-registry (or *qlot-source-directory*
-                                       (asdf:system-source-directory :qlot)))
+  (let ((qlot-source-dir (or *qlot-source-directory*
+                             (asdf:system-source-directory :qlot))))
+    (handler-case
+      (run-lisp (append
+                  (when quicklisp-home
+                    (list `(let ((*error-output* (make-broadcast-stream)))
+                             (when (find :quicklisp *features*)
+                               (set (intern (string :*quicklisp-home*) :ql) ,quicklisp-home))
+                             (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
+                  (list `(setf *enable-color* ,*enable-color*))
+                  (list `(uiop:symbol-call :qlot/distify :distify
+                                           ;; Call defrost-source to set '%version' from 'source-version'.
+                                           (defrost-source
+                                             (make-instance ',(type-of source)
+                                                            :project-name ,(source-project-name source)
+                                                            ,@(source-initargs source)
+                                                            ,@(and (slot-boundp source 'qlot/source/base::version)
+                                                                   `(:version ,(source-version source)))
+                                                            ,@(source-frozen-slots source)))
+                                           ,destination
+                                           :distinfo-only ,distinfo-only)))
+                :load (or (probe-file (merge-pathnames #P".bundle-libs/bundle.lisp" qlot-source-dir))
+                          #+quicklisp (merge-pathnames #P"setup.lisp" *system-quicklisp-home*))
+                :systems '("qlot/distify")
+                :source-registry qlot-source-dir)
       (shell-command-error (e)
         (error 'qlot-simple-error
-               :format-control (shell-command-error-output e)))))
+               :format-control (shell-command-error-output e))))))
 
 (defmacro with-qlot-server ((source &optional qlhome destination distinfo-only) &body body)
   (let ((g-source (gensym "SOURCE"))
