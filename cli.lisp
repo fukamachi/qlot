@@ -85,14 +85,15 @@
                        (uiop:copy-file qlfile.lock qlfile))))
       (install))))
 
-(defun bundle (&optional (project-root *default-pathname-defaults*) &key exclude)
+(defun bundle (&optional (project-root *default-pathname-defaults*) &rest args)
   (unless (find-package :qlot/bundle)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/bundle)))
-  (uiop:symbol-call '#:qlot/bundle '#:bundle-project
-                    (uiop:ensure-directory-pathname project-root)
-                    :exclude exclude))
+  (destructuring-bind (&key exclude) args
+    (uiop:symbol-call '#:qlot/bundle '#:bundle-project
+                      (uiop:ensure-directory-pathname project-root)
+                      :exclude exclude)))
 
 (defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
   (fresh-line *error-output*)
