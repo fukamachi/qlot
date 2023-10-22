@@ -7,7 +7,9 @@
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils
-                #:with-package-functions)
+                #:with-package-functions
+                #:starts-with
+                #:split-with)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
@@ -17,7 +19,34 @@
 
 (defvar *bundle-directory* #P".bundle-libs/")
 
-(defun %bundle-project (project-root)
+(defun compile-exclude-rule (rule)
+  (when (< 0 (length rule))
+    (let ((rule-parts (split-with #\* rule))
+          (starts-with-star
+            (char= #\* (aref rule 0)))
+          (ends-with-star
+            (char= #\* (aref rule (1- (length rule))))))
+      (lambda (str)
+        (block out
+          (when (< 0 (length str))
+            (let ((current 0))
+              (loop with initial = t
+                    for part in rule-parts
+                    do (when (or (null initial)
+                                 starts-with-star)
+                         (let ((pos (search part str :start2 current)))
+                           (unless pos
+                             (return-from out nil))
+                           (setf current pos)))
+                       (unless (starts-with part str :start current)
+                         (return-from out nil))
+                       (incf current (length part))
+                       (setf initial nil))
+              (if ends-with-star
+                  t
+                  (= current (length str))))))))))
+
+(defun %bundle-project (project-root &key exclude)
   (assert (uiop:absolute-pathname-p project-root))
 
   (unless (local-quicklisp-installed-p project-root)
@@ -29,7 +58,14 @@
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (with-quicklisp-home quicklisp-home
-      (let* ((dependencies (project-dependencies project-root))
+      (let* ((exclude-functions (mapcar #'compile-exclude-rule exclude))
+             (dependencies (project-dependencies project-root
+                                                 :test
+                                                 (and exclude-functions
+                                                      (lambda (system-name)
+                                                        (not (some (lambda (fn)
+                                                                     (funcall fn system-name))
+                                                                   exclude-functions))))))
              (dep-releases (with-package-functions #:ql-dist (release name)
                              (delete-duplicates
                               (mapcar #'release dependencies)
@@ -46,11 +82,11 @@
                                 :to bundle-directory))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
-(defun bundle-project (object)
+(defun bundle-project (object &key exclude)
   (etypecase object
     ((or symbol string)
-     (bundle-project (asdf:find-system object)))
+     (bundle-project (asdf:find-system object) :exclude exclude))
     (asdf:system
-      (%bundle-project (asdf:system-source-directory object)))
+     (%bundle-project (asdf:system-source-directory object) :exclude exclude))
     (pathname
-      (%bundle-project object))))
+     (%bundle-project object :exclude exclude))))

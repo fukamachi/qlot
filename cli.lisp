@@ -86,13 +86,14 @@
       (install))))
 
 (defun bundle (&optional (project-root *default-pathname-defaults*) &rest args)
-  (declare (ignore args))
   (unless (find-package :qlot/bundle)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/bundle)))
-  (uiop:symbol-call '#:qlot/bundle '#:bundle-project
-                    (uiop:ensure-directory-pathname project-root)))
+  (destructuring-bind (&key exclude) args
+    (uiop:symbol-call '#:qlot/bundle '#:bundle-project
+                      (uiop:ensure-directory-pathname project-root)
+                      :exclude exclude)))
 
 (defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
   (fresh-line *error-output*)
@@ -262,18 +263,24 @@ OPTIONS:
                        (list :cache cache))))))
 
 (defun parse-bundle-argv (argv)
-  (loop with project-root = *default-pathname-defaults*
+  (loop with project-root = nil
+        with exclude = '()
         for option = (pop argv)
         while option
         do (case-equal option
              ("--debug"
               (setf qlot/logger:*debug* t))
-             (project-root
-              (qlot/errors:ros-command-error "'~A' is invalid argument" option))
+             ("--exclude"
+              (unless argv
+                (qlot/errors:ros-command-error "--exclude requires a system name"))
+              (push (pop argv) exclude))
              (otherwise
-              (setf project-root option)))
+              (if project-root
+                  (qlot/errors:ros-command-error "'~A' is invalid argument" option)
+                  (setf project-root option))))
         finally
-        (return (list project-root))))
+        (return (list (or project-root *default-pathname-defaults*)
+                      :exclude exclude))))
 
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/

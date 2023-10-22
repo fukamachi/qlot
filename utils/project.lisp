@@ -39,40 +39,54 @@
       (merge-pathnames *qlot-directory* project-root)
       *default-pathname-defaults*)))
 
-(defun project-dependencies (project-root)
+(defun project-dependencies (project-root &key test)
   (with-package-functions #:ql-dist (find-system name)
     (let ((all-dependencies '())
+          (pis-already-seen-files '())
           (loaded-asd-files '())
           (project-system-names '()))
       (with-directory (system-file system-name dependencies) project-root
         (pushnew system-name project-system-names :test 'equal)
-        (unless (find system-file loaded-asd-files :test 'equal)
-          (push system-file loaded-asd-files)
-          (message "Loading '~A'..." system-file)
-          (let ((errout *error-output*))
-            (handler-bind ((error
-                             (lambda (e)
-                               (uiop:print-condition-backtrace e :stream errout))))
-              (let ((*standard-output* (make-broadcast-stream))
-                    (*trace-output* (make-broadcast-stream))
-                    (*error-output* (if *debug*
-                                        *error-output*
-                                        (make-broadcast-stream))))
-                (with-autoload-on-missing
-                  (asdf:load-asd system-file))))))
-        (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
-          (let ((pis-dependencies
-                  (loop for file in (directory-lisp-files (uiop:pathname-directory-pathname system-file))
-                        append (lisp-file-dependencies file))))
-            (setf dependencies
-                  (delete-duplicates
-                    (mapcar #'string-downcase
-                            (nconc dependencies pis-dependencies))
-                    :test 'equal))))
-        (let ((dependencies (remove-if-not #'find-system dependencies)))
-          (debug-log "'~A' requires ~S" system-name dependencies)
-          (setf all-dependencies
-                (nconc all-dependencies dependencies))))
+        (when (or (null test)
+                  (funcall test system-name))
+          (unless (find system-file loaded-asd-files :test 'equal)
+            (push system-file loaded-asd-files)
+            (message "Loading '~A'..." system-file)
+            (let ((errout *error-output*))
+              (handler-bind ((error
+                               (lambda (e)
+                                 (uiop:print-condition-backtrace e :stream errout))))
+                (let ((*standard-output* (make-broadcast-stream))
+                      (*trace-output* (make-broadcast-stream))
+                      (*error-output* (if *debug*
+                                          *error-output*
+                                          (make-broadcast-stream))))
+                  (with-autoload-on-missing
+                    (asdf:load-asd system-file))))))
+          (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
+            (let* ((lisp-files
+                     (set-difference
+                      (directory-lisp-files (uiop:pathname-directory-pathname system-file))
+                      pis-already-seen-files
+                      :test 'equal))
+                   (pis-dependencies
+                    (loop for file in lisp-files
+                          for (file-deps pkg-name) = (multiple-value-list
+                                                      (lisp-file-dependencies file :test test))
+                          when pkg-name
+                          append (progn (debug-log "'~A' requires ~S" pkg-name file-deps)
+                                        file-deps))))
+              (setf dependencies
+                    (delete-duplicates
+                     (remove-if-not (or test #'identity)
+                                    (nconc dependencies pis-dependencies))
+                     :test 'equal))
+              (setf pis-already-seen-files
+                    (append pis-already-seen-files lisp-files))))
+          (let ((dependencies (remove-if-not #'find-system dependencies)))
+            (debug-log "'~A' requires ~S" system-name dependencies)
+            (setf all-dependencies
+                  (nconc all-dependencies dependencies)))))
       (with-package-functions #:ql-dist (required-systems name)
         (let ((already-seen (make-hash-table :test 'equal)))
           (labels ((find-system-with-fallback (system-name)
