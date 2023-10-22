@@ -28,6 +28,8 @@ check_requirement() {
   fi
 }
 
+check_requirement "which"
+
 if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
 elif [ "$(which ros 2>/dev/null)" != "" ]; then
