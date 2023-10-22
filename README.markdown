@@ -13,6 +13,7 @@
   * [Automatic installer](#automatic-installer)
   * [via Roswell](#via-roswell)
   * [via Quicklisp](#via-quicklisp)
+  * [Manual installation](#manual-installation)
   * [Install from source](#install-from-source)
   * [via Docker](#via-docker)
 * [Optional settings](#optional-settings)
@@ -123,7 +124,26 @@ To update Qlot, run `(ql:update-all-dists)` in the REPL.
 
 ### Manual installation
 
-If you don't use both of Roswell and Quicklisp for some reason, Qlot also can be installed from the source code.
+If you don't use both of Roswell and Quicklisp for some reason, Qlot also can be installed manually.
+
+The advantage of this method is no dependencies are required other than `sbcl` and `OpenSSL`.
+
+```shell
+# Getting the latest version
+$ curl -sL https://api.github.com/repos/fukamachi/qlot/releases/latest | jq -rM '.name'
+1.2.16
+```
+
+```shell
+$ curl https://github.com/fukamachi/qlot/releases/download/1.2.16/qlot-1.2.16.tar.gz -o qlot.tar.gz
+$ tar xfz qlot.tar.gz
+$ cd qlot
+$ scripts/setup.sh
+$ sudo printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
+$ sudo chmod u+x /usr/local/bin/qlot
+```
+
+### Install from source
 
 ```shell
 $ git clone https://github.com/fukamachi/qlot
