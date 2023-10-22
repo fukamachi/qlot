@@ -83,7 +83,7 @@ This is what Qlot is trying to solve.
 $ curl -L https://qlot.tech/installer | bash
 ```
 
-It also requires `curl` and `tar`.
+It also requires `curl` (or `wget`) and `tar`.
 
 To uninstall Qlot, run a Qlot uninstaller like:
 

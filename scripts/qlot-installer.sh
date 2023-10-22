@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VERSION=${VERSION:-heads/master}
-QLOT_ARCHIVE==${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
+QLOT_ARCHIVE=${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
 
 if [ `id -u` == "0" ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
@@ -21,11 +21,19 @@ notice() { echo -e "\e[33m$1\e[0m"; }
 success() { echo -e "\e[32m$1\e[0m"; }
 
 check_requirement() {
-  cmd=$1
-  if [ "$(which "$cmd" 2>/dev/null)" == "" ]; then
-    errmsg "$cmd is required to install Qlot"
-    exit 1
+  for cmd in "$@"
+  do
+    if [ "$(which "$cmd" 2>/dev/null)" != "" ]; then
+      return
+    fi
+  done
+  if [ $# == 1 ]; then
+    errmsg "$1 is required to install Qlot"
+  else
+    printf -v all_cmds '%s, ' "$@"
+    errmsg "One of ${all_cmds%, } is required to install Qlot"
   fi
+  exit 1
 }
 
 check_requirement "which"
@@ -45,7 +53,7 @@ qlot_version() {
     --eval '(progn (princ (asdf:component-version (asdf:find-system :qlot))) (fresh-line))'
 }
 
-check_requirement "curl"
+check_requirement "curl" "wget"
 check_requirement "tar"
 
 success 'Welcome to Qlot automatic installer!'
@@ -62,8 +70,19 @@ mkdir -p "$QLOT_SOURCE_DIR"
 #
 # Download
 
-echo -n "Downloading an archive from '$QLOT_ARCHIVE'..."
-curl -sL "$QLOT_ARCHIVE" | tar zx -C "$QLOT_SOURCE_DIR" --strip-component 1
+if [ -f "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz" ]; then
+  echo "Already have an archive: $QLOT_SOURCE_DIR/tmp/qlot.tar.gz"
+else
+  echo -n "Downloading an archive from '$QLOT_ARCHIVE'..."
+  mkdir -p "$QLOT_SOURCE_DIR/tmp"
+  if [ "$(which curl 2>/dev/null)" != "" ]; then
+    curl -sL "$QLOT_ARCHIVE" -o "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz"
+  else
+    wget -q "$QLOT_ARCHIVE" -O "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz"
+  fi
+fi
+
+tar zxf "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz" -C "$QLOT_SOURCE_DIR" --strip-component 1
 echo "done"
 
 #
