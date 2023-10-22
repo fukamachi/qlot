@@ -21,9 +21,14 @@ jobs:
       - name: Bundle dependencies
         run: scripts/run.sh bundle
       - name: Create a bundled tarball
-        run: tar --exclude './.git' --exclude './.qlot' -cvfz /tmp/qlot.tar.gz ./
+        run: |
+          tar --exclude './.git' --exclude './.qlot' cvfz /tmp/qlot.tar.gz ./
+          echo -e "#!/bin/bash\n\nVERSION=${{ github.ref }}\nQLOT_ARCHIVE=https://github.com/fukamachi/qlot/releases/download/${GITHUB_REF_NAME}/qlot.tar.gz\n" > /tmp/qlot-installer.sh
+          cat scripts/qlot-installer.sh >> /tmp/qlot-installer.sh
       - name: Release and publish assets
         uses: softprops/action-gh-release@v1
         with:
           draft: true
-          files: /tmp/qlot.tar.gz
+          files: |
+            /tmp/qlot-${{ github.ref_name }}.tar.gz
+            /tmp/qlot-installer.sh
