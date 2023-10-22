@@ -7,13 +7,15 @@
   (let* ((source-registry (ql-setup:qmerge "source-registry.conf"))
          (local-source-registry-form
            (and (uiop:file-exists-p source-registry)
-                (uiop:read-file-form source-registry))))
+                (uiop:read-file-form source-registry)))
+         (project-root
+           (uiop:pathname-parent-directory-pathname ql:*quicklisp-home*)))
     (asdf:initialize-source-registry
      (if local-source-registry-form
          (append local-source-registry-form
-                 `((:tree ,(probe-file (merge-pathnames #P"../" ql:*quicklisp-home*)))))
+                 `((:tree ,project-root)))
          `(:source-registry :ignore-inherited-configuration
-           (:tree ,(probe-file (merge-pathnames #P"../" ql:*quicklisp-home*)))
+           (:tree ,project-root)
            (:also-exclude ".qlot"))))))
 
 (setup-source-registry)

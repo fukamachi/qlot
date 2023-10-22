@@ -28,9 +28,19 @@ case "$command" in
     exec $lisp --noinform --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
     ;;
   *)
+    if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+      setup_file="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
+    elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
+      setup_file="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
+    else
+      echo "Qlot is not setup yet." >&2
+      echo "Run '$QLOT_SOURCE_DIR/scripts/setup.sh' first." >&2
+      exit 1
+    fi
+
     exec $lisp --noinform --no-sysinit --no-userinit --non-interactive \
-      --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
+      --load "$setup_file" \
       --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
-      --eval '(ql:quickload :qlot/cli :silent t)' \
+      --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \
       --eval '(qlot/cli:main)' -- "$@"
 esac
