@@ -1,6 +1,7 @@
 #!/bin/bash
 
 VERSION=${VERSION:-heads/master}
+QLOT_ARCHIVE==${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
 
 if [ `id -u` == "0" ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
@@ -27,6 +28,8 @@ check_requirement() {
   fi
 }
 
+check_requirement "which"
+
 if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
 elif [ "$(which ros 2>/dev/null)" != "" ]; then
@@ -49,8 +52,6 @@ success 'Welcome to Qlot automatic installer!'
 echo ''
 echo "Installation path: $QLOT_HOME"
 
-archive="https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz"
-
 if [ -f "$QLOT_SOURCE_DIR/qlot.asd" ]; then
   rm -rf "$QLOT_SOURCE_DIR/"
 fi
@@ -61,8 +62,8 @@ mkdir -p "$QLOT_SOURCE_DIR"
 #
 # Download
 
-echo -n "Downloading an archive from '$archive'..."
-curl -sL "$archive" | tar zx -C "$QLOT_SOURCE_DIR" --strip-component 1
+echo -n "Downloading an archive from '$QLOT_ARCHIVE'..."
+curl -sL "$QLOT_ARCHIVE" | tar zx -C "$QLOT_SOURCE_DIR" --strip-component 1
 echo "done"
 
 #
