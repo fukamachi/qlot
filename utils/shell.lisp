@@ -118,6 +118,7 @@
                    `(if (find :quicklisp *features*)
                         (uiop:symbol-call :ql :quickload ,system :silent t)
                         (let ((*standard-output* (make-broadcast-stream))
+                              (*error-output* (make-broadcast-stream))
                               (*trace-output* (make-broadcast-stream)))
                           (asdf:load-system ,system)))))
 
