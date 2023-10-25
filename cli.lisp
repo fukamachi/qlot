@@ -10,6 +10,7 @@
                 #:which
                 #:command-line-arguments)
   (:import-from #:qlot/utils
+                #:starts-with
                 #:generate-random-string)
   (:export #:install
            #:update
@@ -72,6 +73,13 @@
           (if (find #\/ (first args) :test 'char=)
               (cons "github" args)
               (cons "ql" args))))
+
+  (setf args
+        (mapcar (lambda (arg)
+                  (if (starts-with "--" arg)
+                      (format nil ":~A" (subseq arg 2))
+                      arg))
+                args))
 
   (unless (find-package :qlot/add)
     (let ((*standard-output* (make-broadcast-stream))
