@@ -8,7 +8,8 @@
                 #:message)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed)
-  (:export #:add-project))
+  (:export #:add-project
+           #:remove-project))
 (in-package #:qlot/add)
 
 (defun add-project (new-definition qlfile)
@@ -42,3 +43,20 @@
         (unless replaced
           (message "Add '~A' to '~A'." new-line qlfile)
           (format out "~A~%" new-line))))))
+
+(defun remove-project (targets qlfile)
+  (check-type targets cons)
+  (assert (every #'stringp targets))
+  (let* ((lines (uiop:read-file-lines qlfile)))
+    (uiop:with-output-file (out qlfile :if-exists :supersede :if-does-not-exist :create)
+      (loop for line in lines
+            for source = (ignore-errors (parse-qlfile-line line))
+            if (and source
+                    (find (source-project-name source) targets
+                          :test 'equal))
+            collect
+               (progn
+                 (message "Remove '~A'." (source-project-name source))
+                 (source-project-name source))
+            else
+            do (format out "~A~%" line)))))
