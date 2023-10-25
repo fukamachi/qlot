@@ -205,8 +205,9 @@ $ git commit -m 'Start using Qlot.'
 ### Adding a new dependency
 
 ```
-$ qlot add <library name>                 # Add a new library from Quicklisp explicitly
-$ qlot add github <username/repository>   # Add a new library from a GitHub repository
+$ qlot add <library name>              # Add a new library from Quicklisp explicitly
+$ qlot add <library name> --upstream   # Add an upstream version of a Quicklisp library
+$ qlot add <username/repository>       # Add a new library from a GitHub repository
 ```
 
 You can also edit a `qlfile` file directly. See [qlfile syntax](#qlfile-syntax) section to know how to write it. Be sure to run `qlot install` to install new dependencies.
@@ -250,14 +251,26 @@ $ qlot update mito sxql
 
 ### add
 
-`qlot add` will add a line to `qlfile` and invoke `qlot install` internally.
+`qlot add` will add a line to `qlfile` and invoke `qlot install` internally. It replaces an existing line if a library with the same name already exists.
+
 Its arguments are same as the qlfile syntax.
 
 ```
-$ qlot add mito                          # ql mito
-$ qlot add ql mito                       # ql mito (Same as the above)
-$ qlot add ultralisp egao1980-cl-idna    # ultralisp egao1980-cl-idna
-$ qlot add github fukamachi/datafly      # github datafly fukamachi/datafly
+$ qlot add mito                                # ql mito
+$ qlot add mito --latest                       # ql mito :latest
+$ qlot add mito --upstream                     # ql mito :upstream
+$ qlot add fukamachi/datafly                   # github datafly fukamachi/datafly
+$ qlot add fukamachi/datafly --branch stable   # github datafly fukamachi/datafly :branch stable
+$ qlot add ultralisp egao1980-cl-idna          # ultralisp egao1980-cl-idna
+```
+
+### remove
+
+`qlot remove` will remove libraries from `qlfile` and invoke `qlot install` internally.
+
+```
+$ qlot remove mito
+$ qlot remove mito datafly   # can specify multiple names
 ```
 
 ### exec
