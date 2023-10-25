@@ -21,6 +21,8 @@
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/errors
+                #:qlot-simple-error)
   (:import-from #:yason)
   (:export #:distify-github))
 (in-package #:qlot/distify/github)
@@ -33,12 +35,17 @@
 
 (defun retrieve-from-github (repos &optional action)
   (let ((cred (github-credentials)))
-    (yason:parse
-      (apply #'qdex:get
-             (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
-             :want-stream t
-             (when cred
-               `(:basic-auth ,cred))))))
+    (handler-case
+        (yason:parse
+         (apply #'qdex:get
+                (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
+                :want-stream t
+                (when cred
+                  `(:basic-auth ,cred))))
+      (dex:http-request-not-found ()
+        (error 'qlot-simple-error
+               :format-control "'~A' is not found in GitHub."
+               :format-arguments (list repos))))))
 
 (defun retrieve-default-branch (repos)
   (gethash "default_branch" (retrieve-from-github repos)))
