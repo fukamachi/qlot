@@ -15,10 +15,13 @@
                 #:get-distinfo-url
                 #:write-source-distinfo)
   (:import-from #:qlot/utils
+                #:take
                 #:https-of)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:qlot/utils/http)
+  (:import-from #:fuzzy-match
+                #:fuzzy-match)
   (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
 
@@ -39,17 +42,20 @@
     (check-type version string)
     ;; Check if the project is available
     (progress "Getting the release metadata.")
-    (let ((stream (qdex:get (https-of release-index-url) :want-stream t)))
+    (let ((stream (qdex:get (https-of release-index-url) :want-stream t))
+          (candidates '()))
       (block nil
         (parse-space-delimited-stream stream
                                       :test (lambda (data)
                                               (when (equal (first data) (source-project-name source))
-                                                (return t))))
+                                                (return t))
+                                              (push (first data) candidates)))
         (error 'qlot-simple-error
-               :format-control "'~A' is not available in dist '~A'"
+               :format-control "'~A' is not available in dist '~A'.~@[~%Did you mean:~%~{  ~A~^~%~}~]"
                :format-arguments (list
                                    (source-project-name source)
-                                   (source-distinfo-url source)))))
+                                   (source-distinfo-url source)
+                                   (take 4 (fuzzy-match (source-project-name source) candidates))))))
     (setf (source-version source)
           (format nil "~A~A"
                   (source-version-prefix source)
