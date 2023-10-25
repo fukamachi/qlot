@@ -64,9 +64,14 @@
   (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
 
 (defun add (args)
-  ;; Use 'ql' as the default source
-  (when (= 1 (length args))
-    (setf args (cons "ql" args)))
+  ;; Complete the source type
+  (unless (member (first args)
+                  '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                  :test 'equal)
+    (setf args
+          (if (find #\/ (first args) :test 'char=)
+              (cons "github" args)
+              (cons "ql" args))))
 
   (unless (find-package :qlot/add)
     (let ((*standard-output* (make-broadcast-stream))
