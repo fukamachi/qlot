@@ -90,7 +90,6 @@
         (declare (ignorable out))))
     (uiop:copy-file qlfile qlfile.bak)
     (uiop:symbol-call '#:qlot/add '#:add-project args qlfile)
-    (message "Add '~{~A~^ ~}' to '~A'." args qlfile)
     (handler-bind ((error
                      (lambda (e)
                        (declare (ignore e))

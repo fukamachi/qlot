@@ -4,6 +4,8 @@
                 #:parse-qlfile-line)
   (:import-from #:qlot/source
                 #:source-project-name)
+  (:import-from #:qlot/logger
+                #:message)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed)
   (:export #:add-project))
@@ -31,7 +33,12 @@
                                   (equal new-project-name (source-project-name source)))
                              (progn
                                (setf replaced t)
+                               (message "Update '~A' to '~A' in '~A'."
+                                        new-project-name
+                                        new-line
+                                        qlfile)
                                new-line)
                              line)))
         (unless replaced
+          (message "Add '~A' to '~A'." new-line qlfile)
           (format out "~A~%" new-line))))))
