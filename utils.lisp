@@ -6,6 +6,7 @@
   (:export #:make-keyword
            #:starts-with
            #:split-with
+           #:take
            #:generate-random-string
            #:with-package-functions
            #:pathname-in-directory-p
@@ -51,6 +52,11 @@
             (keep i)
             (setf pos (1+ i))))))
     (nreverse results)))
+
+(defun take (n list)
+  (if (nthcdr n list)
+      (subseq list 0 n)
+      list))
 
 (defun generate-random-string ()
   (let ((*random-state* (make-random-state t)))

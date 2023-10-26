@@ -1,5 +1,6 @@
 (defpackage #:qlot/cli
   (:use #:cl)
+  (:shadow #:remove)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors)
@@ -10,11 +11,13 @@
                 #:which
                 #:command-line-arguments)
   (:import-from #:qlot/utils
+                #:starts-with
                 #:generate-random-string)
   (:export #:install
            #:update
            #:init
            #:add
+           #:remove
            #:bundle
            #:main))
 (in-package #:qlot/cli)
@@ -64,26 +67,70 @@
   (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
 
 (defun add (args)
-  ;; Use 'ql' as the default source
-  (when (= 1 (length args))
-    (setf args (cons "ql" args)))
+  ;; Complete the source type
+  (unless (member (first args)
+                  '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                  :test 'equal)
+    (setf args
+          (if (find #\/ (first args) :test 'char=)
+              (cons "github" args)
+              (cons "ql" args))))
 
+  (setf args
+        (mapcar (lambda (arg)
+                  (if (starts-with "--" arg)
+                      (format nil ":~A" (subseq arg 2))
+                      arg))
+                args))
+
+  (unless (find-package :qlot/add)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/add)))
   (unless (find-package :qlot/install)
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
   (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install)))
-        (qlfile.lock (merge-pathnames (format nil "qlfile-~A.lock" (generate-random-string))
-                                      (uiop:temporary-directory))))
-    (uiop:copy-file qlfile qlfile.lock)
-    (uiop:with-output-file (out qlfile :if-exists :append :if-does-not-exist :create)
-      (format out "~&~{~A~^ ~}~%" args)
-      (message "Add '~{~A~^ ~}' to '~A'." args qlfile))
+        (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                     (uiop:temporary-directory))))
+    (unless (uiop:file-exists-p qlfile)
+      (message "Creating ~A" qlfile)
+      (with-open-file (out qlfile :if-does-not-exist :create)
+        (declare (ignorable out))))
+    (uiop:copy-file qlfile qlfile.bak)
+    (uiop:symbol-call '#:qlot/add '#:add-project args qlfile)
     (handler-bind ((error
                      (lambda (e)
                        (declare (ignore e))
-                       (uiop:copy-file qlfile.lock qlfile))))
+                       (uiop:copy-file qlfile.bak qlfile))))
       (install))))
+
+(defun remove (targets)
+  (unless (find-package :qlot/add)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/add)))
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
+  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
+    (when (uiop:file-exists-p qlfile)
+      (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                         (uiop:temporary-directory))))
+        (uiop:copy-file qlfile qlfile.bak)
+        (let ((removed-projects
+                (uiop:symbol-call '#:qlot/add '#:remove-project targets qlfile)))
+          (unless removed-projects
+            (message "Nothing to remove in '~A'." qlfile)
+            (return-from remove))
+
+          (handler-bind ((error
+                           (lambda (e)
+                             (declare (ignore e))
+                             (uiop:copy-file qlfile.bak qlfile))))
+            (install)))))))
 
 (defun bundle (&optional (project-root *default-pathname-defaults*) &rest args)
   (unless (find-package :qlot/bundle)
@@ -196,6 +243,9 @@ COMMANDS:
           $ qlot add ultralisp egao1980-cl-idna
           $ qlot add github datafly fukamachi/datafly
 
+    remove [project name..]
+        Remove specific projects from 'qlfile' and trigger 'qlot install'.
+
     run
         Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
 
@@ -236,9 +286,9 @@ OPTIONS:
                 (qlot/errors:ros-command-error "--project requires a project name"))
               (setf projects
                     (append projects
-                            (remove ""
-                                    (split #\, (pop argv))
-                                    :test 'equal))))
+                            (cl:remove ""
+                                       (split #\, (pop argv))
+                                       :test 'equal))))
              ("--version"
               (print-version)
               (uiop:quit -1))
@@ -335,6 +385,10 @@ OPTIONS:
                (unless argv
                  (qlot/errors:ros-command-error "requires a new library information."))
                (add argv))
+              ((equal "remove" $1)
+               (unless argv
+                 (qlot/errors:ros-command-error "requires project names to remove"))
+               (remove argv))
               ((equal "bundle" $1)
                (apply #'bundle (parse-bundle-argv argv)))
               ((equal "--version" $1)

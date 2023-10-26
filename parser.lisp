@@ -19,6 +19,7 @@
                 #:quicklisp-distinfo-url)
   (:export #:parse-qlfile
            #:parse-qlfile-lock
+           #:parse-qlfile-line
            #:read-qlfile-for-install))
 (in-package #:qlot/parser)
 
@@ -67,19 +68,19 @@
                                                  :error e))))
                          (parse-qlfile-line line))
           when source
-            collect
-              (if (find (source-project-name source) sources
-                        :test #'string=
-                        :key #'source-project-name)
-                  (error 'qlfile-parse-failed
-                         :file file
-                         :lineno lineno
-                         :line line
-                         :error
-                         (make-condition 'duplicate-project
-                                         :name (source-project-name source)))
-                  source)
-            into sources
+          collect
+             (if (find (source-project-name source) sources
+                       :test #'string=
+                       :key #'source-project-name)
+                 (error 'qlfile-parse-failed
+                        :file file
+                        :lineno lineno
+                        :line line
+                        :error
+                        (make-condition 'duplicate-project
+                                        :name (source-project-name source)))
+                 source)
+          into sources
           finally (return sources))))
 
 (defmacro with-handling-parse-error ((file lineno) &body body)
