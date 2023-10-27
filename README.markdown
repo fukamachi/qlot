@@ -62,9 +62,9 @@ However, what only you can specify is the month of distribution. Which means you
 
 "local-projects/" or ASDF configurations may be a solution to this problem, but there are a couple of problems.
 
-1) *They are not project-local.* If you have multiple projects that use the different version of the same library, it would be a problem.
+1) *They are not project-local.* If you have multiple projects that use different versions of the same library, it would be a problem.
 
-2) *They are difficult to fix the version or to update them.* If your project need to work on other than your machine, for instance on other people's machine or on servers, the version of depending libraries should be the same.
+2) *They are difficult to fix the version or to update them.* If your project needs to work on other than your machine, for instance on other people's machines or on servers, the version of depending libraries should be the same.
 
 This is what Qlot is trying to solve.
 
@@ -101,7 +101,7 @@ $ ros install qlot              # Install from the Quicklisp dist
 $ ros install fukamachi/qlot    # Install the latest version from the git repository
 ```
 
-Roswell adds an executable script under `$HOME/.roswell/bin`. Make sure if the directory exists in `$PATH`.
+Roswell adds an executable script under `$HOME/.roswell/bin`. Make sure the directory exists in `$PATH`.
 
 ```shell
 $ which qlot
@@ -124,7 +124,7 @@ To update Qlot, run `(ql:update-all-dists)` in the REPL.
 
 ### Manual installation
 
-If you don't use both of Roswell and Quicklisp for some reason, Qlot also can be installed manually.
+If you don't use both Roswell and Quicklisp for some reason, Qlot also can be installed manually.
 
 The advantage of this method is no dependencies are required other than `sbcl` and `OpenSSL`.
 
@@ -169,7 +169,7 @@ $ docker run --rm -it fukamachi/qlot
 
 ### ASDF configuration to prevent from loading by mistake
 
-ASDF loads any ASD files under a directory `~/common-lisp` including its subdirectories. It is easily understandable and convenient. However, it will lead a problematic situation that ASDF accidentally loads libraries under ".qlot/" even in case you don't need it.
+ASDF loads any ASD files under a directory `~/common-lisp` including its subdirectories. It is easily understandable and convenient. However, it will lead to a problematic situation which ASDF accidentally loads libraries under ".qlot/" even in case you don't need it.
 
 To avoid the situation, we recommend not to use `~/common-lisp` directory, or add the following lines to your Lisp's init file such as `~/.sbclrc` for SBCL.
 
@@ -191,11 +191,11 @@ $ qlot init
 
 It creates 2 files "qlfile" and "qlfile.lock", and a directory ".qlot/" at the root of your project directory.
 
-`qlfile` is a file clarifying the project dependencies. See [qlfile syntax](#qlfile-syntax) for the detail.
+`qlfile` is a file clarifying the project dependencies. See [qlfile syntax](#qlfile-syntax) for the details.
 
 `qlfile.lock` is similar to `qlfile` except the library versions are clarified. This will ensure that other developers or your deployment environment use exactly the same versions of libraries you just installed.
 
-Make sure you add `qlfile` and `qlfile.lock` to your version controlled repository.
+Make sure you add `qlfile` and `qlfile.lock` to your version-controlled repository.
 
 ```
 $ git add qlfile qlfile.lock
@@ -230,7 +230,7 @@ It will also overwrite `qlfile.lock`.
 
 ### install
 
-`qlot install` will install Quicklisp and libraries that declared in `qlfile` project-locally. `qlfile.lock` will be used with precedence if it exists.
+`qlot install` will install Quicklisp and libraries that are declared in `qlfile` project-locally. `qlfile.lock` will be used with precedence if it exists.
 
 ```
 $ qlot install
@@ -298,7 +298,7 @@ Here are few useful commands:
 * `qlot exec ros build some-app.ros` - another command, useful, to build a binary
   from systems, fixed in `qlfile` and `qlfile.lock`. This way you can be sure that your builds are stable.
 
-**NOTE**: `qlot exec` is only affects to `ros` or Roswell scripts.
+**NOTE**: `qlot exec` is only affected by `ros` or Roswell scripts.
 
 If you're using Qlot without Roswell, load `.qlot/setup.lisp` instead, like:
 
@@ -381,7 +381,7 @@ git cl-dbi https://github.com/fukamachi/cl-dbi.git :ref 54928984e5756e92ba298aae
 
 #### Retrieving from private repository
 
-Qlot doesn't authenticate itself, but retrieving from private repository can be done via git's SSH key authentication. Which means, if the current user can `git clone`, Qlot also would be possible to do it.
+Qlot doesn't authenticate itself, but retrieving from private repository can be done via git's SSH key authentication. This means, if the current user can `git clone`, Qlot also would be possible to do it.
 
 ```
 git myapp git@github.com:somewrite-adtech/myapp
@@ -430,13 +430,13 @@ dist ultralisp http://dist.ultralisp.org/
 
 ## Priorities of distributions
 
-If multiple distributions provide the same library, lower one would take priority over higher ones.
+If multiple distributions provide the same library, lower ones would take priority over higher ones.
 
 ## Working with SLIME
 
 [SLIME](https://github.com/slime/slime) is the most popular development environment in Common Lisp. However, its REPL always loads the global Quicklisp, not the project-local one.
 
-Here's quick steps to start project-local REPL with SLIME for each text editors:
+Here's quick steps to start project-local REPL with SLIME for each text editor:
 
 ### Lem
 
@@ -513,7 +513,7 @@ endfunction
 
 ## Working with local git repositories
 
-`PROJECT_ROOT/.qlot/local-projects` can be used for local git repositories. Symbolic links are also be accessible in Qlot environment.
+`PROJECT_ROOT/.qlot/local-projects` can be used for local git repositories. Symbolic links are also accessible in Qlot environment.
 
 ## Author
 
