@@ -24,6 +24,7 @@
     (copy-directory quicklisp-client path
                     :exclude (lambda (file)
                                (not (or (equal (pathname-type file) "lisp")
+                                        (equal (pathname-type file) "asd")
                                         (equal (file-namestring file) "version.txt"))))))
   (mapc #'ensure-directories-exist
         (mapcar (lambda (dirname)

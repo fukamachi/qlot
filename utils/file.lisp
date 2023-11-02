@@ -5,7 +5,7 @@
 
 (defun copy-directory (dir destination &key exclude)
   (let ((files
-          (remove-if (or exclude #'identity) (uiop:directory-files dir))))
+          (remove-if (or exclude (constantly nil)) (uiop:directory-files dir))))
     (when files
       (ensure-directories-exist destination)
       (dolist (file files)
@@ -13,4 +13,5 @@
                         (merge-pathnames (file-namestring file) destination)))))
   (dolist (subdir (uiop:subdirectories dir))
     (copy-directory subdir
-                    (merge-pathnames (enough-namestring subdir dir) destination))))
+                    (merge-pathnames (enough-namestring subdir dir) destination)
+                    :exclude exclude)))
