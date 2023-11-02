@@ -11,7 +11,7 @@ fi
 if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
 elif [ "$(which ros 2>/dev/null)" != "" ]; then
-  lisp="ros without-roswell=t -L sbcl-bin run --"
+  lisp="ros +Q -L sbcl-bin run --"
 else
   exit
 fi
