@@ -78,7 +78,7 @@ This is what Qlot is trying to solve.
 
 ## Installation
 
-### Automatic installer
+### Automatic installer (recommended)
 
 ```shell
 $ curl -L https://qlot.tech/installer | bash
@@ -97,8 +97,10 @@ $ ~/.qlot/qlot/scripts/qlot-uninstaller.sh
 If you're already using Roswell, Qlot can be installed by `ros install`.
 
 ```shell
-$ ros install qlot              # Install from the Quicklisp dist
-$ ros install fukamachi/qlot    # Install the latest version from the git repository
+# Install from the Quicklisp dist
+$ ros install qlot
+# Or, install the latest version from the git repository
+$ ros follow-dependency=t install fukamachi/qlot
 
 # For older Roswell (Not required since v23.10.14.114 or above)
 $ ros -e '(ql:quickload :qlot/distify)'
@@ -149,7 +151,7 @@ $ sudo chmod u+x /usr/local/bin/qlot
 ### Install from source
 
 ```shell
-$ git clone https://github.com/fukamachi/qlot
+$ git clone --recursive https://github.com/fukamachi/qlot
 $ cd qlot
 $ scripts/setup.sh
 $ sudo printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
