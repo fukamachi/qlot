@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        submodules: true
+        with:
+          submodules: true
       - name: Install Roswell
         env:
           LISP: sbcl
