@@ -6,7 +6,7 @@ QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 >/dev/null && pwd -P)
 
 errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
 if [ "$(which ros 2>/dev/null)" != "" ]; then
-  lisp="ros without-roswell=t -L sbcl-bin run --"
+  lisp="ros +Q -L sbcl-bin run --"
 elif [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
 else
@@ -23,6 +23,11 @@ if [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
       --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
       --eval '(asdf:load-system :qlot/install/quicklisp)' \
       --eval "(qlot/install/quicklisp:install-quicklisp \"$QLOT_SOURCE_DIR/.qlot/\")"
+    if [ ! -d "$QLOT_SOURCE_DIR/.qlot/dists/quicklisp" ]; then
+      $lisp --noinform --no-sysinit --no-userinit --non-interactive \
+        --load "$QLOT_SOURCE_DIR/.qlot/setup.lisp" \
+        --eval '(ql-dist:install-dist "https://beta.quicklisp.org/dist/quicklisp.txt" :prompt nil)'
+    fi
   else
     $lisp --noinform --no-sysinit --no-userinit --non-interactive \
       --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
