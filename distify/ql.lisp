@@ -19,7 +19,7 @@
                 #:https-of)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
-  (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/http)
   (:import-from #:fuzzy-match
                 #:fuzzy-match)
   (:export #:distify-ql))
@@ -27,8 +27,8 @@
 
 (defun load-source-ql-version (source)
   (progress "Getting the distinfo.")
-  (let* ((body-stream (handler-case (qdex:get (source-distinfo-url source)
-                                              :want-stream t)
+  (let* ((body-stream (handler-case (qlot/http:get (source-distinfo-url source)
+                                                   :want-stream t)
                         (dex:http-request-failed (e)
                           (error 'qlot-simple-error
                                  :format-control "Not available dist: ~A (~A)"
@@ -42,7 +42,7 @@
     (check-type version string)
     ;; Check if the project is available
     (progress "Getting the release metadata.")
-    (let ((stream (qdex:get (https-of release-index-url) :want-stream t))
+    (let ((stream (qlot/http:get (https-of release-index-url) :want-stream t))
           (candidates '()))
       (block nil
         (parse-space-delimited-stream stream
@@ -86,14 +86,14 @@
                  (uiop:file-exists-p "releases.txt"))
       (progress "Getting the distinfo.")
       (let ((original-distinfo
-              (parse-distinfo-stream (qdex:get (source-distinfo-url source)
-                                               :want-stream t))))
+              (parse-distinfo-stream (qlot/http:get (source-distinfo-url source)
+                                                    :want-stream t))))
         (progress "Getting the metadata files.")
         (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
                                  ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
           (destructuring-bind (file . url) metadata-pair
             (check-type url string)
-            (let ((data (parse-space-delimited-stream (qdex:get (https-of url) :want-stream t)
+            (let ((data (parse-space-delimited-stream (qlot/http:get (https-of url) :want-stream t)
                                                       :test (lambda (data)
                                                               (equal (first data) (source-project-name source)))
                                                       :include-header t)))

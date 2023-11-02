@@ -18,7 +18,7 @@
                 #:parse-distinfo-file)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
-  (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/http)
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
                 #:digest-file)
@@ -51,7 +51,7 @@
                                                     (source-metadata-destination source destination))))
     (uiop:with-temporary-file (:pathname tmp-archive :direction :io)
       (progress "Downloading ~S" (source-http-url source))
-      (qdex:fetch (source-http-url source) tmp-archive)
+      (qlot/http:fetch (source-http-url source) tmp-archive)
 
       (progress "Calculating the MD5 of the archive.")
       (let ((archive-md5 (byte-array-to-hex-string

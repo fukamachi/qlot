@@ -1,7 +1,6 @@
-(defpackage #:qlot/utils/http
+(defpackage #:qlot/http
   (:use #:cl)
   (:shadow #:get)
-  (:nicknames #:qdex)
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:dexador)
@@ -9,7 +8,7 @@
   (:import-from #:cl+ssl)
   (:export #:fetch
            #:get))
-(in-package #:qlot/utils/http)
+(in-package #:qlot/http)
 
 (defmacro with-retry (() &body body)
   `(let ((retry-request (dex:retry-request 2 :interval 3)))
@@ -27,7 +26,8 @@
            (and basic-auth
                 (list :basic-auth basic-auth)))))
 
-(defun get (url &rest args)
+(defun get (url &rest args &key want-stream basic-auth force-binary)
+  (declare (ignore want-stream basic-auth force-binary))
   (with-retry ()
     (apply #'dex:get url
            :keep-alive nil

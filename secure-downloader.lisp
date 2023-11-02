@@ -64,14 +64,14 @@
     (launch-lisp `((loop
                      (let ((,url-var (read-line))
                            (,file-var (read-line)))
-                       (uiop:symbol-call :qlot/utils/http :fetch ,url-var
+                       (uiop:symbol-call :qlot/http :fetch ,url-var
                                          ,file-var)
                        (format t "~A~%" ,file-var)
                        (force-output))))
 
                  :load (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
                            #+quicklisp (merge-pathnames #P"setup.lisp" ql:*quicklisp-home*))
-                 :systems '("qlot/utils/http")
+                 :systems '("qlot/http")
                  :source-registry (or *qlot-source-directory*
                                       (asdf:system-source-directory :qlot)))))
 

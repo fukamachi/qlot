@@ -1,6 +1,6 @@
 (defpackage #:qlot/fetch
   (:use #:cl)
-  (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/http)
   (:import-from #:qlot/utils/cli
                 #:command-line-arguments))
 (in-package #:qlot/fetch)
@@ -15,7 +15,7 @@
   (format t "~&; Fetching '~A'.~%" url)
   (let ((now (get-internal-real-time)))
     (multiple-value-bind (body-stream status headers)
-        (qdex:get url :want-stream t :force-binary t)
+        (qlot/http:get url :want-stream t :force-binary t)
       (declare (ignore status))
       (let* ((body-size (gethash "content-length" headers))
              (body-size (and body-size

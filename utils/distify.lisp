@@ -13,7 +13,7 @@
                 #:make-versioned-distinfo-url-with-template)
   (:import-from #:qlot/utils
                 #:https-of)
-  (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/http)
   (:import-from #:qlot/source
                 #:source-distinfo-url
                 #:source-project-name
@@ -89,8 +89,8 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
 
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data
-           (parse-distinfo-stream (qdex:get (https-of distribution)
-                                            :want-stream t)))
+           (parse-distinfo-stream (qlot/http:get (https-of distribution)
+                                                 :want-stream t)))
          (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
                                             :test #'string=)))
          (distinfo-url (or (cdr (assoc "canonical-distinfo-url" distinfo-data

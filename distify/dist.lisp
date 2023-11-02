@@ -9,7 +9,7 @@
                 #:progress)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url)
-  (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/http)
   (:export #:distify-dist))
 (in-package #:qlot/distify/dist)
 
@@ -33,5 +33,5 @@
                        relative-path
                        destination)))
     (ensure-directories-exist target-path)
-    (qdex:fetch (source-distinfo-url source) target-path)
+    (qlot/http:fetch (source-distinfo-url source) target-path)
     destination))

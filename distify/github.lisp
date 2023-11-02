@@ -20,7 +20,7 @@
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
-  (:import-from #:qlot/utils/http)
+  (:import-from #:qlot/http)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:yason)
@@ -37,7 +37,7 @@
   (let ((cred (github-credentials)))
     (handler-case
         (yason:parse
-         (apply #'qdex:get
+         (apply #'qlot/http:get
                 (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
                 :want-stream t
                 (when cred
@@ -101,7 +101,7 @@
         (unless (uiop:file-exists-p archive-file)
           (progress "Downloading ~S." (source-github-url source))
           (let ((cred (github-credentials)))
-            (apply #'qdex:fetch (source-github-url source) archive-file
+            (apply #'qlot/http:fetch (source-github-url source) archive-file
                    (when cred
                      `(:basic-auth ,cred))))
           (progress "Downloaded ~S." (source-github-url source)))
