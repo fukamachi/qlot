@@ -4,7 +4,8 @@
   :author "Eitaro Fukamachi"
   :license "MIT"
   :description "A project-local library installer"
-  :depends-on ("qlot/main")
+  :depends-on ("qlot/main"
+               #+ros.installing "qlot/distify")
   :output-files (image-op (o c)
                   (output-files o :qlot/command))
   :in-order-to ((test-op (test-op "qlot/tests"))
