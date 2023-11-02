@@ -23,6 +23,11 @@ if [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
       --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
       --eval '(asdf:load-system :qlot/install/quicklisp)' \
       --eval "(qlot/install/quicklisp:install-quicklisp \"$QLOT_SOURCE_DIR/.qlot/\")"
+    if [ ! -d "$QLOT_SOURCE_DIR/.qlot/dists/quicklisp" ]; then
+      $lisp --noinform --no-sysinit --no-userinit --non-interactive \
+        --load "$QLOT_SOURCE_DIR/.qlot/setup.lisp" \
+        --eval '(ql-dist:install-dist "https://beta.quicklisp.org/dist/quicklisp.txt" :prompt nil)'
+    fi
   else
     $lisp --noinform --no-sysinit --no-userinit --non-interactive \
       --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
