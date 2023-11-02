@@ -1,0 +1,3 @@
+[submodule "quicklisp-client"]
+	path = quicklisp-client
+	url = https://github.com/quicklisp/quicklisp-client
