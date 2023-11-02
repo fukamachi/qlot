@@ -24,7 +24,7 @@ jobs:
         run: scripts/run.sh bundle --exclude qlot/tests --exclude "qlot/tests/*"
       - name: Create a bundled tarball
         run: |
-          tar cvfz /tmp/qlot-${{ github.ref_name }}.tar.gz --exclude './.git' --exclude './.qlot' -C ../ qlot
+          tar cvfz /tmp/qlot-${{ github.ref_name }}.tar.gz --exclude '.git' --exclude '.qlot' -C ../ qlot
           echo -e "#!/bin/bash\n\nVERSION=${{ github.ref }}\nQLOT_ARCHIVE=https://github.com/fukamachi/qlot/releases/download/${GITHUB_REF_NAME}/qlot-${GITHUB_REF_NAME}.tar.gz\n" > /tmp/qlot-installer-${{ github.ref_name }}.sh
           tail -n +5 scripts/qlot-installer.sh >> /tmp/qlot-installer-${{ github.ref_name }}.sh
       - name: Release and publish assets
