@@ -35,3 +35,5 @@ jobs:
         run: |
           PATH="~/.roswell/bin:$PATH"
           rove qlot.asd
+      - name: Run setup.sh
+        run: scripts/setup.sh
