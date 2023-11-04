@@ -23,7 +23,9 @@ jobs:
           update: true
           install: >-
             git
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install Roswell
         env:
           LISP: ${{ matrix.lisp }}

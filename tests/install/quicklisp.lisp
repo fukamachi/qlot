@@ -10,6 +10,8 @@
 (in-package #:qlot/tests/install/quicklisp)
 
 (deftest install-quicklisp-tests
+  (ok (uiop:directory-exists-p (asdf:system-relative-pathname :qlot #P"quicklisp-client/")))
+  (ok (uiop:directory-files (asdf:system-relative-pathname :qlot #P"quicklisp-client/")))
   (testing "install-quicklisp-with-installer"
     (with-tmp-directory (tmp-dir)
       (ok (install-quicklisp-with-installer tmp-dir))
