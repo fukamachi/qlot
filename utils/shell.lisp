@@ -33,7 +33,7 @@
   (setf args (mapcar #'princ-to-string args))
   (debug-log "Running shell command: ~A~{ ~S~}" program args)
   (uiop:with-temporary-file (:pathname stderr
-                             :direction :output)
+                             :direction :io)
     (handler-case
         (uiop:run-program (cons program args)
                           :input :interactive
