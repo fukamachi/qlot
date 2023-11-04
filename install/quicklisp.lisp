@@ -31,7 +31,8 @@
                   (merge-pathnames dirname path))
                 (list "local-projects/"
                       "dists/"
-                      "tmp/"))))
+                      "tmp/")))
+  t)
 
 (defun install-quicklisp-with-installer (path)
   (let ((quicklisp-file (asdf:system-relative-pathname :qlot #P"quicklisp/quicklisp-installer.lisp")))
@@ -41,7 +42,8 @@
                "(setf quicklisp-quickstart:*after-initial-setup-message* \"\")"
                (format nil "(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (quicklisp-quickstart:install :path #P\"~A\"~@[ :proxy \"~A\"~]))"
                        path
-                       *proxy*)))))
+                       *proxy*))))
+  t)
 
 (defun install-quicklisp (path)
   (message "Installing Quicklisp to ~A..." path)

@@ -23,7 +23,12 @@ jobs:
           update: true
           install: >-
             git
-      - uses: actions/checkout@v3
+      - name: Prepare git
+        run: git config --global core.autocrlf input
+        shell: bash
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install Roswell
         env:
           LISP: ${{ matrix.lisp }}
