@@ -491,6 +491,7 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
                :name 'qlot
                :env (list (concat "PATH=" (mapconcat 'identity exec-path ":")))))
 ```
+NOTE for [sly](https://github.com/joaotavora/sly) users: Define `sly-qlot-exec` as the above code replaced `slime-start` with `sly-start`.
 
 2. Relaunch the Emacs.
 3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
