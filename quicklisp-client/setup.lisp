@@ -126,10 +126,14 @@ compiling asdf.lisp to a FASL and then loading it."
 
 (push (qmerge "quicklisp/") asdf:*central-registry*)
 
+#+sbcl (declaim (sb-ext:muffle-conditions sb-ext:compiler-note))
+
 (let ((*compile-print* nil)
       (*compile-verbose* nil)
       (*load-verbose* nil)
       (*load-print* nil))
   (asdf:oos 'asdf:load-op "quicklisp" :verbose nil))
+
+#+sbcl (declaim (sb-ext:unmuffle-conditions sb-ext:compiler-note))
 
 (quicklisp:setup)
