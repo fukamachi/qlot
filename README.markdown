@@ -100,7 +100,7 @@ If you're already using Roswell, Qlot can be installed by `ros install`.
 # Install from the Quicklisp dist
 $ ros install qlot
 # Or, install the latest version from the git repository
-$ ros follow-dependency=t install fukamachi/qlot
+$ ros install fukamachi/qlot
 
 # For older Roswell (Not required since v23.10.14.114 or above)
 $ ros -e '(ql:quickload :qlot/distify)'
