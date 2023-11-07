@@ -9,9 +9,11 @@
 (unless *load-truename*
   (error "This file must be LOADed to set up quicklisp."))
 
-(defvar *quicklisp-home*
+(defparameter *quicklisp-home*
   (make-pathname :name nil :type nil
                  :defaults *load-truename*))
+
+#+sbcl (declaim (sb-ext:muffle-conditions sb-kernel:redefinition-warning))
 
 (defun qmerge (pathname)
   "Return PATHNAME merged with the base Quicklisp directory."
@@ -109,6 +111,8 @@ compiling asdf.lisp to a FASL and then loading it."
             (try (load (compile-file source :verbose nil :output-file fasl))))
           (error "Could not load ASDF ~S or newer" *required-asdf-version*))))))
 
+#+sbcl (declaim (sb-ext:unmuffle-conditions sb-kernel:redefinition-warning))
+
 (ensure-asdf-loaded)
 
 ;;;
@@ -132,7 +136,8 @@ compiling asdf.lisp to a FASL and then loading it."
       (*compile-verbose* nil)
       (*load-verbose* nil)
       (*load-print* nil))
-  (asdf:oos 'asdf:load-op "quicklisp" :verbose nil))
+  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning))
+    (asdf:oos 'asdf:load-op "quicklisp" :verbose nil)))
 
 #+sbcl (declaim (sb-ext:unmuffle-conditions sb-ext:compiler-note))
 
