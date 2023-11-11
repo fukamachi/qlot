@@ -14,6 +14,7 @@
                 #:source-install-url
                 #:freeze-source)
   (:import-from #:qlot/parser
+                #:find-lock
                 #:read-qlfile-for-install)
   (:import-from #:qlot/server
                 #:with-qlot-server
@@ -49,8 +50,10 @@
   (:import-from #:sb-posix)
   (:export #:install-qlfile
            #:update-qlfile
+           #:check-qlfile
            #:install-project
            #:update-project
+           #:check-project
            #:init-project))
 (in-package #:qlot/install)
 
@@ -219,22 +222,21 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (source-version source))))
         new-dist))))
 
-(defun dump-source-registry-conf (file sources)
-  (uiop:with-output-file (out file :if-exists :supersede)
-    (let ((*print-pretty* nil)
-          (*print-case* :downcase))
-      (format out
-              "~&(~{~S~^~% ~})~%"
-              `(:source-registry
-                :ignore-inherited-configuration
-                (:also-exclude ".qlot")
-                ,@(loop for source in sources
-                        when (typep source 'source-local)
-                        collect (progn
-                                  (message "Adding ~S located at '~A'."
-                                           (source-project-name source)
-                                           (source-local-path source))
-                                  `(:tree ,(source-local-registry-directive source)))))))))
+(defun dump-source-registry-conf (stream sources)
+  (let ((*print-pretty* nil)
+        (*print-case* :downcase))
+    (format stream
+            "~&(~{~S~^~% ~})~%"
+            `(:source-registry
+              :ignore-inherited-configuration
+              (:also-exclude ".qlot")
+              ,@(loop for source in sources
+                      when (typep source 'source-local)
+                      collect (progn
+                                (message "Adding ~S located at '~A'."
+                                         (source-project-name source)
+                                         (source-local-path source))
+                                `(:tree ,(source-local-registry-directive source))))))))
 
 (defun dump-qlfile-lock (file sources)
   (uiop:with-output-file (out file :if-exists :supersede)
@@ -243,6 +245,33 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (loop for source in sources
             for (project-name . contents) = (freeze-source source)
             do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
+
+(defun check-qlfile (qlfile)
+  (unless (find-lock qlfile)
+    (return-from check-qlfile nil))
+  (let* ((qlhome (merge-pathnames *qlot-directory* qlfile))
+         (sources (read-qlfile-for-install qlfile :silent t))
+         (source-registry-up-to-date
+           (or (not (find-if (lambda (source)
+                               (typep source 'source-local))
+                             sources))
+               (and (uiop:file-exists-p (merge-pathnames #P"source-registry.conf" qlhome))
+                    (let ((source-registry-conf
+                            (with-output-to-string (s)
+                              (dump-source-registry-conf s sources))))
+                      (equal source-registry-conf
+                             (uiop:read-file-string (merge-pathnames #P"source-registry.conf" qlhome))))))))
+    (with-quicklisp-home qlhome
+      (with-package-functions #:ql-dist (find-dist version)
+        (remove-if (lambda (source)
+                     (if (typep source 'source-local)
+                         source-registry-up-to-date
+                         (let ((dist (find-dist (source-dist-name source))))
+                           (and dist
+                                (slot-boundp source 'qlot/source/base::version)
+                                (equal (version dist)
+                                       (source-version source))))))
+                   sources)))))
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory)
   (let ((sources (read-qlfile-for-install qlfile
@@ -254,53 +283,53 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (tmp-dir (or cache-directory (tmp-directory))))
       (ensure-directories-exist tmp-dir)
       (unwind-protect
-          (dolist (source (remove-if (lambda (source)
-                                       (typep source 'source-local))
-                                     sources))
-            (with-quicklisp-home qlhome
-              (with-package-functions #:ql-dist (find-dist version)
-                (let ((dist (find-dist (source-dist-name source))))
-                  (cond
-                    ((not dist)
-                     (message "Installing dist ~S." (source-project-name source))
-                     (with-quicklisp-home system-qlhome
-                       (with-qlot-server (source qlhome tmp-dir)
-                         (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (install-source source)))
-                     (message "=> Newly installed ~S version ~S."
-                              (source-project-name source)
-                              (source-version source)))
-                    ((and (slot-boundp source 'qlot/source/base::version)
-                          (equal (version dist)
-                                 (source-version source)))
-                     (message "Already have dist ~S version ~S."
-                              (source-project-name source)
-                              (source-version source)))
-                    ((string= (source-dist-name source) "quicklisp")
-                     (message "Installing dist ~S." (source-project-name source))
-                     (with-package-functions #:ql-dist (uninstall version)
-                       (let* ((current-dist (find-dist "quicklisp"))
-                              (current-version (version current-dist)))
-                         (uninstall (find-dist "quicklisp"))
-                         (with-quicklisp-home system-qlhome
-                           (with-qlot-server (source qlhome tmp-dir)
-                             (debug-log "Using temporary directory '~A'" tmp-dir)
-                             (install-source source)))
-                         (if (equal current-version (source-version source))
-                             (message "=> No update on dist \"quicklisp\" version ~S."
-                                      current-version)
-                             (message "=> Updated dist \"quicklisp\" version ~S -> ~S."
-                                      current-version
-                                      (source-version source))))))
-                    (t
-                     (with-quicklisp-home system-qlhome
-                       (with-qlot-server (source qlhome tmp-dir t)
-                         (debug-log "Using temporary directory '~A'" tmp-dir)
-                         (update-source source tmp-dir))))))))
-            (with-quicklisp-home qlhome
-              (with-package-functions #:ql-dist (find-dist (setf preference))
-                (setf (preference (find-dist (source-dist-name source)))
-                      (incf preference)))))
+           (dolist (source (remove-if (lambda (source)
+                                        (typep source 'source-local))
+                                      sources))
+             (with-quicklisp-home qlhome
+               (with-package-functions #:ql-dist (find-dist version)
+                 (let ((dist (find-dist (source-dist-name source))))
+                   (cond
+                     ((not dist)
+                      (message "Installing dist ~S." (source-project-name source))
+                      (with-quicklisp-home system-qlhome
+                        (with-qlot-server (source qlhome tmp-dir)
+                          (debug-log "Using temporary directory '~A'" tmp-dir)
+                          (install-source source)))
+                      (message "=> Newly installed ~S version ~S."
+                               (source-project-name source)
+                               (source-version source)))
+                     ((and (slot-boundp source 'qlot/source/base::version)
+                           (equal (version dist)
+                                  (source-version source)))
+                      (message "Already have dist ~S version ~S."
+                               (source-project-name source)
+                               (source-version source)))
+                     ((string= (source-dist-name source) "quicklisp")
+                      (message "Installing dist ~S." (source-project-name source))
+                      (with-package-functions #:ql-dist (uninstall version)
+                        (let* ((current-dist (find-dist "quicklisp"))
+                               (current-version (version current-dist)))
+                          (uninstall (find-dist "quicklisp"))
+                          (with-quicklisp-home system-qlhome
+                            (with-qlot-server (source qlhome tmp-dir)
+                              (debug-log "Using temporary directory '~A'" tmp-dir)
+                              (install-source source)))
+                          (if (equal current-version (source-version source))
+                              (message "=> No update on dist \"quicklisp\" version ~S."
+                                       current-version)
+                              (message "=> Updated dist \"quicklisp\" version ~S -> ~S."
+                                       current-version
+                                       (source-version source))))))
+                     (t
+                      (with-quicklisp-home system-qlhome
+                        (with-qlot-server (source qlhome tmp-dir t)
+                          (debug-log "Using temporary directory '~A'" tmp-dir)
+                          (update-source source tmp-dir))))))))
+             (with-quicklisp-home qlhome
+               (with-package-functions #:ql-dist (find-dist (setf preference))
+                 (setf (preference (find-dist (source-dist-name source)))
+                       (incf preference)))))
         (unless cache-directory
           (delete-tmp-directory tmp-dir)))
       (with-quicklisp-home qlhome
@@ -310,8 +339,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (message "Removing dist ~S." (name dist))
               (uninstall dist))))))
 
-    (dump-source-registry-conf (merge-pathnames #P"source-registry.conf" qlhome)
-                               sources)
+    (with-open-file (out (merge-pathnames #P"source-registry.conf" qlhome)
+                         :direction :output
+                         :if-does-not-exist :create
+                         :if-exists :supersede)
+      (dump-source-registry-conf out sources))
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
                                      :type "lock"
                                      :defaults qlfile)
@@ -364,6 +396,15 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :projects projects
                      :install-deps install-deps
                      :cache-directory cache-directory))))
+
+(defun check-project (object)
+  (etypecase object
+    ((or symbol string)
+     (check-project (asdf:find-system object)))
+    (asdf:system
+     (check-qlfile (asdf:system-relative-pathname object *default-qlfile*)))
+    (pathname
+     (check-qlfile (ensure-qlfile-pathname object)))))
 
 (defun init-project (object)
   (etypecase object

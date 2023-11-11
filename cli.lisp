@@ -60,6 +60,17 @@
                                               (uiop:ensure-directory-pathname cache)
                                               *default-pathname-defaults*)))))
 
+(defun check ()
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
+  (let ((project-names
+          (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)))
+    (when project-names
+      ;; TODO: message
+      (uiop:quit -1))))
+
 (defun init ()
   (unless (find-package :qlot/install)
     (let ((*standard-output* (make-broadcast-stream))
@@ -395,6 +406,8 @@ OPTIONS:
                (unless argv
                  (qlot/errors:ros-command-error "requires project names to remove"))
                (remove argv))
+              ((equal "check" $1)
+               (check))
               ((equal "bundle" $1)
                (apply #'bundle (parse-bundle-argv argv)))
               ((equal "--version" $1)

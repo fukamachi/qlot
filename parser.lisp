@@ -20,6 +20,7 @@
   (:export #:parse-qlfile
            #:parse-qlfile-lock
            #:parse-qlfile-line
+           #:find-lock
            #:read-qlfile-for-install))
 (in-package #:qlot/parser)
 
@@ -126,19 +127,23 @@
                   lock-source)
                 source)))))
 
-(defun read-qlfile-for-install (qlfile &key ignore-lock projects)
+(defun find-lock (qlfile)
+  (uiop:file-exists-p
+   (make-pathname :defaults qlfile
+                  :name (file-namestring qlfile)
+                  :type "lock")))
+
+(defun read-qlfile-for-install (qlfile &key ignore-lock projects silent)
   "Read 'qlfile' (or 'qlfile.lock' if exists) and return sources.
   This adds the latest 'quicklisp' dist implicitly if no 'quicklisp' project exists in the file.
   If :ignore-lock is T, read 'qlfile' even when 'qlfile.lock' exists.
   If :projects is specified, read only those projects from qlfile.lock."
-  (message "Reading '~A'..." qlfile)
+  (unless silent
+    (message "Reading '~A'..." qlfile))
   (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
         (sources (parse-qlfile qlfile))
         (qlfile-lock (and (or (not ignore-lock) projects)
-                          (uiop:file-exists-p
-                            (make-pathname :defaults qlfile
-                                           :name (file-namestring qlfile)
-                                           :type "lock")))))
+                          (find-lock qlfile))))
     (unless (find "quicklisp" sources
                   :key #'source-dist-name
                   :test #'string=)
