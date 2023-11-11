@@ -9,7 +9,8 @@
   (:import-from #:qlot/utils/cli
                 #:exec
                 #:which
-                #:command-line-arguments)
+                #:command-line-arguments
+                #:ros-script-p)
   (:import-from #:qlot/utils
                 #:starts-with
                 #:generate-random-string)
@@ -380,6 +381,11 @@ OPTIONS:
 
                (let ((command (or (which (first argv))
                                   (first argv))))
+                 (unless (or (member (file-namestring command)
+                                     '("ros")
+                                     :test 'equal)
+                             (ros-script-p command))
+                   (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))
                  (exec (cons command (rest argv)))))
               ((equal "add" $1)
                (unless argv

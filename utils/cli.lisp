@@ -2,7 +2,8 @@
   (:use #:cl)
   (:export #:exec
            #:which
-           #:command-line-arguments))
+           #:command-line-arguments
+           #:ros-script-p))
 (in-package #:qlot/utils/cli)
 
 (defun command-line-arguments ()
@@ -55,3 +56,12 @@
                                              :output s)))
     (uiop/run-program:subprocess-error ()
       nil)))
+
+(defun ros-script-p (file)
+  (and (uiop:file-exists-p file)
+       (ignore-errors
+         (with-open-file (in file
+                             :direction :input
+                             :element-type 'character)
+           (and (equal (read-line in) "#!/bin/sh")
+                (equal (read-line in) "#|-*- mode:lisp -*-|#"))))))
