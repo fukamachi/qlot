@@ -12,9 +12,12 @@
                 #:source-project-name
                 #:source-version
                 #:source-install-url
-                #:freeze-source)
+                #:freeze-source
+                #:defrost-source
+                #:source=)
   (:import-from #:qlot/parser
                 #:find-lock
+                #:parse-qlfile-lock
                 #:read-qlfile-for-install)
   (:import-from #:qlot/server
                 #:with-qlot-server
@@ -247,31 +250,59 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
 (defun check-qlfile (qlfile)
-  (unless (find-lock qlfile)
-    (return-from check-qlfile nil))
-  (let* ((qlhome (merge-pathnames *qlot-directory* qlfile))
-         (sources (read-qlfile-for-install qlfile :silent t))
-         (source-registry-up-to-date
-           (or (not (find-if (lambda (source)
-                               (typep source 'source-local))
-                             sources))
-               (and (uiop:file-exists-p (merge-pathnames #P"source-registry.conf" qlhome))
-                    (let ((source-registry-conf
-                            (with-output-to-string (s)
-                              (dump-source-registry-conf s sources))))
-                      (equal source-registry-conf
-                             (uiop:read-file-string (merge-pathnames #P"source-registry.conf" qlhome))))))))
-    (with-quicklisp-home qlhome
-      (with-package-functions #:ql-dist (find-dist version)
-        (remove-if (lambda (source)
-                     (if (typep source 'source-local)
-                         source-registry-up-to-date
-                         (let ((dist (find-dist (source-dist-name source))))
-                           (and dist
-                                (slot-boundp source 'qlot/source/base::version)
-                                (equal (version dist)
-                                       (source-version source))))))
-                   sources)))))
+  (let ((sources (read-qlfile-for-install qlfile :silent t))
+        (qlfile.lock (find-lock qlfile)))
+    (unless qlfile.lock
+      (error 'qlot-simple-error
+             :format-control "Lock file does not exist."))
+    ;; Check if qlfile.lock is up-to-date
+    (let* ((lock-sources (parse-qlfile-lock qlfile.lock))
+           (lock-sources (mapcar #'defrost-source lock-sources))
+           (old-sources
+             (remove-if (lambda (source)
+                          (let ((lock-source
+                                  (find (source-project-name source) lock-sources
+                                        :key #'source-project-name
+                                        :test #'string=)))
+                            (and lock-source
+                                 (source= source lock-source))))
+                        sources)))
+      (when old-sources
+        (error 'qlot-simple-error
+               :format-control "Lock file is not up-to-date.")))
+    ;; Check if all dists are installed and up-to-date
+    (let* ((qlhome (merge-pathnames *qlot-directory* qlfile))
+           (source-registry-up-to-date
+             (or (not (find-if (lambda (source)
+                                 (typep source 'source-local))
+                               sources))
+                 (and (uiop:file-exists-p (merge-pathnames #P"source-registry.conf" qlhome))
+                      (let ((source-registry-conf
+                              (with-output-to-string (s)
+                                (dump-source-registry-conf s sources))))
+                        (equal source-registry-conf
+                               (uiop:read-file-string (merge-pathnames #P"source-registry.conf" qlhome))))))))
+      (with-quicklisp-home qlhome
+        (with-package-functions #:ql-dist (find-dist version)
+          (let ((old-sources
+                  (remove-if (lambda (source)
+                               (if (typep source 'source-local)
+                                   source-registry-up-to-date
+                                   (let ((dist (find-dist (source-dist-name source))))
+                                     (and dist
+                                          (slot-boundp source 'qlot/source/base::version)
+                                          (equal (version dist)
+                                                 (source-version source))))))
+                             sources)))
+            (when old-sources
+              (error 'qlot-simple-error
+                     :format-control "Require to install or update dists."))))
+        (with-package-functions #:ql-dist (all-dists name)
+          (dolist (dist (all-dists))
+            (unless (find (name dist) sources :test #'string= :key #'source-dist-name)
+              (error 'qlot-simple-error
+                     :format-control "Require to remove dists.")))))))
+  (message "Lock file is up-to-date."))
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory)
   (let ((sources (read-qlfile-for-install qlfile
