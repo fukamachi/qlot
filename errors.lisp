@@ -6,6 +6,8 @@
            #:invalid-definition
            #:duplicate-project
            #:qlfile-parse-failed
+           #:missing-projects
+           #:unnecessary-projects
            #:ros-command-error
            #:command-not-found
            #:qlot-warning
@@ -51,6 +53,20 @@
              (with-slots (file lineno line error) condition
                (format stream "Error raised while parsing '~A' at line ~A:~2%  ~A~2%~A"
                        file lineno line error)))))
+
+(define-condition missing-projects (qlot-error)
+  ((projects :initarg :projects))
+  (:report (lambda (condition stream)
+             (with-slots (projects) condition
+               (format stream "The following libraries are missing:~%~{ * ~A~^~%~}"
+                       projects)))))
+
+(define-condition unnecessary-projects (qlot-error)
+  ((projects :initarg :projects))
+  (:report (lambda (condition stream)
+             (with-slots (projects) condition
+               (format stream "The following libraries need to be removed:~%~{ * ~A~^~%~}"
+                       projects)))))
 
 (define-condition ros-command-error (qlot-error)
   ((message :initarg :message))

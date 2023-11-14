@@ -3,7 +3,9 @@
   (:shadow #:remove)
   (:import-from #:qlot/logger
                 #:message)
-  (:import-from #:qlot/errors)
+  (:import-from #:qlot/errors
+                #:missing-projects
+                #:unnecessary-projects)
   (:import-from #:qlot/color
                 #:*enable-color*)
   (:import-from #:qlot/utils/cli
@@ -59,6 +61,20 @@
                                             (uiop:ensure-absolute-pathname
                                               (uiop:ensure-directory-pathname cache)
                                               *default-pathname-defaults*)))))
+
+(defun check ()
+  (unless (find-package :qlot/install)
+    (let ((*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (asdf:load-system :qlot/install)))
+  (handler-case
+      (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)
+    ((or
+      missing-projects
+      unnecessary-projects) (e)
+      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+      (format *error-output* "~C[33mMake it up-to-date with `qlot install`.~:*~C[0m~%" #\Esc)
+      (uiop:quit 1))))
 
 (defun init ()
   (unless (find-package :qlot/install)
@@ -395,6 +411,8 @@ OPTIONS:
                (unless argv
                  (qlot/errors:ros-command-error "requires project names to remove"))
                (remove argv))
+              ((equal "check" $1)
+               (check))
               ((equal "bundle" $1)
                (apply #'bundle (parse-bundle-argv argv)))
               ((equal "--version" $1)
