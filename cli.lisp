@@ -65,11 +65,7 @@
     (let ((*standard-output* (make-broadcast-stream))
           (*trace-output* (make-broadcast-stream)))
       (asdf:load-system :qlot/install)))
-  (let ((project-names
-          (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)))
-    (when project-names
-      ;; TODO: message
-      (uiop:quit -1))))
+  (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*))
 
 (defun init ()
   (unless (find-package :qlot/install)

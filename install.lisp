@@ -48,7 +48,9 @@
                 #:tmp-directory
                 #:delete-tmp-directory)
   (:import-from #:qlot/errors
-                #:qlot-simple-error)
+                #:qlot-simple-error
+                #:missing-projects
+                #:unnecessary-projects)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-qlfile
@@ -268,8 +270,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                  (source= source lock-source))))
                         sources)))
       (when old-sources
-        (error 'qlot-simple-error
-               :format-control "Lock file is not up-to-date.")))
+        (error 'missing-projects
+               :projects (mapcar #'source-project-name old-sources))))
     ;; Check if all dists are installed and up-to-date
     (let* ((qlhome (merge-pathnames *qlot-directory* qlfile))
            (source-registry-up-to-date
@@ -295,13 +297,16 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                  (source-version source))))))
                              sources)))
             (when old-sources
-              (error 'qlot-simple-error
-                     :format-control "Require to install or update dists."))))
+              (error 'missing-projects
+                     :projects (mapcar #'source-project-name old-sources)))))
         (with-package-functions #:ql-dist (all-dists name)
-          (dolist (dist (all-dists))
-            (unless (find (name dist) sources :test #'string= :key #'source-dist-name)
-              (error 'qlot-simple-error
-                     :format-control "Require to remove dists.")))))))
+          (let ((extra-dists
+                  (remove-if (lambda (dist-name)
+                               (find dist-name sources :test #'string= :key #'source-dist-name))
+                             (mapcar #'name (all-dists)))))
+            (when extra-dists
+              (error 'unnecessary-projects
+                     :projects extra-dists)))))))
   (message "Lock file is up-to-date."))
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory)
