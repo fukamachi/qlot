@@ -263,6 +263,9 @@ COMMANDS:
     remove [project name..]
         Remove specific projects from 'qlfile' and trigger 'qlot install'.
 
+    check
+        Verify if dependencies are satisfied.
+
     run
         Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
 
