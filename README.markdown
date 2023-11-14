@@ -303,12 +303,12 @@ Here are few useful commands:
 * `qlot exec ros build some-app.ros` - another command, useful, to build a binary
   from systems, fixed in `qlfile` and `qlfile.lock`. This way you can be sure that your builds are stable.
 
-**NOTE**: `qlot exec` only affects `ros` or Roswell scripts.
+**NOTE**: `qlot exec` only affects `ros`, `sbcl` or Roswell scripts.
 
-If you're using Qlot without Roswell, load `.qlot/setup.lisp` instead, like:
+Since it's the same as loading `.qlot/setup.lisp`, you can still use the project-local Quicklisp by loading it, like:
 
 ```
-$ sbcl --noinform --no-userinit --no-sysinit --load .qlot/setup.lisp
+$ ccl --load .qlot/setup.lisp
 ```
 
 ## `qlfile` syntax
