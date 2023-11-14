@@ -253,10 +253,17 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun check-qlfile (qlfile)
   (let ((sources (read-qlfile-for-install qlfile :silent t))
-        (qlfile.lock (find-lock qlfile)))
+        (qlfile.lock (find-lock qlfile))
+        (qlhome (merge-pathnames *qlot-directory* qlfile)))
+
     (unless qlfile.lock
       (error 'qlot-simple-error
              :format-control "Lock file does not exist."))
+
+    (unless (uiop:file-exists-p (merge-pathnames #P"setup.lisp" qlhome))
+      (error 'qlot-simple-error
+             :format-control "Directory ~S does not exist." qlhome))
+
     ;; Check if qlfile.lock is up-to-date
     (let* ((lock-sources (parse-qlfile-lock qlfile.lock))
            (lock-sources (mapcar #'defrost-source lock-sources))
@@ -272,18 +279,21 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (when old-sources
         (error 'missing-projects
                :projects (mapcar #'source-project-name old-sources))))
+
+    (unless (find-package '#:ql)
+      (load (merge-pathnames #P"setup.lisp" qlhome)))
+
     ;; Check if all dists are installed and up-to-date
-    (let* ((qlhome (merge-pathnames *qlot-directory* qlfile))
-           (source-registry-up-to-date
-             (or (not (find-if (lambda (source)
-                                 (typep source 'source-local))
-                               sources))
-                 (and (uiop:file-exists-p (merge-pathnames #P"source-registry.conf" qlhome))
-                      (let ((source-registry-conf
-                              (with-output-to-string (s)
-                                (dump-source-registry-conf s sources))))
-                        (equal source-registry-conf
-                               (uiop:read-file-string (merge-pathnames #P"source-registry.conf" qlhome))))))))
+    (let ((source-registry-up-to-date
+            (or (not (find-if (lambda (source)
+                                (typep source 'source-local))
+                              sources))
+                (and (uiop:file-exists-p (merge-pathnames #P"source-registry.conf" qlhome))
+                     (let ((source-registry-conf
+                             (with-output-to-string (s)
+                               (dump-source-registry-conf s sources))))
+                       (equal source-registry-conf
+                              (uiop:read-file-string (merge-pathnames #P"source-registry.conf" qlhome))))))))
       (with-quicklisp-home qlhome
         (with-package-functions #:ql-dist (find-dist version)
           (let ((old-sources
