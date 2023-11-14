@@ -349,6 +349,26 @@ OPTIONS:
         (return (list (or project-root *default-pathname-defaults*)
                       :exclude exclude))))
 
+(defun append-load-setup-to-argv (argv)
+  (flet ((runtime-option-p (option)
+           (and (member option
+                        '("--help" "--version" "--core" "--dynamic-space-size" "--control-stack-size" "--tls-limit")
+                        :test 'equal)
+                t))
+         (option-string-p (option)
+           (starts-with "--" option)))
+    (let ((start-pos
+            (position-if (lambda (option)
+                           (and (option-string-p option)
+                                (not (runtime-option-p option))))
+                         argv)))
+      (append (subseq argv 0 (and start-pos
+                                  (1+ start-pos)))
+              (list "--load" ".qlot/setup.lisp")
+              (if start-pos
+                  (subseq argv (1+ start-pos))
+                  nil)))))
+
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
   (unless (uiop:getenv "QUICKLISP_HOME")
@@ -397,12 +417,19 @@ OPTIONS:
 
                (let ((command (or (which (first argv))
                                   (first argv))))
-                 (unless (or (member (file-namestring command)
-                                     '("ros")
-                                     :test 'equal)
-                             (ros-script-p command))
-                   (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))
-                 (exec (cons command (rest argv)))))
+                 (exec
+                  (cons
+                   command
+                   (case-equal (file-namestring command)
+                     ("ros"
+                      (rest argv))
+                     ("sbcl"
+                      #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
+                      (append-load-setup-to-argv (rest argv)))
+                     (otherwise
+                      (if (ros-script-p command)
+                          (rest argv)
+                          (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
               ((equal "add" $1)
                (unless argv
                  (qlot/errors:ros-command-error "requires a new library information."))
