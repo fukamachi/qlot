@@ -2,10 +2,6 @@
   (:use #:cl)
   (:import-from #:qlot/logger
                 #:message)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
-  (:import-from #:qlot/utils/shell
-                #:run-lisp)
   (:import-from #:qlot/utils/file
                 #:copy-directory)
   (:export #:install-quicklisp
@@ -34,21 +30,9 @@
                       "tmp/")))
   t)
 
-(defun install-quicklisp-with-installer (path)
-  (let ((quicklisp-file (asdf:system-relative-pathname :qlot #P"quicklisp/quicklisp-installer.lisp")))
-    (run-lisp (list
-               `(let ((*standard-output* (make-broadcast-stream)))
-                  (load ,quicklisp-file))
-               "(setf quicklisp-quickstart:*after-initial-setup-message* \"\")"
-               (format nil "(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (quicklisp-quickstart:install :path #P\"~A\"~@[ :proxy \"~A\"~]))"
-                       path
-                       *proxy*))))
-  t)
-
 (defun install-quicklisp (path)
   (message "Installing Quicklisp to ~A..." path)
-  (if (uiop:file-exists-p (asdf:system-relative-pathname :qlot #P"quicklisp-client/setup.lisp"))
-      (install-quicklisp-from-subdir path)
-      (install-quicklisp-with-installer path))
+  (assert (uiop:file-exists-p (asdf:system-relative-pathname :qlot #P"quicklisp-client/setup.lisp")))
+  (install-quicklisp-from-subdir path)
   (copy-local-init-files path)
   t)
