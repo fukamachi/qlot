@@ -1,8 +1,8 @@
-(defpackage #:qlot/tests/utils
+(defpackage #:qlot-tests/utils
   (:use #:cl
         #:rove
         #:qlot/utils))
-(in-package #:qlot/tests/utils)
+(in-package #:qlot-tests/utils)
 
 (deftest make-keyword-tests
   (ok (eq (make-keyword "foo") :foo))

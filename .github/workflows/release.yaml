@@ -21,7 +21,7 @@ jobs:
       - name: Setup Qlot
         run: scripts/setup.sh
       - name: Bundle dependencies
-        run: scripts/run.sh bundle --exclude qlot/tests --exclude "qlot/tests/*"
+        run: scripts/run.sh bundle --exclude qlot-tests --exclude "qlot-tests/*"
       - name: Create a bundled tarball
         run: |
           tar cvfz /tmp/qlot-${{ github.ref_name }}.tar.gz --exclude '.git' --exclude '.qlot' --exclude '.github' -C ../ qlot
