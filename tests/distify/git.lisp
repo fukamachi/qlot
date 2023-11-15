@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/distify/git
+(defpackage #:qlot-tests/distify/git
   (:use #:cl
         #:rove
         #:qlot/distify/git)
@@ -11,7 +11,7 @@
                 #:tmp-directory)
   (:import-from #:assoc-utils
                 #:aget))
-(in-package #:qlot/tests/distify/git)
+(in-package #:qlot-tests/distify/git)
 
 (defparameter *tmp-directory* (tmp-directory))
 

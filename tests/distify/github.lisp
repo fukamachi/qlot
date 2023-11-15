@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/distify/github
+(defpackage #:qlot-tests/distify/github
   (:use #:cl
         #:rove
         #:qlot/distify/github)
@@ -6,7 +6,7 @@
                 #:make-source)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory))
-(in-package #:qlot/tests/distify/github)
+(in-package #:qlot-tests/distify/github)
 
 (defparameter *tmp-directory* (tmp-directory))
 
