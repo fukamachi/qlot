@@ -1,6 +1,5 @@
 (defpackage #:qlot/cli
   (:use #:cl)
-  (:shadow #:remove)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
@@ -14,150 +13,23 @@
                 #:command-line-arguments
                 #:ros-script-p)
   (:import-from #:qlot/utils
+                #:split-with
+                #:ensure-list
+                #:ensure-cons
                 #:starts-with
                 #:generate-random-string)
-  (:export #:install
-           #:update
-           #:init
-           #:add
-           #:remove
-           #:bundle
+  (:export #:qlot-command
            #:main))
 (in-package #:qlot/cli)
 
-(defun install (&optional targets &rest options)
-  ;; Requires no targets or a single target
-  (unless (or (null targets)
-              (not (null (cdr targets))))
-    (qlot/errors:ros-command-error "Too many arguments: ~{~A~^, ~}" targets))
-  (unless (find-package :qlot/install)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/install)))
-  (let ((object (or (first targets)
-                    *default-pathname-defaults*)))
-    (destructuring-bind (&key install-deps cache) options
-      (uiop:symbol-call '#:qlot/install '#:install-project
-                        (pathname object)
-                        :install-deps install-deps
-                        :cache-directory (and cache
-                                              (uiop:ensure-absolute-pathname
-                                               (uiop:ensure-directory-pathname cache)
-                                               *default-pathname-defaults*))))))
-
-(defun update (&optional targets &rest args)
-  (unless (find-package :qlot/install)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/install)))
-  (destructuring-bind (&key projects install-deps cache) args
-    (when projects
-      (qlot/errors:ros-command-warn "'--project' option is deprecated. Please use 'qlot update <name>' instead."))
-    (uiop:symbol-call '#:qlot/install '#:update-project
-                      (pathname *default-pathname-defaults*)
-                      :projects (append targets projects)
-                      :install-deps install-deps
-                      :cache-directory (and cache
-                                            (uiop:ensure-absolute-pathname
-                                              (uiop:ensure-directory-pathname cache)
-                                              *default-pathname-defaults*)))))
-
-(defun check ()
-  (unless (find-package :qlot/install)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/install)))
-  (handler-case
-      (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)
-    ((or
-      missing-projects
-      unnecessary-projects) (e)
-      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
-      (format *error-output* "~C[33mMake it up-to-date with `qlot install`.~:*~C[0m~%" #\Esc)
-      (uiop:quit 1))))
-
-(defun init ()
-  (unless (find-package :qlot/install)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/install)))
-  (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
-
-(defun add (args)
-  ;; Complete the source type
-  (unless (member (first args)
-                  '("dist" "git" "github" "http" "local" "ql" "ultralisp")
-                  :test 'equal)
-    (setf args
-          (if (find #\/ (first args) :test 'char=)
-              (cons "github" args)
-              (cons "ql" args))))
-
-  (setf args
-        (mapcar (lambda (arg)
-                  (if (starts-with "--" arg)
-                      (format nil ":~A" (subseq arg 2))
-                      arg))
-                args))
-
-  (unless (find-package :qlot/add)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/add)))
-  (unless (find-package :qlot/install)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/install)))
-  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install)))
-        (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
-                                     (uiop:temporary-directory))))
-    (unless (uiop:file-exists-p qlfile)
-      (message "Creating ~A" qlfile)
-      (with-open-file (out qlfile :if-does-not-exist :create)
-        (declare (ignorable out))))
-    (uiop:copy-file qlfile qlfile.bak)
-    (uiop:symbol-call '#:qlot/add '#:add-project args qlfile)
-    (handler-bind ((error
-                     (lambda (e)
-                       (declare (ignore e))
-                       (uiop:copy-file qlfile.bak qlfile))))
-      (install))))
-
-(defun remove (targets)
-  (unless (find-package :qlot/add)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/add)))
-  (unless (find-package :qlot/install)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/install)))
-  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
-    (when (uiop:file-exists-p qlfile)
-      (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
-                                         (uiop:temporary-directory))))
-        (uiop:copy-file qlfile qlfile.bak)
-        (let ((removed-projects
-                (uiop:symbol-call '#:qlot/add '#:remove-project targets qlfile)))
-          (unless removed-projects
-            (message "Nothing to remove in '~A'." qlfile)
-            (return-from remove))
-
-          (handler-bind ((error
-                           (lambda (e)
-                             (declare (ignore e))
-                             (uiop:copy-file qlfile.bak qlfile))))
-            (install)))))))
-
-(defun bundle (&optional (project-root *default-pathname-defaults*) &rest args)
-  (unless (find-package :qlot/bundle)
-    (let ((*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (asdf:load-system :qlot/bundle)))
-  (destructuring-bind (&key exclude) args
-    (uiop:symbol-call '#:qlot/bundle '#:bundle-project
-                      (uiop:ensure-directory-pathname project-root)
-                      :exclude exclude)))
+(defun ensure-package-loaded (package-names)
+  (let ((package-names (ensure-list package-names))
+        (*standard-output* (make-broadcast-stream))
+        (*trace-output* (make-broadcast-stream)))
+    (dolist (package-name package-names)
+      (check-type package-name keyword)
+      (unless (find-package package-name)
+        (asdf:load-system package-name)))))
 
 (defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
   (fresh-line *error-output*)
@@ -230,13 +102,6 @@ in CL_SOURCE_REGISTRY environment variable."
                                    :test #'equal)
                              ,@body))))))
 
-(defun split (div sequence)
-  (let ((pos (position div sequence)))
-    (if pos
-        (list* (subseq sequence 0 pos)
-               (split div (subseq sequence (1+ pos))))
-        (list sequence))))
-
 (defun print-usage ()
   (format *error-output*
           "~&Usage: ~A COMMAND [ARGS..]
@@ -293,65 +158,6 @@ OPTIONS:
   (format t "~&Qlot ~A~%"
           (asdf:component-version (asdf:find-system :qlot))))
 
-(defun parse-argv (argv)
-  (loop with targets = nil
-        with projects = '()
-        with install-deps = t
-        with cache = nil
-        for option = (pop argv)
-        while option
-        do (case-equal option
-             ("--project"
-              (unless argv
-                (qlot/errors:ros-command-error "--project requires a project name"))
-              (setf projects
-                    (append projects
-                            (cl:remove ""
-                                       (split #\, (pop argv))
-                                       :test 'equal))))
-             ("--version"
-              (print-version)
-              (uiop:quit -1))
-             ("--debug"
-              (setf qlot/logger:*debug* t))
-             ("--no-deps"
-              (setf install-deps nil))
-             ("--cache"
-              (setf cache (pop argv)))
-             (otherwise
-              (if (and (<= 2 (length option))
-                       (string= option "--" :end1 2))
-                  (qlot/errors:ros-command-error "'~A' is unknown option" option)
-                  (push option targets))))
-        finally
-           (return
-             (append (list targets
-                           :install-deps install-deps)
-                     (when projects
-                       (list :projects projects))
-                     (when cache
-                       (list :cache cache))))))
-
-(defun parse-bundle-argv (argv)
-  (loop with project-root = nil
-        with exclude = '()
-        for option = (pop argv)
-        while option
-        do (case-equal option
-             ("--debug"
-              (setf qlot/logger:*debug* t))
-             ("--exclude"
-              (unless argv
-                (qlot/errors:ros-command-error "--exclude requires a system name"))
-              (push (pop argv) exclude))
-             (otherwise
-              (if project-root
-                  (qlot/errors:ros-command-error "'~A' is invalid argument" option)
-                  (setf project-root option))))
-        finally
-        (return (list (or project-root *default-pathname-defaults*)
-                      :exclude exclude))))
-
 (defun append-load-setup-to-argv (argv)
   (flet ((runtime-option-p (option)
            (and (member option
@@ -398,6 +204,214 @@ OPTIONS:
          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
+(defmacro do-options ((option argv) &rest clauses)
+  (let ((g-argv (gensym "ARGV")))
+    `(loop with ,g-argv = (copy-seq ,argv)
+           for ,option = (pop ,g-argv)
+           while ,option
+           do (case-equal
+               ,option
+               ,@(mapcar (lambda (clause)
+                           (destructuring-bind (case-expr &rest body)
+                               clause
+                             (destructuring-bind (option &optional var)
+                                 (ensure-cons case-expr)
+                               (assert (or (stringp option)
+                                           (eq option 'otherwise)))
+                               `(,option
+                                 ,@(if var
+                                       `((unless ,g-argv
+                                           (qlot/errors:ros-command-error "~A requires a value" ,option))
+                                         (let ((,var (pop ,g-argv)))
+                                           ,@body))
+                                       `((progn ,@body)))))))
+                         clauses)
+               ,@(unless (find 'otherwise clauses
+                               :key #'first
+                               :test 'eq)
+                   `((otherwise (qlot-unknown-option ,option))))))))
+
+(defun qlot-option-debug ()
+  (setf qlot/logger:*debug* t))
+
+(defun qlot-unknown-option (option)
+  (qlot/errors:ros-command-error "'~A' is unknown option" option))
+
+(defun qlot-command-install (argv)
+  (let ((install-deps t)
+        (cache nil))
+    (do-options (option argv)
+      ("--no-deps"
+       (setf install-deps nil))
+      (("--cache" cache-dir)
+       (setf cache cache-dir))
+      ("--debug"
+       (qlot-option-debug)))
+    (ensure-package-loaded :qlot/install)
+    (uiop:symbol-call '#:qlot/install '#:install-project
+                      *default-pathname-defaults*
+                      :install-deps install-deps
+                      :cache-directory (and cache
+                                            (uiop:ensure-absolute-pathname
+                                             (uiop:ensure-directory-pathname cache)
+                                             *default-pathname-defaults*)))))
+
+(defun qlot-command-update (argv)
+  (let ((install-deps t)
+        (cache nil)
+        (projects nil))
+    (do-options (option argv)
+      (("--project" name)
+       (qlot/errors:ros-command-warn "'--project' option is deprecated. Please use 'qlot update <name>' instead.")
+       (setf projects
+             (append projects
+                     (cl:remove ""
+                                (split-with #\, name)
+                                :test 'equal))))
+      ("--no-deps"
+       (setf install-deps nil))
+      (("--cache" cache-dir)
+       (setf cache cache-dir))
+      ("--debug"
+       (qlot-option-debug))
+      (otherwise
+       (if (starts-with "--" option)
+           (qlot-unknown-option option)
+           (setf projects
+                 (append projects (list option))))))
+    (ensure-package-loaded :qlot/install)
+    (uiop:symbol-call '#:qlot/install '#:update-project
+                      *default-pathname-defaults*
+                      :projects projects
+                      :install-deps install-deps
+                      :cache-directory (and cache
+                                            (uiop:ensure-absolute-pathname
+                                             (uiop:ensure-directory-pathname cache)
+                                             *default-pathname-defaults*)))))
+
+(defun qlot-command-init (argv)
+  (when argv
+    (qlot/errors:ros-command-error "extra arguments for 'qlot init'"))
+  (ensure-package-loaded :qlot/install)
+  (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
+
+(defun qlot-command-exec (argv)
+  (unless argv
+    (qlot/errors:ros-command-error "no command given to exec"))
+
+  (use-local-quicklisp)
+
+  (let ((command (or (which (first argv))
+                     (first argv))))
+    (exec
+     (cons
+      command
+      (case-equal (file-namestring command)
+        ("ros"
+         (rest argv))
+        ("sbcl"
+         #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
+         (append-load-setup-to-argv (rest argv)))
+        (otherwise
+         (if (ros-script-p command)
+             (rest argv)
+             (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
+
+(defun qlot-command-add (argv)
+  (unless argv
+    (qlot/errors:ros-command-error "requires a new library information."))
+
+  ;; Complete the source type
+  (unless (member (first argv)
+                  '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                  :test 'equal)
+    (setf argv
+          (if (find #\/ (first argv) :test 'char=)
+              (cons "github" argv)
+              (cons "ql" argv))))
+
+  (setf argv
+        (mapcar (lambda (arg)
+                  (if (starts-with "--" arg)
+                      (format nil ":~A" (subseq arg 2))
+                      arg))
+                argv))
+
+  (ensure-package-loaded '(:qlot/add :qlot/install))
+
+  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install)))
+        (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                     (uiop:temporary-directory))))
+    (unless (uiop:file-exists-p qlfile)
+      (message "Creating ~A" qlfile)
+      (with-open-file (out qlfile :if-does-not-exist :create)
+        (declare (ignorable out))))
+    (uiop:copy-file qlfile qlfile.bak)
+    (uiop:symbol-call '#:qlot/add '#:add-project argv qlfile)
+    (handler-bind ((error
+                     (lambda (e)
+                       (declare (ignore e))
+                       (uiop:copy-file qlfile.bak qlfile))))
+      (qlot-command-install nil))))
+
+(defun qlot-command-remove (argv)
+  (unless argv
+    (qlot/errors:ros-command-error "requires project names to remove"))
+  (ensure-package-loaded '(:qlot/add :qlot/install))
+  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
+    (when (uiop:file-exists-p qlfile)
+      (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                         (uiop:temporary-directory))))
+        (uiop:copy-file qlfile qlfile.bak)
+        (let ((removed-projects
+                (uiop:symbol-call '#:qlot/add '#:remove-project argv qlfile)))
+          (unless removed-projects
+            (message "Nothing to remove in '~A'." qlfile)
+            (return-from qlot-command-remove))
+
+          (handler-bind ((error
+                           (lambda (e)
+                             (declare (ignore e))
+                             (uiop:copy-file qlfile.bak qlfile))))
+            (qlot-command-install nil)))))))
+
+(defun qlot-command-check (argv)
+  (when argv
+    (qlot/errors:ros-command-error "extra arguments for 'qlot check'"))
+  (ensure-package-loaded :qlot/install)
+  (handler-case
+      (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)
+    ((or
+      missing-projects
+      unnecessary-projects) (e)
+      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+      (format *error-output* "~C[33mMake it up-to-date with `qlot install`.~:*~C[0m~%" #\Esc)
+      (uiop:quit 1))))
+
+(defun qlot-command-bundle (argv)
+  (let (exclude)
+    (do-options (option argv)
+      ("--debug"
+       (qlot-option-debug))
+      (("--exclude" name)
+       (setf exclude
+             (append exclude
+                     (list name)))))
+    (ensure-package-loaded :qlot/bundle)
+    (uiop:symbol-call '#:qlot/bundle '#:bundle-project
+                      *default-pathname-defaults*
+                      :exclude exclude)))
+
+(defun qlot-command-toplevel (argv)
+  (do-options (option argv)
+    ("--version"
+     (print-version)
+     (uiop:quit -1))
+    (otherwise
+     (error 'qlot/errors:command-not-found :command option)))
+  (print-usage)
+  (uiop:quit -1))
+
 (defun qlot-command (&optional $1 &rest argv)
   (let ((*enable-color* t))
     (handler-bind ((qlot/errors:qlot-warning
@@ -408,50 +422,25 @@ OPTIONS:
                        (invoke-restart (find-restart 'continue c)))))
       (handler-case
           (cond ((equal "install" $1)
-                 (apply #'install (parse-argv argv)))
+                 (qlot-command-install argv))
                 ((equal "update" $1)
-                 (apply #'qlot/cli:update (parse-argv argv)))
+                 (qlot-command-update argv))
                 ((equal "init" $1)
-                 (qlot/cli:init))
+                 (qlot-command-init argv))
                 ((equal "exec" $1)
-                 (unless argv
-                   (qlot/errors:ros-command-error "no command given to exec"))
-
-                 (use-local-quicklisp)
-
-                 (let ((command (or (which (first argv))
-                                    (first argv))))
-                   (exec
-                    (cons
-                     command
-                     (case-equal (file-namestring command)
-                                 ("ros"
-                                  (rest argv))
-                                 ("sbcl"
-                                  #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
-                                  (append-load-setup-to-argv (rest argv)))
-                                 (otherwise
-                                  (if (ros-script-p command)
-                                      (rest argv)
-                                      (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
+                 (qlot-command-exec argv))
                 ((equal "add" $1)
-                 (unless argv
-                   (qlot/errors:ros-command-error "requires a new library information."))
-                 (add argv))
+                 (qlot-command-add argv))
                 ((equal "remove" $1)
-                 (unless argv
-                   (qlot/errors:ros-command-error "requires project names to remove"))
-                 (remove argv))
+                 (qlot-command-remove argv))
                 ((equal "check" $1)
-                 (check))
+                 (qlot-command-check argv))
                 ((equal "bundle" $1)
-                 (apply #'bundle (parse-bundle-argv argv)))
-                ((equal "--version" $1)
-                 (print-version)
-                 (uiop:quit -1))
+                 (qlot-command-bundle argv))
+                ((and $1 (starts-with "--" $1))
+                 (qlot-command-toplevel (cons $1 argv)))
                 ((null $1)
-                 (print-usage)
-                 (uiop:quit -1))
+                 (qlot-command-toplevel nil))
                 (t (error 'qlot/errors:command-not-found :command $1)))
         #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
         (qlot/errors:command-not-found (e)
