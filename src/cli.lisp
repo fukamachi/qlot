@@ -108,37 +108,14 @@ in CL_SOURCE_REGISTRY environment variable."
           "~&Usage: ~A COMMAND [ARGS..]
 
 COMMANDS:
-    init
-        Initialize a project to start using Qlot.
-
-    install
-        Installs libraries to './.qlot'.
-
-    update [library name..]
-        Update specific libraries and rewrite their versions in 'qlfile.lock'.
-
-    add [project name]
-    add [source] [project name] [arg1, arg2..]
-        Add a new library to qlfile and trigger 'qlot install'.
-        ex)
-          $ qlot add mito       # Add 'ql mito'
-          $ qlot add ql mito    # Same as the above
-          $ qlot add ultralisp egao1980-cl-idna
-          $ qlot add github datafly fukamachi/datafly
-
-    remove [project name..]
-        Remove specific projects from 'qlfile' and trigger 'qlot install'.
-
-    check
-        Verify if dependencies are satisfied.
-
-    exec [shell-args..]
-        Invokes the following shell-command with the project local Quicklisp.
-
-    bundle
-        Bundles project dependencies to './.bundle-libs'.
-        Load './.bundle-libs/bundle.lisp' to make them available.
-        Read https://www.quicklisp.org/beta/bundles.html for the detail.
+    init     Initialize a project to start using Qlot.
+    install  Install libraries to './.qlot'.
+    update   Update specific libraries and rewrite their versions in 'qlfile.lock'.
+    add      Add a new library to qlfile and trigger 'qlot install'.
+    remove   Remove specific projects from 'qlfile' and trigger 'qlot install'.
+    check    Verify if dependencies are satisfied.
+    exec     Invoke the following shell-command with the project local Quicklisp.
+    bundle   Bundles project dependencies to './.bundle-libs'.
 
 OPTIONS:
     --version
@@ -146,6 +123,8 @@ OPTIONS:
     --help
         Show help. This option can be used for subcommands.
         ex) qlot add --help
+
+Run 'qlot COMMAND --help' for more information on a subcommand.
 "
           "qlot"))
 
