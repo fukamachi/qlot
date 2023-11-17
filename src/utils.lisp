@@ -12,7 +12,9 @@
            #:pathname-in-directory-p
            #:merge-hash-tables
            #:octets-stream-to-string
-           #:https-of))
+           #:https-of
+           #:ensure-list
+           #:ensure-cons))
 (in-package #:qlot/utils)
 
 (defun make-keyword (text)
@@ -107,3 +109,13 @@ with the same key."
            (search "http://" url :end2 7))
       (format nil "https://~A" (subseq url 7))
       url))
+
+(defun ensure-list (object)
+  (if (listp object)
+      object
+      (list object)))
+
+(defun ensure-cons (object)
+  (if (consp object)
+      object
+      (list object)))
