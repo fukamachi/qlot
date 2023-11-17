@@ -115,7 +115,7 @@ COMMANDS:
     remove   Remove specific projects from 'qlfile' and trigger 'qlot install'.
     check    Verify if dependencies are satisfied.
     exec     Invoke the following shell-command with the project local Quicklisp.
-    bundle   Bundles project dependencies to './.bundle-libs'.
+    bundle   Bundle project dependencies to './.bundle-libs'.
 
 OPTIONS:
     --version
