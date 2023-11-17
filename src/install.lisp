@@ -72,7 +72,7 @@
                                            :key #'name
                                            :test 'equal
                                            :from-end t)))
-          (format t "~&Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed.~%" (length releases))
+          (progress "Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed." (length releases))
           (mapc #'ensure-installed releases))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home
