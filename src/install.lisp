@@ -77,7 +77,8 @@
 
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
-                                   cache-directory)
+                                   cache-directory
+                                   quiet)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlot-simple-error
            :format-control "File does not exist: ~A"
@@ -100,7 +101,8 @@
 
     (with-secure-installer (:no-logs t)
       (apply-qlfile-to-qlhome qlfile quicklisp-home
-                              :cache-directory cache-directory)
+                              :cache-directory cache-directory
+                              :quiet quiet)
 
       ;; Install project dependencies
       (when install-deps
@@ -112,7 +114,8 @@
 (defun update-qlfile (qlfile &key quicklisp-home
                                   projects
                                   (install-deps t)
-                                  cache-directory)
+                                  cache-directory
+                                  quiet)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlot-simple-error
            :format-control "Failed to update because the file '~A' does not exist."
@@ -134,7 +137,8 @@
       (apply-qlfile-to-qlhome qlfile quicklisp-home
                               :ignore-lock t
                               :projects projects
-                              :cache-directory cache-directory)
+                              :cache-directory cache-directory
+                              :quiet quiet)
 
       ;; Install project dependencies
       (when install-deps
@@ -319,7 +323,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :projects extra-dists)))))))
   (message "Lock file is up-to-date."))
 
-(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory)
+(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory quiet)
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
@@ -348,9 +352,10 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      ((and (slot-boundp source 'qlot/source/base::version)
                            (equal (version dist)
                                   (source-version source)))
-                      (message "Already have dist ~S version ~S."
-                               (source-project-name source)
-                               (source-version source)))
+                      (unless quiet
+                        (message "Already have dist ~S version ~S."
+                                 (source-project-name source)
+                                 (source-version source))))
                      ((string= (source-dist-name source) "quicklisp")
                       (message "Installing dist ~S." (source-project-name source))
                       (with-package-functions #:ql-dist (uninstall version)
@@ -405,43 +410,50 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
      (merge-pathnames *default-qlfile* (uiop:ensure-directory-pathname object)))
     (t object)))
 
-(defun install-project (object &key (install-deps t) cache-directory)
+(defun install-project (object &key (install-deps t) cache-directory quiet)
   (etypecase object
     ((or symbol string)
      (install-project (asdf:find-system object)
                       :install-deps install-deps
-                      :cache-directory cache-directory))
+                      :cache-directory cache-directory
+                      :quiet quiet))
     (asdf:system
       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                       :quicklisp-home (asdf:system-relative-pathname
                                        object *qlot-directory*)
                       :install-deps install-deps
-                      :cache-directory cache-directory))
+                      :cache-directory cache-directory
+                      :quiet quiet))
     (pathname
       (install-qlfile (ensure-qlfile-pathname object)
                       :install-deps install-deps
-                      :cache-directory cache-directory))))
+                      :cache-directory cache-directory
+                      :quiet quiet))))
 
 (defun update-project (object &key projects
                                    (install-deps t)
-                                   cache-directory)
+                                   cache-directory
+                                   quiet)
   (etypecase object
     ((or symbol string)
      (update-project (asdf:find-system object)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory))
+                     :cache-directory cache-directory
+                     :quiet quiet))
     (asdf:system
       (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory))
+                     :cache-directory cache-directory
+                     :quiet quiet))
     (pathname
       (update-qlfile (ensure-qlfile-pathname object)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory))))
+                     :cache-directory cache-directory
+                     :quiet quiet))))
 
 (defun check-project (object)
   (etypecase object
