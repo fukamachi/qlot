@@ -9,7 +9,7 @@
                 #:with-package-functions)
   (:import-from #:qlot/logger
                 #:*debug*
-                #:message
+                #:progress
                 #:debug-log)
   (:export #:*qlot-directory*
            #:local-quicklisp-installed-p
@@ -44,14 +44,16 @@
     (let ((all-dependencies '())
           (pis-already-seen-files '())
           (loaded-asd-files '())
-          (project-system-names '()))
+          (project-system-names '())
+          (file-counts 0))
       (with-directory (system-file system-name dependencies) project-root
         (pushnew system-name project-system-names :test 'equal)
         (when (or (null test)
                   (funcall test system-name))
           (unless (find system-file loaded-asd-files :test 'equal)
             (push system-file loaded-asd-files)
-            (message "Loading '~A'..." system-file)
+            (progress "Loading '~A'..." system-file)
+            (incf file-counts)
             (let ((errout *error-output*))
               (handler-bind ((error
                                (lambda (e)
@@ -87,6 +89,7 @@
             (debug-log "'~A' requires ~S" system-name dependencies)
             (setf all-dependencies
                   (nconc all-dependencies dependencies)))))
+      (progress "Loaded ~A system files." file-counts)
       (with-package-functions #:ql-dist (required-systems name)
         (let ((already-seen (make-hash-table :test 'equal)))
           (labels ((find-system-with-fallback (system-name)
