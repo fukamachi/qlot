@@ -6,7 +6,8 @@
                 #:missing-projects
                 #:unnecessary-projects)
   (:import-from #:qlot/color
-                #:*enable-color*)
+                #:*enable-color*
+                #:color-text)
   (:import-from #:qlot/utils/cli
                 #:exec
                 #:which
@@ -113,12 +114,12 @@ COMMANDS:
     install
         Installs libraries to './.qlot'.
 
-    update [project name..]
-        Update specific projects and rewrite their versions in 'qlfile.lock'.
+    update [library name..]
+        Update specific libraries and rewrite their versions in 'qlfile.lock'.
 
     add [project name]
     add [source] [project name] [arg1, arg2..]
-        Add a new library to qlfile and trigger 'qlot install'. (experimental)
+        Add a new library to qlfile and trigger 'qlot install'.
         ex)
           $ qlot add mito       # Add 'ql mito'
           $ qlot add ql mito    # Same as the above
@@ -131,9 +132,6 @@ COMMANDS:
     check
         Verify if dependencies are satisfied.
 
-    run
-        Starts REPL with the project local Quicklisp dists (Same as 'qlot exec ros run').
-
     exec [shell-args..]
         Invokes the following shell-command with the project local Quicklisp.
 
@@ -145,12 +143,9 @@ COMMANDS:
 OPTIONS:
     --version
         Show the Qlot version
-    --debug
-        A flag to enable debug logging. (Only for 'install' or 'update')
-    --no-deps
-        Don't install dependencies of all systems from the current directory.
-    --cache [directory]
-        Keep intermediate files for fast reinstallation.
+    --help
+        Show help. This option can be used for subcommands.
+        ex) qlot add --help
 "
           "qlot"))
 
@@ -204,10 +199,12 @@ OPTIONS:
          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
-(defmacro do-options ((option argv) &rest clauses)
+(defmacro do-options ((option argv &optional rest-options) &rest clauses)
   (let ((g-argv (gensym "ARGV")))
     `(loop with ,g-argv = (copy-seq ,argv)
            for ,option = (pop ,g-argv)
+           ,@(when rest-options
+               `(for ,rest-options = ,g-argv))
            while ,option
            do (case-equal
                ,option
@@ -246,7 +243,23 @@ OPTIONS:
       (("--cache" cache-dir)
        (setf cache cache-dir))
       ("--debug"
-       (qlot-option-debug)))
+       (qlot-option-debug))
+      ("--help"
+       (format *error-output*
+               "~&qlot install - Install libraries to './.qlot'.
+
+SYNOPSIS:
+    qlot install [--no-deps] [--cache DIRECTORY]
+
+OPTIONS:
+    --no-deps
+        Don't install dependencies of all systems from the current directory.
+    --cache [directory]
+        Keep intermediate files for fast reinstallation.
+    --debug
+        A flag to enable debug logging.
+")
+       (uiop:quit -1)))
     (ensure-package-loaded :qlot/install)
     (uiop:symbol-call '#:qlot/install '#:install-project
                       *default-pathname-defaults*
@@ -274,6 +287,22 @@ OPTIONS:
        (setf cache cache-dir))
       ("--debug"
        (qlot-option-debug))
+      ("--help"
+       (format *error-output*
+               "~&qlot update - Update specific libraries.
+
+SYNOPSIS:
+    qlot update [name...] [--no-deps] [--cache DIRECTORY]
+
+OPTIONS:
+    --no-deps
+        Don't install dependencies of all systems from the current directory.
+    --cache [directory]
+        Keep intermediate files for fast reinstallation.
+    --debug
+        A flag to enable debug logging.
+")
+       (uiop:quit -1))
       (otherwise
        (if (starts-with "--" option)
            (qlot-unknown-option option)
@@ -290,14 +319,63 @@ OPTIONS:
                                              *default-pathname-defaults*)))))
 
 (defun qlot-command-init (argv)
-  (when argv
-    (qlot/errors:ros-command-error "extra arguments for 'qlot init'"))
+  (flet ((print-init-usage ()
+           (format *error-output* "~&qlot init - Initialize a project for Qlot
+
+SYNOPSIS:
+    qlot init
+")
+           (uiop:quit -1)))
+
+    (do-options (option argv)
+      ("--help"
+       (print-init-usage))
+      (otherwise
+       (format *error-output*
+               (color-text :red "qlot: extra arguments for 'qlot init'"))
+       (print-init-usage))))
+
   (ensure-package-loaded :qlot/install)
   (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
 
 (defun qlot-command-exec (argv)
-  (unless argv
-    (qlot/errors:ros-command-error "no command given to exec"))
+  (flet ((print-exec-usage ()
+           (format *error-output* "~&qlot exec - Invoke the following shell-command with the project-local Quicklisp
+
+SYNOPSYS:
+    qlot exec [shell-args..]
+
+EXAMPLES:
+    qlot exec sbcl
+    qlot exec ros run
+
+NOTE:
+    `qlot exec` only affects `ros`, `sbcl` or Roswell scripts.
+    Since it's the same as loading `.qlot/setup.lisp`, you can still use the project-local Quicklisp by loading it, like: `ccl --load .qlot/setup.lisp`.
+")
+           (uiop:quit -1)))
+
+    (unless argv
+      (format *error-output*
+              (color-text :red "qlot: no command given to exec"))
+      (print-exec-usage))
+
+    ;; Parse options
+    (when (starts-with "--" (first argv))
+      (block nil
+        (do-options (option argv rest-argv)
+          ("--help"
+           (print-exec-usage))
+          (otherwise
+           (when (and (starts-with "--" option)
+                      (not (equal "--" option)))
+             (qlot-unknown-option option))
+           (unless rest-argv
+             (format *error-output*
+                     (color-text :red "qlot: no command given to exec"))
+             (print-exec-usage))
+           (setf argv rest-argv)
+           (return))))))
 
   (use-local-quicklisp)
 
@@ -318,17 +396,63 @@ OPTIONS:
              (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
 
 (defun qlot-command-add (argv)
-  (unless argv
-    (qlot/errors:ros-command-error "requires a new library information."))
+  (flet ((print-add-usage ()
+           (format *error-output* "~&qlot add - Add a new library to qlfile and trigger 'qlot install'.
 
-  ;; Complete the source type
-  (unless (member (first argv)
-                  '("dist" "git" "github" "http" "local" "ql" "ultralisp")
-                  :test 'equal)
-    (setf argv
-          (if (find #\/ (first argv) :test 'char=)
-              (cons "github" argv)
-              (cons "ql" argv))))
+SYNOPSIS:
+    qlot add [name] [arg1, arg2..]
+    qlot add [username/repository] [arg1, arg2..]
+    qlot add [source] [name] [arg1, arg2..]
+
+DESCRIPTION:
+    `qlot add` takes a definition as a line in qlfile syntax with the following extensions:
+
+     * If source type is omitted, Qlot assumes that it's `ql` or `github` source.
+       * `qlot add mito` = `qlot add ql mito`
+       * `qlot add fukamachi/mito` = `qlot add github fukamachi/mito`
+     * Shell options (ex. `--upstream`) is treated as a keyword.
+       * `qlot add mito --upstream` = `qlot add mito :upstream`
+
+EXAMPLES:
+    qlot add mito
+    qlot add mito --upstream
+    qlot add fukamachi/mito
+    qlot add fukamachi/mito --ref 8c795b
+    qlot add ultralisp egao1980-cl-idna
+    qlot add git datafly https://github.com/fukamachi/datafly
+")
+           (uiop:quit -1)))
+
+    (unless argv
+      (format *error-output*
+              (color-text :red "qlot: requires a new library information"))
+      (print-add-usage))
+
+    ;; Parse options
+    (when (starts-with "--" (first argv))
+      (block nil
+        (do-options (option argv rest-argv)
+          ("--help"
+           (print-add-usage))
+          (otherwise
+           (when (and (starts-with "--" option)
+                      (not (equal "--" option)))
+             (qlot-unknown-option option))
+           (unless rest-argv
+             (format *error-output*
+                     (color-text :red "qlot: requires a new library information"))
+             (print-add-usage))
+           (setf argv rest-argv)
+           (return)))))
+
+    ;; Complete the source type
+    (unless (member (first argv)
+                    '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                    :test 'equal)
+      (setf argv
+            (if (find #\/ (first argv) :test 'char=)
+                (cons "github" argv)
+                (cons "ql" argv)))))
 
   (setf argv
         (mapcar (lambda (arg)
@@ -355,8 +479,35 @@ OPTIONS:
       (qlot-command-install nil))))
 
 (defun qlot-command-remove (argv)
-  (unless argv
-    (qlot/errors:ros-command-error "requires project names to remove"))
+  (flet ((print-remove-usage ()
+           (format *error-output* "~&qlot remove - Remove specific libraries.
+
+SYNOPSIS:
+    qlot remove [name...]
+")
+           (uiop:quit -1)))
+    (unless argv
+      (format *error-output*
+              (color-text :red "qlot: requires library names to remove"))
+      (print-remove-usage))
+
+    ;; Parse options
+    (when (starts-with "--" (first argv))
+      (block nil
+        (do-options (option argv rest-argv)
+          ("--help"
+           (print-remove-usage))
+          (otherwise
+           (when (and (starts-with "--" option)
+                      (not (equal "--" option)))
+             (qlot-unknown-option option))
+           (unless rest-argv
+             (format *error-output*
+                     (color-text :red "qlot: requires library names to remove"))
+             (print-remove-usage))
+           (setf argv rest-argv)
+           (return))))))
+
   (ensure-package-loaded '(:qlot/add :qlot/install))
   (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
     (when (uiop:file-exists-p qlfile)
@@ -376,8 +527,23 @@ OPTIONS:
             (qlot-command-install nil)))))))
 
 (defun qlot-command-check (argv)
-  (when argv
-    (qlot/errors:ros-command-error "extra arguments for 'qlot check'"))
+  (flet ((print-check-usage ()
+           (format *error-output* "~&qlot check - Verify if dependencies are installed.
+
+SYNOPSIS:
+    qlot check
+")
+           (uiop:quit -1)))
+
+    ;; Parse options
+    (do-options (option argv)
+      ("--help"
+       (print-check-usage))
+      (otherwise
+       (format *error-output*
+               (color-text :red "qlot: extra arguments for 'qlot check'"))
+       (print-check-usage))))
+
   (ensure-package-loaded :qlot/install)
   (handler-case
       (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)
@@ -389,23 +555,50 @@ OPTIONS:
       (uiop:quit 1))))
 
 (defun qlot-command-bundle (argv)
-  (let (exclude)
-    (do-options (option argv)
-      ("--debug"
-       (qlot-option-debug))
-      (("--exclude" name)
-       (setf exclude
-             (append exclude
-                     (list name)))))
-    (ensure-package-loaded :qlot/bundle)
-    (uiop:symbol-call '#:qlot/bundle '#:bundle-project
-                      *default-pathname-defaults*
-                      :exclude exclude)))
+  (flet ((print-bundle-usage ()
+           (format *error-output* "~&qlot bundle - Bundle project dependencies.
+
+SYNOPSIS:
+    qlot bundle [[--exclude SYSTEM-NAME]..]
+
+DESCRIPTION:
+    This command bundles project dependencies to './.bundle-libs'.
+    Load './.bundle-libs/bundle.lisp' to make them available.
+    Read https://www.quicklisp.org/beta/bundles.html for the detail.
+
+OPTIONS:
+    --exclude <system name>
+        Exclude specific system names and those dependencies.
+        This option can be specified multiple times.
+")
+           (uiop:quit -1)))
+    (let (exclude)
+      (do-options (option argv)
+        ("--debug"
+         (qlot-option-debug))
+        (("--exclude" name)
+         (setf exclude
+               (append exclude
+                       (list name))))
+        ("--help"
+         (print-bundle-usage))
+        (otherwise
+         (format *error-output*
+                 (color-text :red "qlot: '~A' is unknown option" option))
+         (print-bundle-usage)))
+
+      (ensure-package-loaded :qlot/bundle)
+      (uiop:symbol-call '#:qlot/bundle '#:bundle-project
+                        *default-pathname-defaults*
+                        :exclude exclude))))
 
 (defun qlot-command-toplevel (argv)
   (do-options (option argv)
     ("--version"
      (print-version)
+     (uiop:quit -1))
+    ("--help"
+     (print-usage)
      (uiop:quit -1))
     (otherwise
      (error 'qlot/errors:command-not-found :command option)))
