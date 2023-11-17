@@ -399,74 +399,74 @@ OPTIONS:
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
 (defun qlot-command (&optional $1 &rest argv)
-  (handler-bind ((qlot/errors:qlot-warning
-                   (lambda (c)
-                     (format *error-output*
-                             "~&~C[33mWARNING: ~A~C[0m~%"
-                             #\Esc c #\Esc)
-                     (invoke-restart (find-restart 'continue c)))))
-    (handler-case
-        (cond ((equal "install" $1)
-               (apply #'install (parse-argv argv)))
-              ((equal "update" $1)
-               (apply #'qlot/cli:update (parse-argv argv)))
-              ((equal "init" $1)
-               (qlot/cli:init))
-              ((equal "exec" $1)
-               (unless argv
-                 (qlot/errors:ros-command-error "no command given to exec"))
+  (let ((*enable-color* t))
+    (handler-bind ((qlot/errors:qlot-warning
+                     (lambda (c)
+                       (format *error-output*
+                               "~&~C[33mWARNING: ~A~C[0m~%"
+                               #\Esc c #\Esc)
+                       (invoke-restart (find-restart 'continue c)))))
+      (handler-case
+          (cond ((equal "install" $1)
+                 (apply #'install (parse-argv argv)))
+                ((equal "update" $1)
+                 (apply #'qlot/cli:update (parse-argv argv)))
+                ((equal "init" $1)
+                 (qlot/cli:init))
+                ((equal "exec" $1)
+                 (unless argv
+                   (qlot/errors:ros-command-error "no command given to exec"))
 
-               (use-local-quicklisp)
+                 (use-local-quicklisp)
 
-               (let ((command (or (which (first argv))
-                                  (first argv))))
-                 (exec
-                  (cons
-                   command
-                   (case-equal (file-namestring command)
-                     ("ros"
-                      (rest argv))
-                     ("sbcl"
-                      #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
-                      (append-load-setup-to-argv (rest argv)))
-                     (otherwise
-                      (if (ros-script-p command)
-                          (rest argv)
-                          (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
-              ((equal "add" $1)
-               (unless argv
-                 (qlot/errors:ros-command-error "requires a new library information."))
-               (add argv))
-              ((equal "remove" $1)
-               (unless argv
-                 (qlot/errors:ros-command-error "requires project names to remove"))
-               (remove argv))
-              ((equal "check" $1)
-               (check))
-              ((equal "bundle" $1)
-               (apply #'bundle (parse-bundle-argv argv)))
-              ((equal "--version" $1)
-               (print-version)
-               (uiop:quit -1))
-              ((null $1)
-               (print-usage)
-               (uiop:quit -1))
-              (t (error 'qlot/errors:command-not-found :command $1)))
-      #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
-      (qlot/errors:command-not-found (e)
-        (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
-        (print-usage)
-        (uiop:quit -1))
-      (qlot/errors:qlot-error (e)
-        (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
-        (uiop:quit -1)))))
+                 (let ((command (or (which (first argv))
+                                    (first argv))))
+                   (exec
+                    (cons
+                     command
+                     (case-equal (file-namestring command)
+                                 ("ros"
+                                  (rest argv))
+                                 ("sbcl"
+                                  #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
+                                  (append-load-setup-to-argv (rest argv)))
+                                 (otherwise
+                                  (if (ros-script-p command)
+                                      (rest argv)
+                                      (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
+                ((equal "add" $1)
+                 (unless argv
+                   (qlot/errors:ros-command-error "requires a new library information."))
+                 (add argv))
+                ((equal "remove" $1)
+                 (unless argv
+                   (qlot/errors:ros-command-error "requires project names to remove"))
+                 (remove argv))
+                ((equal "check" $1)
+                 (check))
+                ((equal "bundle" $1)
+                 (apply #'bundle (parse-bundle-argv argv)))
+                ((equal "--version" $1)
+                 (print-version)
+                 (uiop:quit -1))
+                ((null $1)
+                 (print-usage)
+                 (uiop:quit -1))
+                (t (error 'qlot/errors:command-not-found :command $1)))
+        #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
+        (qlot/errors:command-not-found (e)
+          (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+          (print-usage)
+          (uiop:quit -1))
+        (qlot/errors:qlot-error (e)
+          (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
+          (uiop:quit -1))))))
 
 (defun main ()
   (destructuring-bind (&optional $0 $1 &rest argv)
       (command-line-arguments)
     (declare (ignore $0))
-    (let ((*enable-color* t))
-      (apply #'qlot-command
-             (if (equal $1 "--") ;; Ignore the first '--'
-                 argv
-                 (cons $1 argv))))))
+    (apply #'qlot-command
+           (if (equal $1 "--") ;; Ignore the first '--'
+               argv
+               (cons $1 argv)))))
