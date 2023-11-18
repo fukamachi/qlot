@@ -42,6 +42,7 @@
                 #:*qlot-directory*
                 #:project-dependencies
                 #:local-quicklisp-installed-p
+                #:check-local-quicklisp
                 #:local-quicklisp-local-init-installed-p
                 #:local-quicklisp-home)
   (:import-from #:qlot/utils/tmp
@@ -50,7 +51,9 @@
   (:import-from #:qlot/errors
                 #:qlot-simple-error
                 #:missing-projects
-                #:unnecessary-projects)
+                #:unnecessary-projects
+                #:qlfile-not-found
+                #:qlfile-lock-not-found)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-qlfile
@@ -80,9 +83,7 @@
                                    cache-directory
                                    quiet)
   (unless (uiop:file-exists-p qlfile)
-    (error 'qlot-simple-error
-           :format-control "File does not exist: ~A"
-           :format-arguments (list qlfile)))
+    (error 'qlfile-not-found :path qlfile))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
@@ -117,18 +118,14 @@
                                   cache-directory
                                   quiet)
   (unless (uiop:file-exists-p qlfile)
-    (error 'qlot-simple-error
-           :format-control "Failed to update because the file '~A' does not exist."
-           :format-arguments (list qlfile)))
+    (error 'qlfile-not-found :path qlfile))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
                              (uiop:ensure-absolute-pathname quicklisp-home)
                              (local-quicklisp-home project-root))))
 
-    (unless (local-quicklisp-installed-p project-root)
-      (error 'qlot-simple-error
-             :format-control "Local Quicklisp is not installed yet."))
+    (check-local-quicklisp project-root)
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
@@ -256,17 +253,18 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
 (defun check-qlfile (qlfile)
-  (let ((sources (read-qlfile-for-install qlfile :silent t))
-        (qlfile.lock (find-lock qlfile))
-        (qlhome (merge-pathnames *qlot-directory* qlfile)))
+  (unless (uiop:file-exists-p qlfile)
+    (error 'qlfile-not-found :path qlfile))
 
-    (unless qlfile.lock
-      (error 'qlot-simple-error
-             :format-control "Lock file does not exist."))
+  (let* ((sources (read-qlfile-for-install qlfile :silent t))
+         (qlfile.lock (find-lock qlfile))
+         (project-root (uiop:pathname-directory-pathname qlfile))
+         (qlhome (merge-pathnames *qlot-directory* project-root)))
 
-    (unless (uiop:file-exists-p (merge-pathnames #P"setup.lisp" qlhome))
-      (error 'qlot-simple-error
-             :format-control "Directory ~S does not exist." qlhome))
+    (unless (uiop:file-exists-p qlfile.lock)
+      (error 'qlfile-lock-not-found :path qlfile.lock))
+
+    (check-local-quicklisp project-root)
 
     ;; Check if qlfile.lock is up-to-date
     (let* ((lock-sources (parse-qlfile-lock qlfile.lock))

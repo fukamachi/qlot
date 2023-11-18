@@ -13,6 +13,8 @@
                 #:which
                 #:command-line-arguments
                 #:ros-script-p)
+  (:import-from #:qlot/utils/project
+                #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
                 #:ensure-list
@@ -366,6 +368,8 @@ NOTE:
              (uiop:quit -1))
            (setf argv rest-argv)
            (return))))))
+
+  (check-local-quicklisp *default-pathname-defaults*)
 
   (use-local-quicklisp)
 

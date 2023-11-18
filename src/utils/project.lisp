@@ -11,8 +11,12 @@
                 #:*debug*
                 #:progress
                 #:debug-log)
+  (:import-from #:qlot/errors
+                #:qlot-directory-not-found
+                #:qlot-directory-invalid)
   (:export #:*qlot-directory*
            #:local-quicklisp-installed-p
+           #:check-local-quicklisp
            #:local-quicklisp-local-init-installed-p
            #:local-quicklisp-home
            #:project-dependencies))
@@ -26,6 +30,15 @@
     (when (and (uiop:directory-exists-p qlhome)
                (uiop:file-exists-p (merge-pathnames "setup.lisp" qlhome)))
       qlhome)))
+
+(defun check-local-quicklisp (project-root)
+  (let ((qlhome (merge-pathnames *qlot-directory* project-root)))
+    (unless (uiop:directory-exists-p qlhome)
+      (error 'qlot-directory-not-found :path qlhome))
+
+    (unless (uiop:file-exists-p (merge-pathnames #P"setup.lisp" qlhome))
+      (error 'qlot-directory-invalid :path qlhome))
+    qlhome))
 
 (defun local-quicklisp-local-init-installed-p (project-root)
   (let ((local-init-dir
