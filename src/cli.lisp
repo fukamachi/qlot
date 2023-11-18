@@ -379,6 +379,13 @@ NOTE:
 
   (check-local-quicklisp *default-pathname-defaults*)
 
+  (ensure-package-loaded :qlot/install)
+  (handler-case
+      (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*
+                        :quiet t)
+    ((or missing-projects unnecessary-projects) ()
+      (qlot/errors:ros-command-warn "Some installed libraries are different from specified versions.~%Run 'qlot install' to fix this problem.")))
+
   (use-local-quicklisp)
 
   (let ((command (or (which (first argv))

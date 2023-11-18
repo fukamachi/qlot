@@ -252,7 +252,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             for (project-name . contents) = (freeze-source source)
             do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
 
-(defun check-qlfile (qlfile)
+(defun check-qlfile (qlfile &key quiet)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
 
@@ -319,7 +319,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             (when extra-dists
               (error 'unnecessary-projects
                      :projects extra-dists)))))))
-  (message "Lock file is up-to-date."))
+  (unless quiet
+    (message "Lock file is up-to-date.")))
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory quiet)
   (let ((sources (read-qlfile-for-install qlfile
@@ -453,14 +454,14 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :cache-directory cache-directory
                      :quiet quiet))))
 
-(defun check-project (object)
+(defun check-project (object &key quiet)
   (etypecase object
     ((or symbol string)
-     (check-project (asdf:find-system object)))
+     (check-project (asdf:find-system object) :quiet quiet))
     (asdf:system
-     (check-qlfile (asdf:system-relative-pathname object *default-qlfile*)))
+     (check-qlfile (asdf:system-relative-pathname object *default-qlfile*) :quiet quiet))
     (pathname
-     (check-qlfile (ensure-qlfile-pathname object)))))
+     (check-qlfile (ensure-qlfile-pathname object) :quiet quiet))))
 
 (defun init-project (object)
   (etypecase object
