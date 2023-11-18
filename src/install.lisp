@@ -480,11 +480,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
          (message "Creating ~A" qlfile)
          (with-open-file (out qlfile :if-does-not-exist :create)
            (declare (ignorable out))))
-       ;; Run 'qlot install'
-       (let ((qlfile.lock (make-pathname :type "lock"
-                                         :defaults qlfile)))
-         (unless (uiop:file-exists-p qlfile.lock)
-           (install-qlfile qlfile)))
        ;; Add .qlot/ to .gitignore (if .git/ directory exists)
        (let ((git-dir (merge-pathnames #P".git/" object)))
          (when (uiop:directory-exists-p git-dir)
