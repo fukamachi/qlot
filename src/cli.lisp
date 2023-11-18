@@ -4,7 +4,9 @@
                 #:message)
   (:import-from #:qlot/errors
                 #:missing-projects
-                #:unnecessary-projects)
+                #:unnecessary-projects
+                #:qlot-directory-not-found
+                #:qlot-directory-invalid)
   (:import-from #:qlot/color
                 #:*enable-color*
                 #:color-text)
@@ -174,14 +176,13 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
     (setf (uiop:getenv "QUICKLISP_HOME")
           (uiop:native-namestring
             (or (uiop:directory-exists-p ".qlot/")
-                (merge-pathnames #P".qlot/" (uiop:getcwd))))))
+                (merge-pathnames #P".qlot/")))))
   (let ((path (uiop:ensure-directory-pathname
                 (uiop:getenv-pathname "QUICKLISP_HOME"))))
     (unless (uiop:directory-exists-p path)
-      (qlot/errors:ros-command-error "'~A' does not exist." path))
+      (error 'qlot-directory-not-found :path path))
     (unless (uiop:file-exists-p (merge-pathnames "setup.lisp" path))
-      (qlot/errors:ros-command-error "Invalid Quicklisp directory: '~A'"
-                                     (uiop:getenv "QUICKLISP_HOME"))))
+      (error 'qlot-directory-invalid :path path)))
 
   ;; Overwrite CL_SOURCE_REGISTRY to the current directory
   (setf (uiop:getenv "CL_SOURCE_REGISTRY")
@@ -635,11 +636,21 @@ OPTIONS:
                 (t (error 'qlot/errors:command-not-found :command $1)))
         #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
         (qlot/errors:command-not-found (e)
-          (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
+          (error-message (princ-to-string e))
           (print-usage)
           (uiop:quit -1))
+        (qlot/errors:qlfile-not-found (e)
+          (error-message (princ-to-string e))
+          (warn-message "Run 'qlot init' to start using Qlot.")
+          (uiop:quit -1))
+        ((or qlot/errors:qlfile-lock-not-found
+             qlot/errors:qlot-directory-not-found
+             qlot/errors:qlot-directory-invalid) (e)
+          (error-message (princ-to-string e))
+          (warn-message "Run 'qlot install' to set up the project-local Quicklisp.")
+          (uiop:quit -1))
         (qlot/errors:qlot-error (e)
-          (format *error-output* "~&~C[31mqlot: ~A~C[0m~%" #\Esc e #\Esc)
+          (error-message "qlot: ~A" e)
           (uiop:quit -1))))))
 
 (defun main ()
