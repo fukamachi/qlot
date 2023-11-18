@@ -135,8 +135,7 @@ OPTIONS:
     --version
         Show the Qlot version
     --help
-        Show help. This option can be used for subcommands.
-        ex) qlot add --help
+        Show help
 
 Run 'qlot COMMAND --help' for more information on a subcommand.
 "
