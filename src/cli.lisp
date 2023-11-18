@@ -328,7 +328,12 @@ SYNOPSIS:
        (uiop:quit -1))))
 
   (ensure-package-loaded :qlot/install)
-  (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
+  (let* ((qlfile
+           (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
+         (qlfile.lock (make-pathname :type "lock"
+                                     :defaults qlfile)))
+    (unless (uiop:file-exists-p qlfile.lock)
+      (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))
 
 (defun qlot-command-exec (argv)
   (flet ((print-exec-usage ()

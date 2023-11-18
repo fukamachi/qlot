@@ -493,4 +493,5 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                     :direction :output
                                     :if-does-not-exist :create
                                     :if-exists :append)
-                 (format out "~&.qlot/~%"))))))))))
+                 (format out "~&.qlot/~%"))))))
+       qlfile))))
