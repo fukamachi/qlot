@@ -472,6 +472,7 @@ EXAMPLES:
                        (uiop:copy-file qlfile.bak qlfile))))
       (uiop:symbol-call '#:qlot/install '#:install-project
                         *default-pathname-defaults*
+                        :install-deps nil
                         :quiet t))))
 
 (defun qlot-command-remove (argv)
@@ -522,6 +523,7 @@ SYNOPSIS:
                              (uiop:copy-file qlfile.bak qlfile))))
             (uiop:symbol-call '#:qlot/install '#:install-project
                               *default-pathname-defaults*
+                              :install-deps nil
                               :quiet t)))))))
 
 (defun qlot-command-check (argv)
