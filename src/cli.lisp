@@ -131,9 +131,13 @@ COMMANDS:
     exec     Invoke the following shell-command with the project local Quicklisp.
     bundle   Bundle project dependencies to './.bundle-libs'.
 
-OPTIONS:
+GLOBAL OPTIONS:
+    --dir <directory>
+        Directory to run the Qlot command
     --no-color
         Don't colorize the output
+
+TOPLEVEL OPTIONS:
     --version
         Show the Qlot version
     --help
@@ -192,6 +196,13 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
+(defun change-directory (dir)
+  (let ((dir (uiop:ensure-directory-pathname dir)))
+    (unless (uiop:directory-exists-p dir)
+      (qlot/errors:ros-command-error "Directory '~A' does not exist." dir))
+    (setf *default-pathname-defaults*
+          (probe-file dir))))
+
 (defmacro do-options ((option argv &optional rest-options) &rest clauses)
   (let ((g-argv (gensym "ARGV")))
     `(loop with ,g-argv = (copy-seq ,argv)
@@ -202,6 +213,10 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
            do (case-equal
                   ,option
                 ("--no-color" (setf *enable-color* nil))
+                ("--dir"
+                 (unless ,g-argv
+                   (qlot/errors:ros-command-error "~A requires a value" ,option))
+                 (change-directory (pop ,g-argv)))
                 ,@(mapcar (lambda (clause)
                             (destructuring-bind (case-expr &rest body)
                                 clause
