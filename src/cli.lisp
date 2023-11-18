@@ -456,6 +456,8 @@ EXAMPLES:
         (do-options (option argv rest-argv)
           ("--help"
            (print-add-usage))
+          ("--debug"
+           (qlot-option-debug))
           (otherwise
            (when (and (starts-with "--" option)
                       (not (equal "--" option)))
