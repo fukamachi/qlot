@@ -23,6 +23,16 @@
            #:main))
 (in-package #:qlot/cli)
 
+(defun error-message (control &rest args)
+  (format *error-output*
+          (apply #'color-text :red control args))
+  (fresh-line *error-output*))
+
+(defun warn-message (control &rest args)
+  (format *error-output*
+          (apply #'color-text :yellow control args))
+  (fresh-line *error-output*))
+
 (defun ensure-package-loaded (package-names)
   (let ((package-names (ensure-list package-names))
         (*standard-output* (make-broadcast-stream))
@@ -311,9 +321,9 @@ SYNOPSIS:
       ("--help"
        (print-init-usage))
       (otherwise
-       (format *error-output*
-               (color-text :red "qlot: extra arguments for 'qlot init'"))
-       (print-init-usage))))
+       (error-message "qlot: extra arguments for 'qlot init'")
+       (warn-message "Run 'qlot init --help' to see the usage.")
+       (uiop:quit -1))))
 
   (ensure-package-loaded :qlot/install)
   (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
@@ -336,9 +346,9 @@ NOTE:
            (uiop:quit -1)))
 
     (unless argv
-      (format *error-output*
-              (color-text :red "qlot: no command given to exec"))
-      (print-exec-usage))
+      (error-message "qlot: no command given to exec")
+      (warn-message "Run 'qlot exec --help' to see the usage.")
+      (uiop:quit -1))
 
     ;; Parse options
     (when (starts-with "--" (first argv))
@@ -351,9 +361,9 @@ NOTE:
                       (not (equal "--" option)))
              (qlot-unknown-option option))
            (unless rest-argv
-             (format *error-output*
-                     (color-text :red "qlot: no command given to exec"))
-             (print-exec-usage))
+             (error-message "qlot: no command given to exec")
+             (warn-message "Run 'qlot exec --help' to see the usage.")
+             (uiop:quit -1))
            (setf argv rest-argv)
            (return))))))
 
@@ -404,9 +414,9 @@ EXAMPLES:
            (uiop:quit -1)))
 
     (unless argv
-      (format *error-output*
-              (color-text :red "qlot: requires a new library information"))
-      (print-add-usage))
+      (error-message "qlot: requires a new library information")
+      (warn-message "Run 'qlot add --help' to see the usage.")
+      (uiop:quit -1))
 
     ;; Parse options
     (when (starts-with "--" (first argv))
@@ -419,9 +429,9 @@ EXAMPLES:
                       (not (equal "--" option)))
              (qlot-unknown-option option))
            (unless rest-argv
-             (format *error-output*
-                     (color-text :red "qlot: requires a new library information"))
-             (print-add-usage))
+             (error-message "qlot: requires a new library information")
+             (warn-message "Run 'qlot add --help' to see the usage.")
+             (uiop:quit -1))
            (setf argv rest-argv)
            (return)))))
 
@@ -469,9 +479,9 @@ SYNOPSIS:
 ")
            (uiop:quit -1)))
     (unless argv
-      (format *error-output*
-              (color-text :red "qlot: requires library names to remove"))
-      (print-remove-usage))
+      (error-message "qlot: requires library names to remove")
+      (warn-message "Run 'qlot remove --help' to see the usage.")
+      (uiop:quit -1))
 
     ;; Parse options
     (when (starts-with "--" (first argv))
@@ -484,9 +494,9 @@ SYNOPSIS:
                       (not (equal "--" option)))
              (qlot-unknown-option option))
            (unless rest-argv
-             (format *error-output*
-                     (color-text :red "qlot: requires library names to remove"))
-             (print-remove-usage))
+             (error-message "qlot: requires library names to remove")
+             (warn-message "Run 'qlot remove --help' to see the usage.")
+             (uiop:quit -1))
            (setf argv rest-argv)
            (return))))))
 
@@ -524,9 +534,9 @@ SYNOPSIS:
       ("--help"
        (print-check-usage))
       (otherwise
-       (format *error-output*
-               (color-text :red "qlot: extra arguments for 'qlot check'"))
-       (print-check-usage))))
+       (error-message "qlot: extra arguments for 'qlot check'")
+       (warn-message "Run 'qlot check --help' to see the usage.")
+       (uiop:quit -1))))
 
   (ensure-package-loaded :qlot/install)
   (handler-case
@@ -567,9 +577,9 @@ OPTIONS:
         ("--help"
          (print-bundle-usage))
         (otherwise
-         (format *error-output*
-                 (color-text :red "qlot: '~A' is unknown option" option))
-         (print-bundle-usage)))
+         (error-message "qlot: '~A' is unknown option" option)
+         (warn-message "Run 'qlot bundle --help' to see the usage.")
+         (uiop:quit -1)))
 
       (ensure-package-loaded :qlot/bundle)
       (uiop:symbol-call '#:qlot/bundle '#:bundle-project
