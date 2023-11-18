@@ -622,7 +622,23 @@ OPTIONS:
                        (format *error-output*
                                "~&~C[33mWARNING: ~A~C[0m~%"
                                #\Esc c #\Esc)
-                       (invoke-restart (find-restart 'continue c)))))
+                       (invoke-restart (find-restart 'continue c))))
+                   (error
+                     (lambda (c)
+                       (let ((error.log
+                               (uiop:with-temporary-file (:stream out
+                                                          :pathname error.log
+                                                          :direction :output
+                                                          :prefix "qlot-error-"
+                                                          :suffix ""
+                                                          :type "log"
+                                                          :keep t)
+                                 (uiop:print-condition-backtrace c :stream out)
+                                 error.log)))
+                         (error-message "Unexpected error: ~A" c)
+                         (message "This can be a bug of Qlot.~%Report it at https://github.com/fukamachi/qlot/issues/new/choose.")
+                         (message "Please attach the stack trace dumped to '~A'." error.log))
+                       (uiop:quit -1))))
       (handler-case
           (cond ((equal "install" $1)
                  (qlot-command-install argv))
