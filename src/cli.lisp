@@ -132,6 +132,8 @@ COMMANDS:
     bundle   Bundle project dependencies to './.bundle-libs'.
 
 OPTIONS:
+    --no-color
+        Don't colorize the output
     --version
         Show the Qlot version
     --help
@@ -194,30 +196,31 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
   (let ((g-argv (gensym "ARGV")))
     `(loop with ,g-argv = (copy-seq ,argv)
            for ,option = (pop ,g-argv)
-           ,@(when rest-options
-               `(for ,rest-options = ,g-argv))
+              ,@(when rest-options
+                  `(for ,rest-options = ,g-argv))
            while ,option
            do (case-equal
-               ,option
-               ,@(mapcar (lambda (clause)
-                           (destructuring-bind (case-expr &rest body)
-                               clause
-                             (destructuring-bind (option &optional var)
-                                 (ensure-cons case-expr)
-                               (assert (or (stringp option)
-                                           (eq option 'otherwise)))
-                               `(,option
-                                 ,@(if var
-                                       `((unless ,g-argv
-                                           (qlot/errors:ros-command-error "~A requires a value" ,option))
-                                         (let ((,var (pop ,g-argv)))
-                                           ,@body))
-                                       `((progn ,@body)))))))
-                         clauses)
-               ,@(unless (find 'otherwise clauses
-                               :key #'first
-                               :test 'eq)
-                   `((otherwise (qlot-unknown-option ,option))))))))
+                  ,option
+                ("--no-color" (setf *enable-color* nil))
+                ,@(mapcar (lambda (clause)
+                            (destructuring-bind (case-expr &rest body)
+                                clause
+                              (destructuring-bind (option &optional var)
+                                  (ensure-cons case-expr)
+                                (assert (or (stringp option)
+                                            (eq option 'otherwise)))
+                                `(,option
+                                  ,@(if var
+                                        `((unless ,g-argv
+                                            (qlot/errors:ros-command-error "~A requires a value" ,option))
+                                          (let ((,var (pop ,g-argv)))
+                                            ,@body))
+                                        `((progn ,@body)))))))
+                          clauses)
+                ,@(unless (find 'otherwise clauses
+                                :key #'first
+                                :test 'eq)
+                    `((otherwise (qlot-unknown-option ,option))))))))
 
 (defun qlot-option-debug ()
   (setf qlot/logger:*debug* t))
@@ -660,7 +663,11 @@ OPTIONS:
                  (qlot-command-toplevel (cons $1 argv)))
                 ((null $1)
                  (qlot-command-toplevel nil))
-                (t (error 'qlot/errors:command-not-found :command $1)))
+                (t
+                 (do-options (option argv)
+                   ("--no-color" (setf *enable-color* nil))
+                   (otherwise))
+                 (error 'qlot/errors:command-not-found :command $1)))
         #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))
