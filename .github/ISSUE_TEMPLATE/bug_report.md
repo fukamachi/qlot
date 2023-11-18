@@ -7,11 +7,13 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+## Describe the bug
 
-**Error messages or stack traces**
+## Reproducible steps
 
-**Versions (please complete the following information):**
+## Error messages
+
+## Versions:
  - Qlot version: [e.g. 1.3.3]
  - Where did you get it from: [e.g. Automatic Installer, Roswell, or Quicklisp]
  - OS: [e.g. Debian 11]
