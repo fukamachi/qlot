@@ -385,9 +385,14 @@ NOTE:
          #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
          (append-load-setup-to-argv (rest argv)))
         (otherwise
-         (if (ros-script-p command)
-             (rest argv)
-             (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script"))))))))
+         (cond
+           ((ros-script-p command)
+            (rest argv))
+           ((starts-with ".qlot/bin/" command)
+            (qlot/errors:ros-command-warn "No need to exec scripts in .qlot/bin/.")
+            (rest argv))
+           (t
+            (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script")))))))))
 
 (defun qlot-command-add (argv)
   (flet ((print-add-usage ()
