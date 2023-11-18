@@ -78,7 +78,7 @@
                                           (make-broadcast-stream))))
                   (with-autoload-on-missing
                     (asdf:load-asd system-file))))))
-          (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
+          (when (typep (asdf:find-system system-name nil) 'asdf:package-inferred-system)
             (let* ((lisp-files
                      (set-difference
                       (directory-lisp-files (uiop:pathname-directory-pathname system-file))
