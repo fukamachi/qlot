@@ -662,6 +662,7 @@ OPTIONS:
                                                           :keep t)
                                  (uiop:print-condition-backtrace c :stream out)
                                  error.log)))
+                         (fresh-line)
                          (error-message "Unexpected error: ~A" c)
                          (message "This can be a bug of Qlot.~%Report it at https://github.com/fukamachi/qlot/issues/new/choose.")
                          (message "Please attach the stack trace dumped to '~A'." error.log))
