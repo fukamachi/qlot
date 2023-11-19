@@ -16,9 +16,9 @@ else
   QLOT_BIN_DIR="$QLOT_HOME/bin"
 fi
 
-errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
-notice() { echo -e "\e[33m$1\e[0m"; }
-success() { echo -e "\e[32m$1\e[0m"; }
+errmsg() { printf "\033[31mError: $1\033[0m" >&2; }
+notice() { printf "\033[33m$1\033[0m"; }
+success() { printf "\033[32m$1\033[0m"; }
 
 check_requirement() {
   for cmd in "$@"
