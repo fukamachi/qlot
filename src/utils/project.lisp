@@ -4,7 +4,8 @@
                 #:with-directory
                 #:with-autoload-on-missing
                 #:directory-lisp-files
-                #:lisp-file-dependencies)
+                #:lisp-file-dependencies
+                #:system-class-name)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/logger
@@ -78,7 +79,8 @@
                                           (make-broadcast-stream))))
                   (with-autoload-on-missing
                     (asdf:load-asd system-file))))))
-          (when (typep (asdf:find-system system-name nil) 'asdf:package-inferred-system)
+          ;; XXX: This doesn't work if it's a class inherits package-inferred-system.
+          (when (eq (system-class-name system-name) :package-inferred-system)
             (let* ((lisp-files
                      (set-difference
                       (directory-lisp-files (uiop:pathname-directory-pathname system-file))
