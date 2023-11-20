@@ -46,25 +46,6 @@
       (unless (find-package package-name)
         (asdf:load-system package-name)))))
 
-(defun rename-quicklisp-to-dot-qlot (&optional (pwd *default-pathname-defaults*) enable-color)
-  (fresh-line *error-output*)
-  (when enable-color
-    (format *error-output* "~C[33m" #\Esc))
-  (format *error-output*
-          "Project local Quicklisp directory has changed from 'quicklisp/' to '.qlot/' since v0.9.13.
-See https://github.com/fukamachi/qlot/pull/78 for the details.")
-  (when enable-color
-    (format *error-output* "~C[0m" #\Esc))
-  (fresh-line *error-output*)
-  (when (y-or-n-p "Would you like Qlot to migrate?")
-    (let ((*default-pathname-defaults* (or pwd
-                                           *default-pathname-defaults*)))
-      (rename-file #P"quicklisp/" (merge-pathnames #P".qlot/"))
-      (when (uiop:directory-exists-p #P".git")
-        (uiop:with-output-file (out #P".gitignore" :if-exists :append :if-does-not-exist :create)
-          (format out "~&.qlot/~%")))
-      t)))
-
 (defun extend-source-registry (current-value dir-to-add)
   "According to ASDF documentation:
 https://common-lisp.net/project/asdf/asdf/Shell_002dfriendly-syntax-for-configuration.html
@@ -193,10 +174,6 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
   (unless (uiop:getenv "QUICKLISP_HOME")
-    (when (and (not (uiop:directory-exists-p #P".qlot/"))
-               (uiop:directory-exists-p #P"quicklisp/")
-               (uiop:file-exists-p #P"quicklisp/setup.lisp"))
-      (rename-quicklisp-to-dot-qlot nil t))
     (setf (uiop:getenv "QUICKLISP_HOME")
           (uiop:native-namestring
             (or (uiop:directory-exists-p ".qlot/")
