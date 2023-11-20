@@ -6,7 +6,8 @@
   :description "A project-local library installer"
   :pathname "src"
   :depends-on ("qlot/main"
-               #+ros.installing "qlot/distify")
+               #+ros.installing "qlot/distify"
+               #+ros.installing "qlot/cli")
   :output-files (image-op (o c)
                   (output-files o :qlot/command))
   :in-order-to ((test-op (test-op "qlot/tests"))
