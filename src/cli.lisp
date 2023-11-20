@@ -374,7 +374,8 @@ NOTE:
            (when (and (starts-with "--" option)
                       (not (equal "--" option)))
              (qlot-unknown-option option))
-           (push option argv)
+           (unless (equal "--" option)
+             (push option argv))
            (return)))))
 
     (unless argv
@@ -459,7 +460,8 @@ EXAMPLES:
            (when (and (starts-with "--" option)
                       (not (equal "--" option)))
              (qlot-unknown-option option))
-           (push option argv)
+           (unless (equal "--" option)
+             (push option argv))
            (return)))))
 
     (unless argv
@@ -514,15 +516,19 @@ SYNOPSIS:
 
     (let (names)
       ;; Parse options
-      (do-options (option argv)
-        ("--help"
-         (print-remove-usage))
-        (otherwise
-         (when (and (starts-with "--" option)
-                    (not (equal "--" option)))
-           (qlot-unknown-option option))
-         (setf names
-               (append names (list option)))))
+      (block nil
+        (do-options (option argv)
+          ("--help"
+           (print-remove-usage))
+          (otherwise
+           (when (equal "--" option)
+             (setf names
+                   (append names argv))
+             (return))
+           (when (starts-with "--" option)
+             (qlot-unknown-option option))
+           (setf names
+                 (append names (list option))))))
 
       (unless names
         (error-message "qlot: requires library names to remove")
