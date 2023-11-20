@@ -643,7 +643,7 @@ OPTIONS:
   (uiop:quit -1))
 
 (defun qlot-command (&optional $1 &rest argv)
-  (let ((*enable-color* t))
+  (let ((*enable-color* (null (uiop:getenvp "QLOT_NO_COLOR"))))
     (handler-bind ((qlot/errors:qlot-warning
                      (lambda (c)
                        (format *error-output*

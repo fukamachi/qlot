@@ -7,7 +7,10 @@ ansi() {
   [ $# -gt 0 ] || return
   printf "\033[%sm" "$@"
 }
-[ -t 1 ] || ansi() { :; }
+if ! [ -t 1 ]; then
+  ansi() { :; }
+  export QLOT_NO_COLOR=1
+fi
 errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 
 if [ "$(which ros 2>/dev/null)" != "" ]; then
