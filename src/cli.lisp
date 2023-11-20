@@ -14,7 +14,7 @@
                 #:exec
                 #:which
                 #:command-line-arguments
-                #:ros-script-p)
+                #:no-such-program)
   (:import-from #:qlot/utils/project
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
@@ -151,7 +151,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
   (format t "~&Qlot ~A~%"
           (asdf:component-version (asdf:find-system :qlot))))
 
-(defun append-load-setup-to-argv (argv)
+(defun append-load-setup-to-sbcl-argv (argv)
   (flet ((runtime-option-p (option)
            (and (member option
                         '("--help" "--version" "--core" "--dynamic-space-size" "--control-stack-size" "--tls-limit")
@@ -167,6 +167,25 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
       (append (subseq argv 0 (and start-pos
                                   (1+ start-pos)))
               (list "--load" ".qlot/setup.lisp")
+              (if start-pos
+                  (subseq argv (1+ start-pos))
+                  nil)))))
+
+(defun append-load-setup-to-allegro-argv (argv)
+  (flet ((runtime-option-p (option)
+           (and (or (member option '("-Q" "-:" "-I") :test 'equal)
+                    (starts-with "+" option))
+                t))
+         (option-string-p (option)
+           (starts-with "-" option)))
+    (let ((start-pos
+            (position-if (lambda (option)
+                           (and (option-string-p option)
+                                (not (runtime-option-p option))))
+                         argv)))
+      (append (subseq argv 0 (and start-pos
+                                  (1+ start-pos)))
+              (list "-L" ".qlot/setup.lisp")
               (if start-pos
                   (subseq argv (1+ start-pos))
                   nil)))))
@@ -403,26 +422,30 @@ NOTE:
 
   (use-local-quicklisp)
 
-  (let ((command (or (which (first argv))
-                     (first argv))))
-    (exec
-     (cons
-      command
-      (case-equal (file-namestring command)
-        ("ros"
-         (rest argv))
-        ("sbcl"
-         #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
-         (append-load-setup-to-argv (rest argv)))
-        (otherwise
-         (cond
-           ((ros-script-p command)
-            (rest argv))
-           ((starts-with ".qlot/bin/" command)
-            (qlot/errors:ros-command-warn "No need to exec scripts in .qlot/bin/.")
-            (rest argv))
-           (t
-            (qlot/errors:ros-command-error "exec must be followed by 'ros' or a Roswell script")))))))))
+  (let ((command (first argv)))
+    (when (starts-with ".qlot/bin/" command)
+      (qlot/errors:ros-command-warn "No need to exec scripts in .qlot/bin/."))
+    #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
+
+    (setf (rest argv)
+          (case-equal (pathname-name command)
+            ("sbcl"
+             (append-load-setup-to-sbcl-argv (rest argv)))
+            (("ccl" "ecl" "abcl")
+             (append (list "--load" ".qlot/setup.lisp")
+                     (rest argv)))
+            ("clisp"
+             (append (list "-i" ".qlot/setup.lisp")
+                     (rest argv)))
+            (("allegro" "alisp")
+             (append-load-setup-to-allegro-argv (rest argv)))
+            (otherwise (rest argv))))
+
+    (handler-case
+        (exec argv)
+      (no-such-program (e)
+        (error-message (princ-to-string e))
+        (uiop:quit -1)))))
 
 (defun qlot-command-add (argv)
   (flet ((print-add-usage ()
