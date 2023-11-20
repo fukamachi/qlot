@@ -326,6 +326,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
+    (when projects
+      (let ((missing (set-difference projects (mapcar #'source-project-name sources)
+                                     :test #'string=)))
+        (when missing
+          (error 'missing-projects :projects missing))))
     (let ((preference (get-universal-time))
           (system-qlhome (and (find :quicklisp *features*)
                               (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))
