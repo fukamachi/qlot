@@ -597,8 +597,8 @@ SYNOPSIS:
     ((or
       missing-projects
       unnecessary-projects) (e)
-      (format *error-output* "~&~C[31m~A~C[0m~%" #\Esc e #\Esc)
-      (format *error-output* "~C[33mMake it up-to-date with `qlot install`.~:*~C[0m~%" #\Esc)
+      (error-message (princ-to-string e))
+      (warn-message "Make it up-to-date with `qlot install`.")
       (uiop:quit 1))))
 
 (defun qlot-command-bundle (argv)
@@ -656,9 +656,7 @@ OPTIONS:
   (let ((*enable-color* (null (uiop:getenvp "QLOT_NO_COLOR"))))
     (handler-bind ((qlot/errors:qlot-warning
                      (lambda (c)
-                       (format *error-output*
-                               "~&~C[33mWARNING: ~A~C[0m~%"
-                               #\Esc c #\Esc)
+                       (warn-message "WARNING: ~A" c)
                        (invoke-restart (find-restart 'continue c))))
                    (error
                      (lambda (c)
