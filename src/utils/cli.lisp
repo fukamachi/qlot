@@ -1,10 +1,16 @@
 (defpackage #:qlot/utils/cli
   (:use #:cl)
   (:export #:exec
+           #:no-such-program
            #:which
-           #:command-line-arguments
-           #:ros-script-p))
+           #:command-line-arguments))
 (in-package #:qlot/utils/cli)
+
+(define-condition no-such-program (error)
+  ((program :initarg :program))
+  (:report (lambda (condition stream)
+             (with-slots (program) condition
+               (format stream "No such file or directory: ~A" program)))))
 
 (defun command-line-arguments ()
   #+allegro (system:command-line-arguments)
@@ -34,7 +40,8 @@
                     (%execvp program a-args))
                (let ((errno (sb-impl::get-errno)))
                  (case errno
-                   (2 (error "No such file or directory: ~S" program))
+                   (2
+                    (error 'no-such-program :program program))
                    (otherwise
                     (error "execvp(3) failed. (Code=~D)" errno))))))
         (sb-alien:free-alien a-args)))))
@@ -56,12 +63,3 @@
                                              :output s)))
     (uiop/run-program:subprocess-error ()
       nil)))
-
-(defun ros-script-p (file)
-  (and (uiop:file-exists-p file)
-       (ignore-errors
-         (with-open-file (in file
-                             :direction :input
-                             :element-type 'character)
-           (and (equal (read-line in) "#!/bin/sh")
-                (equal (read-line in) "#|-*- mode:lisp -*-|#"))))))
