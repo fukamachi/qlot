@@ -28,13 +28,13 @@
 (in-package #:qlot/cli)
 
 (defun error-message (control &rest args)
-  (format *error-output*
-          (apply #'color-text :red control args))
+  (princ (apply #'color-text :red control args)
+         *error-output*)
   (fresh-line *error-output*))
 
 (defun warn-message (control &rest args)
-  (format *error-output*
-          (apply #'color-text :yellow control args))
+  (princ (apply #'color-text :yellow control args)
+         *error-output*)
   (fresh-line *error-output*))
 
 (defun ensure-package-loaded (package-names)
