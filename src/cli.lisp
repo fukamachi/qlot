@@ -222,39 +222,36 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
     (setf *default-pathname-defaults*
           (probe-file dir))))
 
-(defmacro do-options ((option argv &optional rest-options) &rest clauses)
-  (let ((g-argv (gensym "ARGV")))
-    `(loop with ,g-argv = (copy-seq ,argv)
-           for ,option = (pop ,g-argv)
-              ,@(when rest-options
-                  `(for ,rest-options = ,g-argv))
-           while ,option
-           do (case-equal
-                  ,option
-                ("--no-color" (setf *enable-color* nil))
-                ("--dir"
-                 (unless ,g-argv
-                   (qlot/errors:ros-command-error "~A requires a value" ,option))
-                 (change-directory (pop ,g-argv)))
-                ,@(mapcar (lambda (clause)
-                            (destructuring-bind (case-expr &rest body)
-                                clause
-                              (destructuring-bind (option &optional var)
-                                  (ensure-cons case-expr)
-                                (assert (or (stringp option)
-                                            (eq option 'otherwise)))
-                                `(,option
-                                  ,@(if var
-                                        `((unless ,g-argv
-                                            (qlot/errors:ros-command-error "~A requires a value" ,option))
-                                          (let ((,var (pop ,g-argv)))
-                                            ,@body))
-                                        `((progn ,@body)))))))
-                          clauses)
-                ,@(unless (find 'otherwise clauses
-                                :key #'first
-                                :test 'eq)
-                    `((otherwise (qlot-unknown-option ,option))))))))
+(defmacro do-options ((option argv) &rest clauses)
+  (check-type argv symbol)
+  `(loop for ,option = (pop ,argv)
+         while ,option
+         do (case-equal
+             ,option
+             ("--no-color" (setf *enable-color* nil))
+             ("--dir"
+              (unless ,argv
+                (qlot/errors:ros-command-error "~A requires a value" ,option))
+              (change-directory (pop ,argv)))
+             ,@(mapcar (lambda (clause)
+                         (destructuring-bind (case-expr &rest body)
+                             clause
+                           (destructuring-bind (option &optional var)
+                               (ensure-cons case-expr)
+                             (assert (or (stringp option)
+                                         (eq option 'otherwise)))
+                             `(,option
+                               ,@(if var
+                                     `((unless ,argv
+                                         (qlot/errors:ros-command-error "~A requires a value" ,option))
+                                       (let ((,var (pop ,argv)))
+                                         ,@body))
+                                     `((progn ,@body)))))))
+                       clauses)
+             ,@(unless (find 'otherwise clauses
+                             :key #'first
+                             :test 'eq)
+                 `((otherwise (qlot-unknown-option ,option)))))))
 
 (defun qlot-option-debug ()
   (setf qlot/logger:*debug* t))
@@ -389,27 +386,24 @@ NOTE:
 ")
            (uiop:quit -1)))
 
-    (unless argv
-      (error-message "qlot: no command given to exec")
-      (warn-message "Run 'qlot exec --help' to see the usage.")
-      (uiop:quit -1))
-
     ;; Parse options
-    (when (starts-with "--" (first argv))
+    (when (and (first argv)
+               (starts-with "--" (first argv)))
       (block nil
-        (do-options (option argv rest-argv)
+        (do-options (option argv)
           ("--help"
            (print-exec-usage))
           (otherwise
            (when (and (starts-with "--" option)
                       (not (equal "--" option)))
              (qlot-unknown-option option))
-           (unless rest-argv
-             (error-message "qlot: no command given to exec")
-             (warn-message "Run 'qlot exec --help' to see the usage.")
-             (uiop:quit -1))
-           (setf argv rest-argv)
-           (return))))))
+           (push option argv)
+           (return)))))
+
+    (unless argv
+      (error-message "qlot: no command given to exec")
+      (warn-message "Run 'qlot exec --help' to see the usage.")
+      (uiop:quit -1)))
 
   (check-local-quicklisp *default-pathname-defaults*)
 
@@ -475,15 +469,11 @@ EXAMPLES:
 ")
            (uiop:quit -1)))
 
-    (unless argv
-      (error-message "qlot: requires a new library information")
-      (warn-message "Run 'qlot add --help' to see the usage.")
-      (uiop:quit -1))
-
     ;; Parse options
-    (when (starts-with "--" (first argv))
+    (when (and (first argv)
+               (starts-with "--" (first argv)))
       (block nil
-        (do-options (option argv rest-argv)
+        (do-options (option argv)
           ("--help"
            (print-add-usage))
           ("--debug"
@@ -492,12 +482,13 @@ EXAMPLES:
            (when (and (starts-with "--" option)
                       (not (equal "--" option)))
              (qlot-unknown-option option))
-           (unless rest-argv
-             (error-message "qlot: requires a new library information")
-             (warn-message "Run 'qlot add --help' to see the usage.")
-             (uiop:quit -1))
-           (setf argv rest-argv)
+           (push option argv)
            (return)))))
+
+    (unless argv
+      (error-message "qlot: requires a new library information")
+      (warn-message "Run 'qlot add --help' to see the usage.")
+      (uiop:quit -1))
 
     ;; Complete the source type
     (unless (member (first argv)
@@ -543,48 +534,44 @@ SYNOPSIS:
     qlot remove [name...]
 ")
            (uiop:quit -1)))
-    (unless argv
-      (error-message "qlot: requires library names to remove")
-      (warn-message "Run 'qlot remove --help' to see the usage.")
-      (uiop:quit -1))
 
-    ;; Parse options
-    (when (starts-with "--" (first argv))
-      (block nil
-        (do-options (option argv rest-argv)
-          ("--help"
-           (print-remove-usage))
-          (otherwise
-           (when (and (starts-with "--" option)
-                      (not (equal "--" option)))
-             (qlot-unknown-option option))
-           (unless rest-argv
-             (error-message "qlot: requires library names to remove")
-             (warn-message "Run 'qlot remove --help' to see the usage.")
-             (uiop:quit -1))
-           (setf argv rest-argv)
-           (return))))))
+    (let (names)
+      ;; Parse options
+      (do-options (option argv)
+        ("--help"
+         (print-remove-usage))
+        (otherwise
+         (when (and (starts-with "--" option)
+                    (not (equal "--" option)))
+           (qlot-unknown-option option))
+         (setf names
+               (append names (list option)))))
 
-  (ensure-package-loaded '(:qlot/add :qlot/install))
-  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
-    (when (uiop:file-exists-p qlfile)
-      (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
-                                         (uiop:temporary-directory))))
-        (uiop:copy-file qlfile qlfile.bak)
-        (let ((removed-projects
-                (uiop:symbol-call '#:qlot/add '#:remove-project argv qlfile)))
-          (unless removed-projects
-            (message "Nothing to remove in '~A'." qlfile)
-            (return-from qlot-command-remove))
+      (unless names
+        (error-message "qlot: requires library names to remove")
+        (warn-message "Run 'qlot remove --help' to see the usage.")
+        (uiop:quit -1))
 
-          (handler-bind ((error
-                           (lambda (e)
-                             (declare (ignore e))
-                             (uiop:copy-file qlfile.bak qlfile))))
-            (uiop:symbol-call '#:qlot/install '#:install-project
-                              *default-pathname-defaults*
-                              :install-deps nil
-                              :quiet t)))))))
+      (ensure-package-loaded '(:qlot/add :qlot/install))
+      (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
+        (when (uiop:file-exists-p qlfile)
+          (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                             (uiop:temporary-directory))))
+            (uiop:copy-file qlfile qlfile.bak)
+            (let ((removed-projects
+                    (uiop:symbol-call '#:qlot/add '#:remove-project names qlfile)))
+              (unless removed-projects
+                (message "Nothing to remove in '~A'." qlfile)
+                (return-from qlot-command-remove))
+
+              (handler-bind ((error
+                               (lambda (e)
+                                 (declare (ignore e))
+                                 (uiop:copy-file qlfile.bak qlfile))))
+                (uiop:symbol-call '#:qlot/install '#:install-project
+                                  *default-pathname-defaults*
+                                  :install-deps nil
+                                  :quiet t)))))))))
 
 (defun qlot-command-check (argv)
   (flet ((print-check-usage ()
