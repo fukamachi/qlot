@@ -62,7 +62,8 @@
            #:install-project
            #:update-project
            #:check-project
-           #:init-project))
+           #:init-project
+           #:*default-qlfile*))
 (in-package #:qlot/install)
 
 (defvar *default-qlfile* #P"qlfile")
