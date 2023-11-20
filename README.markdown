@@ -239,7 +239,6 @@ It will also overwrite `qlfile.lock`.
 
 ```
 $ qlot install
-$ qlot install /path/to/myapp/qlfile
 ```
 
 ### update
@@ -302,14 +301,6 @@ Here are few useful commands:
   [asdf's documentation](https://common-lisp.net/project/asdf/asdf/Shell_002dfriendly-syntax-for-configuration.html).
 * `qlot exec ros build some-app.ros` - another command, useful, to build a binary
   from systems, fixed in `qlfile` and `qlfile.lock`. This way you can be sure that your builds are stable.
-
-**NOTE**: `qlot exec` only affects `ros`, `sbcl` or Roswell scripts.
-
-Since it's the same as loading `.qlot/setup.lisp`, you can still use the project-local Quicklisp by loading it, like:
-
-```
-$ ccl --load .qlot/setup.lisp
-```
 
 ## `qlfile` syntax
 
