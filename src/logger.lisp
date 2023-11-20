@@ -21,6 +21,8 @@
 
 (defvar *previous-progress* "")
 
+(defparameter *padding* "- ")
+
 (defun fill-spaces-to-clear-progress (text)
   (write-string
    (make-string (max 0
@@ -32,8 +34,9 @@
   text)
 
 (defun progress (format-control &rest format-arguments)
-  (let ((out *logger-message-stream*)
-        (text (apply #'format nil format-control format-arguments)))
+  (let* ((out *logger-message-stream*)
+         (text (apply #'format nil format-control format-arguments))
+         (text (concatenate 'string *padding* text)))
     (write-string (color-text :gray text) out)
     (fill-spaces-to-clear-progress text)
     (write-char #\Return out)
