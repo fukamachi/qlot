@@ -147,11 +147,10 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
                            (and (option-string-p option)
                                 (not (runtime-option-p option))))
                          argv)))
-      (append (subseq argv 0 (and start-pos
-                                  (1+ start-pos)))
+      (append (subseq argv 0 start-pos)
               (list "--load" ".qlot/setup.lisp")
               (if start-pos
-                  (subseq argv (1+ start-pos))
+                  (subseq argv start-pos)
                   nil)))))
 
 (defun append-load-setup-to-allegro-argv (argv)
@@ -166,11 +165,10 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
                            (and (option-string-p option)
                                 (not (runtime-option-p option))))
                          argv)))
-      (append (subseq argv 0 (and start-pos
-                                  (1+ start-pos)))
+      (append (subseq argv 0 start-pos)
               (list "-L" ".qlot/setup.lisp")
               (if start-pos
-                  (subseq argv (1+ start-pos))
+                  (subseq argv start-pos)
                   nil)))))
 
 (defun use-local-quicklisp ()
