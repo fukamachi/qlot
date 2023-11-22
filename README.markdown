@@ -151,7 +151,7 @@ $ sudo chmod u+x /usr/local/bin/qlot
 ### Install from source
 
 ```shell
-$ git clone --recursive https://github.com/fukamachi/qlot
+$ git clone https://github.com/fukamachi/qlot
 $ cd qlot
 $ scripts/setup.sh
 $ sudo printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
