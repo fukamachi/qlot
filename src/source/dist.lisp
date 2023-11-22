@@ -76,7 +76,7 @@
                 (slot-value source '%version)))))
 
 (defmethod source-identifier ((source source-dist))
-  (source-distribution source))
+  (https-of (source-distribution source)))
 
 (defmethod source= ((source1 source-dist-project) (source2 source-dist-project))
   (and (or (string= (source-distribution source1)
