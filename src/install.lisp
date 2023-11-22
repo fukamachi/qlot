@@ -4,6 +4,7 @@
                 #:install-quicklisp
                 #:copy-local-init-files)
   (:import-from #:qlot/source
+                #:prepare-source
                 #:source-dist
                 #:source-dist-name
                 #:source-local
@@ -341,6 +342,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
            (dolist (source (remove-if (lambda (source)
                                         (typep source 'source-local))
                                       sources))
+             (prepare-source source)
              (with-quicklisp-home qlhome
                (with-package-functions #:ql-dist (find-dist version)
                  (let ((dist (find-dist (source-dist-name source))))

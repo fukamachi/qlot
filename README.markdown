@@ -414,14 +414,14 @@ local rove ~/Programs/lib/rove
 ### dist
 
 ```
-dist <dist name> <distribution URL> [<dist version>]
+dist <distribution URL> [<dist version>]
 ```
 
 `dist` allows to use a custom Quicklisp dist, like Ultralisp.
 
 ```
-dist quicklisp http://beta.quicklisp.org/dist/quicklisp.txt
-dist ultralisp http://dist.ultralisp.org/
+dist http://beta.quicklisp.org/dist/quicklisp.txt
+dist http://dist.ultralisp.org/
 ```
 
 ## Priorities of distributions

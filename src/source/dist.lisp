@@ -5,7 +5,10 @@
   (:import-from #:qlot/utils/ql
                 #:make-versioned-distinfo-url)
   (:import-from #:qlot/utils
-                #:https-of)
+                #:https-of
+                #:starts-with)
+  (:import-from #:qlot/utils/shell
+                #:run-lisp)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:export #:source-dist
@@ -29,16 +32,33 @@
 
 (defmethod make-source ((source (eql :dist)) &rest initargs)
   (handler-case
-      (destructuring-bind (project-name distribution &optional (version :latest))
-          initargs
-        (make-instance 'source-dist
-                       :project-name project-name
-                       :distribution (https-of distribution)
-                       :%version version))
+      (progn
+        ;; project-name isn't necessary anymore
+        (when (or (starts-with "http://" (first initargs))
+                  (starts-with "https://" (first initargs)))
+          (push nil initargs))
+        (destructuring-bind (project-name distribution &optional (version :latest))
+            initargs
+          (make-instance 'source-dist
+                         :project-name project-name
+                         :distribution (https-of distribution)
+                         :%version version)))
     (error ()
       (error 'invalid-definition
              :source :dist
-             :usage "dist <project name> <distribution URL> [<version>]"))))
+             :usage "dist <distribution URL> [<version>]"))))
+
+(defmethod prepare-source ((source source-dist))
+  (unless (source-project-name source)
+    (let ((project-name
+            (run-lisp `((uiop:with-temporary-file (:pathname cl-user::tmp-file)
+                          (uiop:symbol-call :qlot/http :fetch ,(source-distribution source) cl-user::tmp-file)
+                          (write-string
+                           (cdr (assoc "name" (uiop:symbol-call :qlot/utils/ql :parse-distinfo-file cl-user::tmp-file) :test 'equal)))))
+                      :systems '("qlot/http" "qlot/utils/ql")
+                      :source-registry (asdf:system-source-directory :qlot)
+                      :output :string)))
+      (setf (source-project-name source) project-name))))
 
 (defmethod defrost-source :after ((source source-dist-project))
   (when (slot-boundp source 'qlot/source/base::version)
@@ -57,10 +77,11 @@
                 (source-version source)
                 (slot-value source '%version)))))
 
+(defmethod source-identifier ((source source-dist))
+  (source-distribution source))
+
 (defmethod source= ((source1 source-dist-project) (source2 source-dist-project))
-  (and (string= (source-project-name source1)
-                (source-project-name source2))
-       (or (string= (source-distribution source1)
+  (and (or (string= (source-distribution source1)
                     (source-distribution source2))
            ;; Backward-compatibility
            (string= (https-of (source-distribution source1))

@@ -100,7 +100,7 @@
                       '((uiop:print-backtrace :condition cl-user::c)))
                (uiop:quit -1))))))
 
-(defun build-command-args (forms &key load systems source-registry)
+(defun build-command-args (forms &key systems source-registry)
   (append
     (default-args)
 
@@ -112,8 +112,13 @@
                         asdf::system-source-registry
                         asdf::system-source-registry-directory))))
 
-    (when load
-      (-e `(load ,load)))
+    (let ((setup
+            (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
+                (and (find :quicklisp *features*)
+                     (merge-pathnames #P"setup.lisp"
+                                      (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))))
+      (when setup
+        (-e `(load ,setup))))
 
     (loop for system in systems
           append (-e
@@ -169,8 +174,8 @@
    (apply #'build-command-args forms args)
    (postcommand-options)))
 
-(defun launch-lisp (forms &rest args &key load systems source-registry)
-  (declare (ignore load systems source-registry))
+(defun launch-lisp (forms &rest args &key systems source-registry)
+  (declare (ignore systems source-registry))
   (safety-background-command
    #-ros.init *current-lisp-path*
    #+ros.init (or (ros:opt "wargv0")
@@ -179,8 +184,8 @@
    :input :stream
    :output :stream))
 
-(defun run-lisp (forms &rest args &key load systems source-registry (output :interactive))
-  (declare (ignore load systems source-registry))
+(defun run-lisp (forms &rest args &key systems source-registry (output :interactive))
+  (declare (ignore systems source-registry))
   (remf args :output)
   (safety-shell-command #-ros.init *current-lisp-path*
                         #+ros.init (or (ros:opt "wargv0")

@@ -10,10 +10,12 @@
            #:source-initargs
            #:source-defrost-args
            #:make-source
+           #:prepare-source
            #:source-frozen-slots
            #:freeze-source
            #:defrost-source
            #:source-dist-name
+           #:source-identifier
            #:source=
            #:write-distinfo
            #:source-install-url
@@ -22,7 +24,7 @@
 
 (defclass source ()
   ((project-name :initarg :project-name
-                 :reader source-project-name)
+                 :accessor source-project-name)
    (version :initarg :version
             :accessor source-version)
 
@@ -42,6 +44,10 @@
   (:method (source &rest args)
     (declare (ignore args))
     (error 'unknown-source :name source)))
+
+(defgeneric prepare-source (source)
+  (:method (source)
+    (declare (ignore source))))
 
 (defgeneric source-frozen-slots (source)
   (:method ((source source))
@@ -79,6 +85,10 @@
 (defgeneric source-dist-name (source)
   (:method ((source source))
     (source-project-name source)))
+
+(defgeneric source-identifier (source)
+  (:method ((source source))
+    (source-dist-name source)))
 
 (defgeneric source= (source1 source2)
   (:method (source1 source2)

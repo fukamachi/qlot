@@ -69,8 +69,6 @@
                                                                ,@(source-frozen-slots source)))
                                             ,destination
                                             :distinfo-only ,distinfo-only)))
-                  :load (or (probe-file (merge-pathnames #P".bundle-libs/bundle.lisp" qlot-source-dir))
-                            #+quicklisp (merge-pathnames #P"setup.lisp" *system-quicklisp-home*))
                   :systems '("qlot/distify")
                   :source-registry qlot-source-dir)
       (shell-command-error (e)
