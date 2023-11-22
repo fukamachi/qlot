@@ -1,7 +1,7 @@
-(defpackage #:qlot/tests/main
+(defpackage #:qlot-tests/main
   (:use #:cl
         #:rove))
-(in-package #:qlot/tests/main)
+(in-package #:qlot-tests/main)
 
 (defun starts-with (prefix value)
   (and (<= (length prefix) (length value))
@@ -24,7 +24,7 @@
               (uiop:run-program
                 `("ros" "--no-rc" "-s" "qlot"
                   "-l" ,(uiop:native-namestring (asdf:system-relative-pathname :qlot #P"tests/check-dependencies-script.lisp"))
-                  "-e" "(qlot/tests/check-dependencies-script:main)")
+                  "-e" "(qlot-tests/check-dependencies-script:main)")
                 :output out)))))
     (ok (null external-dependencies)
         "depends on no external dependencies")))

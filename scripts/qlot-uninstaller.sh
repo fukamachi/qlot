@@ -2,6 +2,12 @@
 
 QLOT_HOME=${QLOT_HOME:-~/.qlot}
 
+ansi() {
+  [ $# -gt 0 ] || return
+  printf "\033[%sm" "$@"
+}
+[ -t 1 ] || ansi() { :; }
+
 rm -rf "$QLOT_HOME"
 
 if [ `id -u` == "0" ]; then
@@ -24,5 +30,5 @@ systems_directory() {
 registry_dir=$(systems_directory)
 rm -f "${registry_dir}qlot.asd"
 
-echo -e "\e[32mQlot has been successfully deleted.\e[0m"
+printf "%sQlot has been successfully deleted.%s\n" "$(ansi 32)" "$(ansi 0)"
 echo 'Bye!'

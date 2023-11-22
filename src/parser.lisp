@@ -128,10 +128,9 @@
                 source)))))
 
 (defun find-lock (qlfile)
-  (uiop:file-exists-p
-   (make-pathname :defaults qlfile
-                  :name (file-namestring qlfile)
-                  :type "lock")))
+  (make-pathname :defaults qlfile
+                 :name (file-namestring qlfile)
+                 :type "lock"))
 
 (defun read-qlfile-for-install (qlfile &key ignore-lock projects silent)
   "Read 'qlfile' (or 'qlfile.lock' if exists) and return sources.
@@ -148,7 +147,7 @@
                   :key #'source-dist-name
                   :test #'string=)
       (push default-ql-source sources))
-    (if qlfile-lock
+    (if (uiop:file-exists-p qlfile-lock)
         (merging-lock-sources sources
                               (parse-qlfile-lock qlfile-lock
                                                  :test (lambda (name)

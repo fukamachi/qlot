@@ -28,6 +28,7 @@
                                        `("--branch" ,checkout-to))
                                 "--depth" "1"
                                 "--recursive"
+                                "--quiet"
                                 "--config" "core.eol=lf"
                                 "--config" "core.autocrlf=input"
                                 ,remote-url
@@ -38,11 +39,10 @@
         (go git-cloning))))
 
   (when ref
-    (let ((*error-output* (make-broadcast-stream)))
-      (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                    "fetch" "--unshallow"))
-      (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                    "checkout" ,ref)))))
+    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
+                                  "fetch" "--unshallow" "--quiet"))
+    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
+                                  "checkout" ,ref "--quiet"))))
 
 (defun create-git-tarball (project-directory destination ref)
   (check-type project-directory pathname)

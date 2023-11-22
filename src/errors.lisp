@@ -8,6 +8,10 @@
            #:qlfile-parse-failed
            #:missing-projects
            #:unnecessary-projects
+           #:qlfile-not-found
+           #:qlfile-lock-not-found
+           #:qlot-directory-not-found
+           #:qlot-directory-invalid
            #:ros-command-error
            #:command-not-found
            #:qlot-warning
@@ -67,6 +71,36 @@
              (with-slots (projects) condition
                (format stream "The following libraries need to be removed:~%~{ * ~A~^~%~}"
                        projects)))))
+
+(define-condition file-not-found (qlot-error)
+  ((path :initarg :path))
+  (:report (lambda (condition stream)
+             (with-slots (path) condition
+               (format stream "File not found: ~A" path)))))
+
+(define-condition qlfile-not-found (file-not-found)
+  ()
+  (:report (lambda (condition stream)
+             (with-slots (path) condition
+               (format stream "qlfile not found: ~A" path)))))
+
+(define-condition qlfile-lock-not-found (file-not-found)
+  ()
+  (:report (lambda (condition stream)
+             (with-slots (path) condition
+               (format stream "qlfile.lock not found: ~A" path)))))
+
+(define-condition qlot-directory-not-found (file-not-found)
+  ()
+  (:report (lambda (condition stream)
+             (with-slots (path) condition
+               (format stream "Directory '~A' does not exist." path)))))
+
+(define-condition qlot-directory-invalid (file-not-found)
+  ()
+  (:report (lambda (condition stream)
+             (with-slots (path) condition
+               (format stream "Directory '~A' is not valid." path)))))
 
 (define-condition ros-command-error (qlot-error)
   ((message :initarg :message))

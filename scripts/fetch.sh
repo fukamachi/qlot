@@ -2,7 +2,13 @@
 
 QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
 
-errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
+ansi() {
+  [ $# -gt 0 ] || return
+  printf "\033[%sm" "$@"
+}
+[ -t 1 ] || ansi() { :; }
+errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" $1 "$(ansi 0)"; }
+
 if [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros +Q -L sbcl-bin run --"
 elif [ "$(which sbcl 2>/dev/null)" != "" ]; then
@@ -12,8 +18,18 @@ else
   exit 1
 fi
 
+if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+  setup_file="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
+elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
+  setup_file="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
+else
+  echo "Qlot is not setup yet." >&2
+  echo "Run '$QLOT_SOURCE_DIR/scripts/setup.sh' first." >&2
+  exit 1
+fi
+
 exec $lisp --noinform --no-sysinit --no-userinit --non-interactive \
-  --load $QLOT_SOURCE_DIR/.qlot/setup.lisp \
+  --load "$setup_file" \
   --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
-  --eval '(ql:quickload :qlot/fetch :silent t)' \
+  --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/fetch))' \
   --eval '(qlot/fetch::main)' -- "$@"

@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/server
+(defpackage #:qlot-tests/server
   (:use #:cl
         #:rove)
   (:import-from #:qlot/server
@@ -10,15 +10,15 @@
                 #:make-source)
   (:import-from #:ironclad
                 #:digest-file))
-(in-package #:qlot/tests/server)
+(in-package #:qlot-tests/server)
 
 (deftest make-handler-tests
   (let ((handler (make-handler (asdf:system-source-directory :qlot))))
     (ok (typep handler 'function))
-    (ok (equal (funcall handler "qlot://localhost/server.lisp")
-               (asdf:system-relative-pathname :qlot #P"server.lisp")))
-    (ok (equal (funcall handler "qlot://localhost/utils/git.lisp")
-               (asdf:system-relative-pathname :qlot #P"utils/git.lisp")))
+    (ok (equal (funcall handler "qlot://localhost/src/server.lisp")
+               (asdf:system-relative-pathname :qlot #P"src/server.lisp")))
+    (ok (equal (funcall handler "qlot://localhost/src/utils/git.lisp")
+               (asdf:system-relative-pathname :qlot #P"src/utils/git.lisp")))
     (ok (null (funcall handler "qlot://localhost/not-found-file")))
     (ok (null (funcall handler "https://github.com/fukamachi/lsx")))
     (ok (null (funcall handler "qlot://local")))
@@ -29,9 +29,9 @@
 (deftest qlot-fetch-tests
   (let ((*handler* (make-handler (asdf:system-source-directory :qlot))))
     (uiop:with-temporary-file (:pathname file)
-      (qlot-fetch "qlot://localhost/server.lisp" file)
+      (qlot-fetch "qlot://localhost/src/server.lisp" file)
       (ok (equalp (ironclad:digest-file :md5 file)
-                  (ironclad:digest-file :md5 (asdf:system-relative-pathname :qlot #P"server.lisp")))))
+                  (ironclad:digest-file :md5 (asdf:system-relative-pathname :qlot #P"src/server.lisp")))))
     (uiop:with-temporary-file (:pathname file)
       (qlot-fetch "qlot://localhost/not-found-file" file)
       (ok (equal (uiop:read-file-string file)

@@ -1,7 +1,7 @@
-(defpackage #:qlot/tests/check-dependencies-script
+(defpackage #:qlot-tests/check-dependencies-script
   (:use #:cl)
   (:export #:main))
-(in-package #:qlot/tests/check-dependencies-script)
+(in-package #:qlot-tests/check-dependencies-script)
 
 (defun starts-with (prefix value)
   (and (<= (length prefix) (length value))

@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/distify/ultralisp
+(defpackage #:qlot-tests/distify/ultralisp
   (:use #:cl
         #:rove
         #:qlot/distify/ql)
@@ -10,7 +10,7 @@
                 #:tmp-directory)
   (:import-from #:assoc-utils
                 #:aget))
-(in-package #:qlot/tests/distify/ultralisp)
+(in-package #:qlot-tests/distify/ultralisp)
 
 (defparameter *tmp-directory* (tmp-directory))
 

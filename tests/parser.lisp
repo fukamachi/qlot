@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/parser
+(defpackage #:qlot-tests/parser
   (:use #:cl
         #:rove
         #:qlot/parser)
@@ -18,7 +18,7 @@
                 #:qlfile-parse-failed
                 #:unknown-source
                 #:invalid-definition))
-(in-package #:qlot/tests/parser)
+(in-package #:qlot-tests/parser)
 
 (defun test-qlfile (name)
   (merge-pathnames name (asdf:system-relative-pathname :qlot #P"tests/data/")))

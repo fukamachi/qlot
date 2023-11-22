@@ -1,8 +1,8 @@
-(defpackage #:qlot/tests/utils/ql
+(defpackage #:qlot-tests/utils/ql
   (:use #:cl
         #:rove
         #:qlot/utils/ql))
-(in-package #:qlot/tests/utils/ql)
+(in-package #:qlot-tests/utils/ql)
 
 (deftest quicklisp-distinfo-url-tests
   (ok (equal (quicklisp-distinfo-url)
