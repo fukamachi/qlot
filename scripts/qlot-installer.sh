@@ -120,9 +120,5 @@ if [ `id -u` != "0" ]; then
   echo ''
   echo "    export PATH=\"$QLOT_BIN_DIR:\$PATH\""
   echo ''
-  echo 'Or, copy the script to a searchable directory such as /usr/local/bin.'
-  echo ''
-  echo "    sudo cp $QLOT_BIN_DIR/qlot /usr/local/bin"
-  echo ''
 fi
 echo 'Enjoy!'
