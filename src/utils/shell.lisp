@@ -94,7 +94,8 @@
       `(setf *debugger-hook*
              (lambda (cl-user::c cl-user::parent)
                (declare (ignore cl-user::parent))
-               (format *error-output* "~&Error: ~A~%" cl-user::c)
+               (princ cl-user::c *error-output*)
+               (fresh-line *error-output*)
                ,@(and *debug*
                       '((uiop:print-backtrace :condition cl-user::c)))
                (uiop:quit -1))))))

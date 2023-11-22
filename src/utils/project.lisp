@@ -4,15 +4,20 @@
                 #:with-directory
                 #:with-autoload-on-missing
                 #:directory-lisp-files
-                #:lisp-file-dependencies)
+                #:lisp-file-dependencies
+                #:system-class-name)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/logger
                 #:*debug*
-                #:message
+                #:progress
                 #:debug-log)
+  (:import-from #:qlot/errors
+                #:qlot-directory-not-found
+                #:qlot-directory-invalid)
   (:export #:*qlot-directory*
            #:local-quicklisp-installed-p
+           #:check-local-quicklisp
            #:local-quicklisp-local-init-installed-p
            #:local-quicklisp-home
            #:project-dependencies))
@@ -26,6 +31,15 @@
     (when (and (uiop:directory-exists-p qlhome)
                (uiop:file-exists-p (merge-pathnames "setup.lisp" qlhome)))
       qlhome)))
+
+(defun check-local-quicklisp (project-root)
+  (let ((qlhome (merge-pathnames *qlot-directory* project-root)))
+    (unless (uiop:directory-exists-p qlhome)
+      (error 'qlot-directory-not-found :path qlhome))
+
+    (unless (uiop:file-exists-p (merge-pathnames #P"setup.lisp" qlhome))
+      (error 'qlot-directory-invalid :path qlhome))
+    qlhome))
 
 (defun local-quicklisp-local-init-installed-p (project-root)
   (let ((local-init-dir
@@ -44,14 +58,16 @@
     (let ((all-dependencies '())
           (pis-already-seen-files '())
           (loaded-asd-files '())
-          (project-system-names '()))
+          (project-system-names '())
+          (file-counts 0))
       (with-directory (system-file system-name dependencies) project-root
         (pushnew system-name project-system-names :test 'equal)
         (when (or (null test)
                   (funcall test system-name))
           (unless (find system-file loaded-asd-files :test 'equal)
             (push system-file loaded-asd-files)
-            (message "Loading '~A'..." system-file)
+            (progress "Loading '~A'..." system-file)
+            (incf file-counts)
             (let ((errout *error-output*))
               (handler-bind ((error
                                (lambda (e)
@@ -63,7 +79,8 @@
                                           (make-broadcast-stream))))
                   (with-autoload-on-missing
                     (asdf:load-asd system-file))))))
-          (when (typep (asdf:find-system system-name) 'asdf:package-inferred-system)
+          ;; XXX: This doesn't work if it's a class inherits package-inferred-system.
+          (when (eq (system-class-name system-name) :package-inferred-system)
             (let* ((lisp-files
                      (set-difference
                       (directory-lisp-files (uiop:pathname-directory-pathname system-file))
@@ -87,6 +104,7 @@
             (debug-log "'~A' requires ~S" system-name dependencies)
             (setf all-dependencies
                   (nconc all-dependencies dependencies)))))
+      (progress "Loaded ~A system files." file-counts)
       (with-package-functions #:ql-dist (required-systems name)
         (let ((already-seen (make-hash-table :test 'equal)))
           (labels ((find-system-with-fallback (system-name)

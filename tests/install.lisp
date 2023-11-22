@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/install
+(defpackage #:qlot-tests/install
   (:use #:cl
         #:rove)
   (:import-from #:qlot/install
@@ -12,7 +12,7 @@
                 #:set-equal)
   (:import-from #:assoc-utils
                 #:aget))
-(in-package #:qlot/tests/install)
+(in-package #:qlot-tests/install)
 
 (defun copy-qlfile (tmp-dir)
   (uiop:copy-file (asdf:system-relative-pathname :qlot #P"tests/data/qlfile5")

@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/install/quicklisp
+(defpackage #:qlot-tests/install/quicklisp
   (:use #:cl
         #:rove)
   (:import-from #:qlot/install/quicklisp
@@ -6,7 +6,7 @@
                 #:install-quicklisp-from-subdir)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory))
-(in-package #:qlot/tests/install/quicklisp)
+(in-package #:qlot-tests/install/quicklisp)
 
 (deftest install-quicklisp-tests
   (ok (uiop:directory-exists-p (asdf:system-relative-pathname :qlot #P"quicklisp-client/")))

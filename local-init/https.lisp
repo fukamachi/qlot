@@ -38,7 +38,9 @@
                              (uiop:ensure-absolute-pathname file *default-pathname-defaults*)))
                       :output (and (not quietly)
                                    :interactive)
-                      :error-output :interactive)))
+                      :error-output :interactive))
+  (values (make-instance 'ql-http::header :status 200)
+          (probe-file file)))
 
 (defun which (cmd)
   (handler-case
@@ -54,14 +56,18 @@
   (let ((url (https-of url)))
     (with-logging (url file :quietly quietly)
       (uiop:run-program (list "curl" "-sSL" url "-o" (uiop:native-namestring file))
-                        :error-output :interactive))))
+                        :error-output :interactive)))
+  (values (make-instance 'ql-http::header :status 200)
+          (probe-file file)))
 
 (defun wget-fetch (url file &rest args &key quietly &allow-other-keys)
   (declare (ignore args))
   (let ((url (https-of url)))
     (with-logging (url file :quietly quietly)
       (uiop:run-program (list "wget" url "-O" (uiop:native-namestring file))
-                        :error-output :interactive))))
+                        :error-output :interactive)))
+  (values (make-instance 'ql-http::header :status 200)
+          (probe-file file)))
 
 (defun add-to-fetch-scheme-functions ()
   (let* ((preference (uiop:getenv "QLOT_FETCH"))
@@ -69,8 +75,10 @@
                ((and (null preference)
                      *fetch-script*
                      (uiop:file-exists-p *fetch-script*)
-                     (uiop:file-exists-p
-                      (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp")))
+                     (or (uiop:file-exists-p
+                          (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
+                         (uiop:file-exists-p
+                          (asdf:system-relative-pathname :qlot #P".qlot/setup.lisp"))))
                 'run-fetch)
                ((which "curl")
                 'curl-fetch)

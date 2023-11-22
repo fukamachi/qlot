@@ -2,7 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/utils/project
                 #:project-dependencies
-                #:local-quicklisp-installed-p
+                #:check-local-quicklisp
                 #:local-quicklisp-home)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
@@ -49,9 +49,7 @@
 (defun %bundle-project (project-root &key exclude)
   (assert (uiop:absolute-pathname-p project-root))
 
-  (unless (local-quicklisp-installed-p project-root)
-    (error 'qlot-simple-error
-           :format-control "Local Quicklisp is not installed yet."))
+  (check-local-quicklisp project-root)
 
   (let ((quicklisp-home (local-quicklisp-home project-root)))
     (unless (find-package '#:ql)

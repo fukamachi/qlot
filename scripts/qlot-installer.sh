@@ -16,9 +16,14 @@ else
   QLOT_BIN_DIR="$QLOT_HOME/bin"
 fi
 
-errmsg() { echo -e "\e[31mError: $1\e[0m" >&2; }
-notice() { echo -e "\e[33m$1\e[0m"; }
-success() { echo -e "\e[32m$1\e[0m"; }
+ansi() {
+  [ $# -gt 0 ] || return
+  printf "\033[%sm" "$@"
+}
+[ -t 1 ] || ansi() { :; }
+errmsg() { printf "%sError: %s%s\n" "$(ansi 31 1)" "$1" "$(ansi 0)"; }
+notice() { printf "%s%s%s\n" "$(ansi 33)" "$1" "$(ansi 0)"; }
+success() { printf "%s%s%s\n" "$(ansi 32)" "$1" "$(ansi 0)"; }
 
 check_requirement() {
   for cmd in "$@"
@@ -114,10 +119,6 @@ if [ `id -u` != "0" ]; then
   echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
   echo ''
   echo "    export PATH=\"$QLOT_BIN_DIR:\$PATH\""
-  echo ''
-  echo 'Or, copy the script to a searchable directory such as /usr/local/bin.'
-  echo ''
-  echo "    sudo cp $QLOT_BIN_DIR/qlot /usr/local/bin"
   echo ''
 fi
 echo 'Enjoy!'

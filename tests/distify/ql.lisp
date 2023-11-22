@@ -1,4 +1,4 @@
-(defpackage #:qlot/tests/distify/ql
+(defpackage #:qlot-tests/distify/ql
   (:use #:cl
         #:rove
         #:qlot/distify/ql
@@ -16,7 +16,7 @@
                 #:qlot-error)
   (:import-from #:assoc-utils
                 #:aget))
-(in-package #:qlot/tests/distify/ql)
+(in-package #:qlot-tests/distify/ql)
 
 (defparameter *tmp-directory* (tmp-directory))
 
