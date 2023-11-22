@@ -322,12 +322,11 @@ OPTIONS:
            (format *error-output* "~&qlot init - Initialize a project for Qlot
 
 SYNOPSIS:
-    qlot init [--dist NAME]
+    qlot init [--dist NAME-OR-URL]
 
 OPTIONS:
-    --dist <name>
+    --dist [<name>|<url>]
         Add a dist to the initial qlfile.
-        It must be one of 'ultralisp' or 'quicklisp' (Default: quicklisp).
 ")
            (uiop:quit -1)))
 
