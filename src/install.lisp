@@ -31,7 +31,8 @@
                 #:with-secure-installer
                 #:with-download-logs)
   (:import-from #:qlot/utils
-                #:with-package-functions)
+                #:with-package-functions
+                #:starts-with)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
@@ -476,12 +477,13 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (cond
     ((equal dist "ultralisp")
      "https://dist.ultralisp.org/")
-    ((equal dist "quicklisp")
-     nil)
     (t
-     (error 'qlot-simple-error
-            :format-control "Unknown dist: ~A"
-            :format-arguments (list dist)))))
+     (unless (or (starts-with "http://" dist)
+                 (starts-with "https://" dist))
+       (error 'qlot-simple-error
+              :format-control "Unknown dist: ~A"
+              :format-arguments (list dist)))
+     dist)))
 
 (defun init-project (object &key dist)
   (etypecase object
@@ -503,9 +505,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                               :if-does-not-exist :create
                               :direction :output)
            (when dist
-             (let ((dist-url (dist-url dist)))
-               (when dist-url
-                 (format out "dist ~A ~A~%" dist dist-url))))))
+             (format out "dist ~A~%" (dist-url dist)))))
        ;; Add .qlot/ to .gitignore (if .git/ directory exists)
        (let ((git-dir (merge-pathnames #P".git/" object)))
          (when (uiop:directory-exists-p git-dir)
