@@ -374,8 +374,14 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                           (update-source source tmp-dir))))))))
              (with-quicklisp-home qlhome
                (with-package-functions #:ql-dist (find-dist (setf preference))
-                 (setf (preference (find-dist (source-dist-name source)))
-                       (incf preference)))))
+                 (let* ((dist-name (source-dist-name source))
+                        (dist (find-dist dist-name)))
+                   (unless dist
+                     (error "Unable to find dist with name ~S. You should use one of these names in the qlfile: ~A"
+                            dist-name
+                            (mapcar #'name (all-dists))))
+                   (setf (preference dist)
+                         (incf preference))))))
         (unless cache-directory
           (delete-tmp-directory tmp-dir)))
       (with-quicklisp-home qlhome
