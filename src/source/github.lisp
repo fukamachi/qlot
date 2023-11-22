@@ -83,4 +83,5 @@
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A"
             (source-github-repos source)
-            (source-github-identifier source))))
+            (or (ignore-errors (source-github-identifier source))
+                "<undetermined>"))))
