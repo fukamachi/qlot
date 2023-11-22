@@ -32,7 +32,8 @@
                 #:with-download-logs)
   (:import-from #:qlot/utils
                 #:with-package-functions
-                #:starts-with)
+                #:starts-with
+                #:find-duplicated-entry)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
@@ -54,6 +55,7 @@
                 #:qlot-simple-error
                 #:missing-projects
                 #:unnecessary-projects
+                #:duplicate-project
                 #:qlfile-not-found
                 #:qlfile-lock-not-found)
   #+sbcl
@@ -339,11 +341,16 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                               (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))
           (tmp-dir (or cache-directory (tmp-directory))))
       (ensure-directories-exist tmp-dir)
+      (mapc #'prepare-source sources)
+      (let ((dup (find-duplicated-entry sources
+                                        :key #'source-project-name
+                                        :test 'equal)))
+        (when dup
+          (error 'duplicate-project :name dup)))
       (unwind-protect
            (dolist (source (remove-if (lambda (source)
                                         (typep source 'source-local))
                                       sources))
-             (prepare-source source)
              (with-quicklisp-home qlhome
                (with-package-functions #:ql-dist (find-dist version)
                  (let ((dist (find-dist (source-dist-name source))))
