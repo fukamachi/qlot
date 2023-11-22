@@ -23,5 +23,5 @@
       (ok (install-quicklisp tmp-dir))
       (ok (uiop:file-exists-p (merge-pathnames #P"setup.lisp" tmp-dir)))
       (ok (uiop:directory-exists-p (merge-pathnames #P"local-init/" tmp-dir)))
-      (ok (uiop:file-exists-p (merge-pathnames #P"local-init/https.lisp" tmp-dir)))
-      (ok (uiop:file-exists-p (merge-pathnames #P"local-init/qlot-setup.lisp" tmp-dir))))))
+      (ok (uiop:file-exists-p (merge-pathnames #P"local-init/qlot-10-https.lisp" tmp-dir)))
+      (ok (uiop:file-exists-p (merge-pathnames #P"local-init/qlot-99-setup.lisp" tmp-dir))))))
