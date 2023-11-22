@@ -79,3 +79,9 @@
               (source-github-branch source2))
        (equal (source-github-tag source1)
               (source-github-tag source2))))
+
+(defmethod print-object ((source source-github) stream)
+  (print-unreadable-object (source stream :type t :identity t)
+    (format stream "~A ~A"
+            (source-github-repos source)
+            (source-github-identifier source))))
