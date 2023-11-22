@@ -12,7 +12,8 @@
   (:import-from #:qlot/bundle
                 #:bundle-project)
   (:import-from #:qlot/logger
-                #:message)
+                #:message
+                #:*logger-message-stream*)
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
@@ -566,8 +567,8 @@ SYNOPSIS:
     ((or
       missing-projects
       unnecessary-projects) (e)
-      (error-message (princ-to-string e))
-      (warn-message "Make it up-to-date with `qlot install`.")
+      (message (color-text :red (princ-to-string e)))
+      (message (color-text :yellow "Make it up-to-date with `qlot install`."))
       (uiop:quit 1))))
 
 (defun qlot-command-bundle (argv)
