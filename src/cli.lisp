@@ -322,23 +322,35 @@ OPTIONS:
            (format *error-output* "~&qlot init - Initialize a project for Qlot
 
 SYNOPSIS:
-    qlot init
+    qlot init [--dist NAME]
+
+OPTIONS:
+    --dist <name>
+        Add a dist to the initial qlfile.
+        It must be one of 'ultralisp' or 'quicklisp' (Default: quicklisp).
 ")
            (uiop:quit -1)))
 
-    (do-options (option argv)
-      ("--help"
-       (print-init-usage))
-      (otherwise
-       (error-message "qlot: extra arguments for 'qlot init'")
-       (warn-message "Run 'qlot init --help' to see the usage.")
-       (uiop:quit -1))))
+    (let (primary-dist)
+      (do-options (option argv)
+        ("--help"
+         (print-init-usage))
+        ("--dist"
+         (when primary-dist
+           (error-message "qlot: Can't specify multiple --dist")
+           (uiop:quit -1))
+         (setf primary-dist (pop argv)))
+        (otherwise
+         (error-message "qlot: extra arguments for 'qlot init'")
+         (warn-message "Run 'qlot init --help' to see the usage.")
+         (uiop:quit -1)))
 
-  (let* ((qlfile (init-project *default-pathname-defaults*))
-         (qlfile.lock (make-pathname :type "lock"
-                                     :defaults qlfile)))
-    (unless (uiop:file-exists-p qlfile.lock)
-      (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))
+      (let* ((qlfile (init-project *default-pathname-defaults*
+                                   :dist primary-dist))
+             (qlfile.lock (make-pathname :type "lock"
+                                         :defaults qlfile)))
+        (unless (uiop:file-exists-p qlfile.lock)
+          (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))))
 
 (defun qlot-command-exec (argv)
   (flet ((print-exec-usage ()

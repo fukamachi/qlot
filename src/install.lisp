@@ -469,7 +469,19 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     (pathname
      (check-qlfile (ensure-qlfile-pathname object) :quiet quiet))))
 
-(defun init-project (object)
+(defun dist-url (dist)
+  (check-type dist string)
+  (cond
+    ((equal dist "ultralisp")
+     "https://dist.ultralisp.org/")
+    ((equal dist "quicklisp")
+     nil)
+    (t
+     (error 'qlot-simple-error
+            :format-control "Unknown dist: ~A"
+            :format-arguments (list dist)))))
+
+(defun init-project (object &key dist)
   (etypecase object
     ((or symbol string)
      (init-project (asdf:find-system object)))
@@ -485,8 +497,13 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
        ;; Create 'qlfile'
        (unless (uiop:file-exists-p (merge-pathnames *default-qlfile* object))
          (message "Creating ~A" qlfile)
-         (with-open-file (out qlfile :if-does-not-exist :create)
-           (declare (ignorable out))))
+         (with-open-file (out qlfile
+                              :if-does-not-exist :create
+                              :direction :output)
+           (when dist
+             (let ((dist-url (dist-url dist)))
+               (when dist-url
+                 (format out "dist ~A ~A~%" dist dist-url))))))
        ;; Add .qlot/ to .gitignore (if .git/ directory exists)
        (let ((git-dir (merge-pathnames #P".git/" object)))
          (when (uiop:directory-exists-p git-dir)
