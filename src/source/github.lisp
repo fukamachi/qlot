@@ -42,21 +42,24 @@
           (source-github-identifier source)))
 
 (defmethod make-source ((source (eql :github)) &rest initargs)
-  ;; Assume project-name by the repository identifier
-  (unless (or (= 1 (length initargs))
-              (eql 1 (position-if #'keywordp initargs)))
-    (pop initargs))
-  (handler-case
-      (destructuring-bind (repos &key ref branch tag) initargs
-        (make-instance 'source-github
-                       :repos repos
-                       :ref ref
-                       :branch branch
-                       :tag tag))
-    (error ()
-      (error 'invalid-definition
-             :source :github
-             :usage "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]"))))
+  (let (project-name)
+    ;; Assume project-name by the repository identifier
+    (unless (or (= 1 (length initargs))
+                (eql 1 (position-if #'keywordp initargs)))
+      (setf project-name (pop initargs)))
+    (handler-case
+        (destructuring-bind (repos &key ref branch tag) initargs
+          (apply #'make-instance 'source-github
+                 :repos repos
+                 :ref ref
+                 :branch branch
+                 :tag tag
+                 (and project-name
+                      (list :project-name project-name))))
+      (error ()
+        (error 'invalid-definition
+               :source :github
+               :usage "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]")))))
 
 (defmethod prepare-source ((source source-github))
   (unless (source-project-name source)

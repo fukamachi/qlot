@@ -32,16 +32,18 @@
 
 (defmethod make-source ((source (eql :dist)) &rest initargs)
   (handler-case
-      (progn
+      (let (project-name)
         ;; project-name isn't necessary anymore
         (unless (or (starts-with "http://" (first initargs))
                     (starts-with "https://" (first initargs)))
-          (pop initargs))
+          (setf project-name (pop initargs)))
         (destructuring-bind (distribution &optional (version :latest))
             initargs
-          (make-instance 'source-dist
-                         :distribution (https-of distribution)
-                         :%version version)))
+          (apply #'make-instance 'source-dist
+                 :distribution (https-of distribution)
+                 :%version version
+                 (and project-name
+                      (list :project-name project-name)))))
     (error ()
       (error 'invalid-definition
              :source :dist
