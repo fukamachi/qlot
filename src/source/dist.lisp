@@ -34,12 +34,11 @@
   (handler-case
       (progn
         ;; project-name isn't necessary anymore
-        (when (or (starts-with "http://" (first initargs))
-                  (starts-with "https://" (first initargs)))
-          (push nil initargs))
-        (destructuring-bind (project-name distribution &optional (version :latest))
+        (unless (or (starts-with "http://" (first initargs))
+                    (starts-with "https://" (first initargs)))
+          (pop initargs))
+        (destructuring-bind (distribution &optional (version :latest))
             initargs
-          (declare (ignore project-name))
           (make-instance 'source-dist
                          :distribution (https-of distribution)
                          :%version version)))

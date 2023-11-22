@@ -43,12 +43,11 @@
 
 (defmethod make-source ((source (eql :github)) &rest initargs)
   ;; Assume project-name by the repository identifier
-  (when (or (= 1 (length initargs))
-            (eql 1 (position-if #'keywordp initargs)))
-    (push nil initargs))
+  (unless (or (= 1 (length initargs))
+              (eql 1 (position-if #'keywordp initargs)))
+    (pop initargs))
   (handler-case
-      (destructuring-bind (project-name repos &key ref branch tag) initargs
-        (declare (ignore project-name))
+      (destructuring-bind (repos &key ref branch tag) initargs
         (make-instance 'source-github
                        :repos repos
                        :ref ref

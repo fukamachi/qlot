@@ -73,7 +73,9 @@
                               (otherwise (intern (string k) class-pkg)))
             when (slot-exists-p source slot-name)
             do (setf (slot-value source slot-name) v)))
-    source))
+    source)
+  (:method :after ((source source))
+    (prepare-source source)))
 
 (defmethod print-object ((source source) stream)
   (print-unreadable-object (source stream :type t :identity t)
