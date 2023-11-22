@@ -48,8 +48,8 @@
     (push nil initargs))
   (handler-case
       (destructuring-bind (project-name repos &key ref branch tag) initargs
+        (declare (ignore project-name))
         (make-instance 'source-github
-                       :project-name project-name
                        :repos repos
                        :ref ref
                        :branch branch

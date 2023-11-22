@@ -24,6 +24,7 @@
 
 (defclass source ()
   ((project-name :initarg :project-name
+                 :initform nil
                  :accessor source-project-name)
    (version :initarg :version
             :accessor source-version)
@@ -77,7 +78,7 @@
 (defmethod print-object ((source source) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A"
-            (source-project-name source)
+            (source-identifier source)
             (if (slot-boundp source 'version)
                 (source-version source)
                 "<no version>"))))

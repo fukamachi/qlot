@@ -39,8 +39,8 @@
           (push nil initargs))
         (destructuring-bind (project-name distribution &optional (version :latest))
             initargs
+          (declare (ignore project-name))
           (make-instance 'source-dist
-                         :project-name project-name
                          :distribution (https-of distribution)
                          :%version version)))
     (error ()
@@ -70,8 +70,7 @@
 
 (defmethod print-object ((source source-dist-project) stream)
   (print-unreadable-object (source stream :type t :identity t)
-    (format stream "~A ~A ~A"
-            (source-project-name source)
+    (format stream "~A ~A"
             (source-distribution source)
             (if (slot-boundp source 'qlot/source/base::version)
                 (source-version source)
