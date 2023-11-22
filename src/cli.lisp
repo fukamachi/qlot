@@ -120,6 +120,8 @@ GLOBAL OPTIONS:
         Directory to run the Qlot command
     --no-color
         Don't colorize the output
+    --quiet
+        Don't output except errors and warnings
 
 TOPLEVEL OPTIONS:
     --version
@@ -207,6 +209,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
          do (case-equal
              ,option
              ("--no-color" (setf *enable-color* nil))
+             ("--quiet" (setf *logger-message-stream* (make-broadcast-stream)))
              ("--dir"
               (unless ,argv
                 (qlot/errors:ros-command-error "~A requires a value" ,option))
