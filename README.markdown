@@ -459,33 +459,29 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 
 1. Add one of the following functions to `init.el`.
 
-#### a) SBCL version
+#### a) SLIME
 
 ```emacs-lisp
-(defun slime-qlot-exec (directory)
-  (interactive (list (read-directory-name "Project directory: ")))
-  (slime-start :program "sbcl"
-               :program-args `("--no-userinit" "--no-sysinit" "--load" ,(concat (file-name-as-directory directory) ".qlot/setup.lisp"))
-               :directory directory
-               :name 'qlot
-               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":")))))
+(setq slime-lisp-implementations
+      '((sbcl ("sbcl") :coding-system utf-8-unix)
+        (qlot ("qlot" "exec" "sbcl") :coding-system utf-8-unix)))
 ```
 
-#### b) Roswell version
+See the [SLIME manual](https://slime.common-lisp.dev/doc/html/Multiple-Lisps.html#Multiple-Lisps) to set up multiple Lisps.
+
+#### b) Sly
 
 ```emacs-lisp
-(defun slime-qlot-exec (directory)
-  (interactive (list (read-directory-name "Project directory: ")))
-  (slime-start :program "qlot"
-               :program-args '("exec" "ros" "-S" "." "run")
-               :directory directory
-               :name 'qlot
-               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":")))))
+(setq sly-lisp-implementations
+      '((sbcl ("sbcl") :coding-system utf-8-unix)
+        (qlot ("qlot" "exec" "sbcl") :coding-system utf-8-unix)))
 ```
-NOTE for [sly](https://github.com/joaotavora/sly) users: Define `sly-qlot-exec` as the above code replaced `slime-start` with `sly-start`.
 
-2. Relaunch the Emacs.
-3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
+See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up multiple Lisps.
+
+2. Relaunch the Emacs or load the config file.
+3. `M-x cd RET /path/to/project` to change the directory.
+4. Invoke `M-- M-x slime RET qlot RET`.
 
 ### Vim/Neovim
 
