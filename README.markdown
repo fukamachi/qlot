@@ -30,28 +30,25 @@
 ## Usage
 
 ```
-# "qlfile" of "myapp"
-git clack https://github.com/fukamachi/clack.git
-github fukamachi/datafly :branch v0.7.x
-ql log4cl 2014-03-17
-ql mito :upstream
-```
-
-```
 $ cd /path/to/myapp
 
-# Installing libraries project-locally.
+# Initialize the project to start using Qlot.
+$ qlot init
+
+# Install libraries project-locally.
 $ qlot install
 
-# Updating specific libraries
+# Add the upstream version of a library
+$ qlot add mito --upstream
+
+# Add a library from GitHub
+$ qlot add fukamachi/anypool
+
+# Update specific libraries
 $ qlot update mito
 
-# Updating all depending libraries of a project.
-$ qlot update
-
-# Execute a command with a project-local Quicklisp
-$ qlot exec ros -S . run
-$ qlot exec clackup app.lisp
+# Run a REPL with a project-local Quicklisp
+$ qlot exec sbcl
 ```
 
 ## What Qlot is trying to solve
@@ -72,7 +69,7 @@ This is what Qlot is trying to solve.
 
 * [Roswell](https://github.com/roswell/roswell/) or [SBCL](https://www.sbcl.org/)
 * OpenSSL (Unix only)
-  * **[Ubuntu/Debian]** `apt install libssl-dev`
+  * **[Ubuntu/Debian]** `sudo apt install libssl-dev`
   * **[macOS]** `brew install openssl`
 * git (for installation from git repositories)
 
@@ -136,11 +133,11 @@ The advantage of this method is no dependencies are required other than `sbcl` a
 ```shell
 # Getting the latest version
 $ curl -sL https://api.github.com/repos/fukamachi/qlot/releases/latest | jq -rM '.name'
-1.2.16
+1.3.5
 ```
 
 ```shell
-$ curl https://github.com/fukamachi/qlot/releases/download/1.2.16/qlot-1.2.16.tar.gz -o qlot.tar.gz
+$ curl https://github.com/fukamachi/qlot/releases/download/1.3.5/qlot-1.3.5.tar.gz -o qlot.tar.gz
 $ tar xfz qlot.tar.gz
 $ cd qlot
 $ scripts/setup.sh
@@ -168,6 +165,14 @@ To update Qlot, run `git pull && scripts/setup.sh`.
 
 ```shell
 $ docker run --rm -it fukamachi/qlot
+```
+
+You can build it by yourself with `docker build`:
+
+```shell
+$ git clone https://github.com/fukamachi/qlot
+$ cd qlot
+$ docker build -t qlot .
 ```
 
 ## Optional settings
