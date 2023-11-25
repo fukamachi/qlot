@@ -8,8 +8,6 @@
                 #:defrost-source)
   (:import-from #:qlot/color
                 #:*enable-color*)
-  (:import-from #:qlot/utils/ql
-                #:with-quicklisp-home)
   (:import-from #:qlot/utils/shell
                 #:run-lisp
                 #:shell-command-error
@@ -47,16 +45,11 @@
 
 (defvar *system-quicklisp-home*)
 
-(defun run-distify-source-process (source destination &key quicklisp-home distinfo-only)
+(defun run-distify-source-process (source destination &key distinfo-only)
   (let ((qlot-source-dir (or *qlot-source-directory*
                              (asdf:system-source-directory :qlot))))
     (handler-case
         (run-lisp (append
-                   (when quicklisp-home
-                     (list `(let ((*error-output* (make-broadcast-stream)))
-                              (when (find :quicklisp *features*)
-                                (set (intern (string :*quicklisp-home*) :ql) ,quicklisp-home))
-                              (load (merge-pathnames #P"setup.lisp" ,quicklisp-home)))))
                    (list `(setf *enable-color* ,*enable-color*))
                    (list `(uiop:symbol-call :qlot/distify :distify
                                             ;; Call defrost-source to set '%version' from 'source-version'.
@@ -77,13 +70,11 @@
         (error 'qlot-simple-error
                :format-control (string-trim '(#\Newline) (shell-command-error-output e)))))))
 
-(defmacro with-qlot-server ((source &optional qlhome destination distinfo-only) &body body)
+(defmacro with-qlot-server ((source &optional destination distinfo-only) &body body)
   (let ((g-source (gensym "SOURCE"))
-        (g-qlhome (gensym "QLHOME"))
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
         (g-destination (gensym "DESTINATION")))
     `(let ((,g-source ,source)
-           (,g-qlhome ,qlhome)
            (*system-quicklisp-home* #+quicklisp ql:*quicklisp-home*
                                     #-quicklisp nil)
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
@@ -92,11 +83,9 @@
               `(with-tmp-directory (,g-destination)))
          ;; Run distify in another Lisp process
          (run-distify-source-process ,g-source ,g-destination
-                                     :quicklisp-home ,g-qlhome
                                      :distinfo-only ,distinfo-only)
          (progv (list ,fetch-scheme-functions '*handler*)
              (list (cons '("qlot" . qlot-fetch)
                          (symbol-value ,fetch-scheme-functions))
                    (make-handler ,g-destination))
-           (with-quicklisp-home ,g-qlhome
-             ,@body))))))
+           ,@body)))))
