@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
 
 ansi() {
