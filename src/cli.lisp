@@ -234,7 +234,9 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
   (setf qlot/logger:*debug* t))
 
 (defun qlot-unknown-option (option)
-  (qlot/errors:ros-command-error "'~A' is unknown option" option))
+  (if (starts-with "--" option)
+      (qlot/errors:ros-command-error "'~A' is an unknown option" option)
+      (qlot/errors:ros-command-error "'~A' is an extra argument" option)))
 
 (defun qlot-command-install (argv)
   (let ((install-deps t)
@@ -261,6 +263,11 @@ OPTIONS:
     --debug
         A flag to enable debug logging.
 ")
+       (uiop:quit -1))
+      (otherwise
+       (error-message "qlot: '~A' is an unknown argument" option)
+       (unless (starts-with "--" option)
+         (warn-message "Did you mean:~%  $ qlot add ~A" option))
        (uiop:quit -1)))
     (install-project *default-pathname-defaults*
                      :install-deps install-deps
