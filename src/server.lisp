@@ -43,11 +43,12 @@
         (when (uiop:file-exists-p file)
           file)))))
 
-(defvar *system-quicklisp-home*)
-
-(defun run-distify-source-process (source destination &key distinfo-only)
+(defun run-distify-source-process (source destination &key distinfo-only quicklisp-home)
   (let ((qlot-source-dir (or *qlot-source-directory*
-                             (asdf:system-source-directory :qlot))))
+                             (asdf:system-source-directory :qlot)))
+        (quicklisp-home (or quicklisp-home
+                            (and (find :quicklisp *features*)
+                                 (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))))
     (handler-case
         (run-lisp (append
                    (list `(setf *enable-color* ,*enable-color*))
@@ -63,27 +64,27 @@
                                             ,destination
                                             :distinfo-only ,distinfo-only)))
                   :load (or (probe-file (merge-pathnames #P".bundle-libs/bundle.lisp" qlot-source-dir))
-                            #+quicklisp (merge-pathnames #P"setup.lisp" *system-quicklisp-home*))
+                            (and quicklisp-home
+                                 (merge-pathnames #P"setup.lisp" quicklisp-home)))
                   :systems '("qlot/distify")
                   :source-registry qlot-source-dir)
       (shell-command-error (e)
         (error 'qlot-simple-error
                :format-control (string-trim '(#\Newline) (shell-command-error-output e)))))))
 
-(defmacro with-qlot-server ((source &optional destination distinfo-only) &body body)
+(defmacro with-qlot-server ((source &key destination distinfo-only quicklisp-home) &body body)
   (let ((g-source (gensym "SOURCE"))
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
         (g-destination (gensym "DESTINATION")))
     `(let ((,g-source ,source)
-           (*system-quicklisp-home* #+quicklisp ql:*quicklisp-home*
-                                    #-quicklisp nil)
            (,fetch-scheme-functions (intern (string '#:*fetch-scheme-functions*) '#:ql-http)))
        (,@(if destination
               `(let ((,g-destination ,destination)))
               `(with-tmp-directory (,g-destination)))
          ;; Run distify in another Lisp process
          (run-distify-source-process ,g-source ,g-destination
-                                     :distinfo-only ,distinfo-only)
+                                     :distinfo-only ,distinfo-only
+                                     :quicklisp-home ,quicklisp-home)
          (progv (list ,fetch-scheme-functions '*handler*)
              (list (cons '("qlot" . qlot-fetch)
                          (symbol-value ,fetch-scheme-functions))
