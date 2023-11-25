@@ -610,6 +610,29 @@ SYNOPSIS:
       (message (color-text :yellow "Make it up-to-date with `qlot install`."))
       (uiop:quit 1))))
 
+(defun qlot-command-outdated (argv)
+  (flet ((print-outdated-usage ()
+           (format *error-output* "~&qlot outdated - Check available updates of libraries
+
+SYNOPSIS:
+    qlot outdated [name...]
+")
+           (uiop:quit -1)))
+    (let (projects)
+      (do-options (option argv)
+        ("--help"
+         (print-outdated-usage))
+        (otherwise
+         (when (and (starts-with "--" option)
+                    (not (equal "--" option)))
+           (qlot-unknown-option option))
+         (unless (equal "--" option)
+           (push option projects))))
+
+      (ensure-package-loaded :qlot/check)
+      (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
+                        :projects projects))))
+
 (defun qlot-command-bundle (argv)
   (flet ((print-bundle-usage ()
            (format *error-output* "~&qlot bundle - Bundle project dependencies.
@@ -699,6 +722,8 @@ OPTIONS:
                  (qlot-command-remove argv))
                 ((equal "check" $1)
                  (qlot-command-check argv))
+                ((equal "outdated" $1)
+                 (qlot-command-outdated argv))
                 ((equal "bundle" $1)
                  (qlot-command-bundle argv))
                 ((and $1 (starts-with "--" $1))
