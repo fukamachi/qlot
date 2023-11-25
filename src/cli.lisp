@@ -267,7 +267,7 @@ OPTIONS:
       (otherwise
        (error-message "qlot: '~A' is an unknown argument" option)
        (unless (starts-with "--" option)
-         (warn-message "Did you mean:~%  $ qlot add ~A" option))
+         (message (color-text :yellow "Did you mean:~%    qlot add ~A" option)))
        (uiop:quit -1)))
     (install-project *default-pathname-defaults*
                      :install-deps install-deps
