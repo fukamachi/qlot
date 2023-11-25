@@ -64,6 +64,12 @@
 (defvar *load-asd-file*)
 (defvar *system-class-name*)
 
+(defmacro with-traversal-context (&body body)
+  `(let ((*registry* (make-hash-table :test 'equal))
+         (*package-system* (make-hash-table :test 'eql))
+         (*system-class-name* (make-hash-table :test 'equal)))
+     ,@body))
+
 (defun read-asd-form (form)
   (labels ((dep-list-name (dep)
              (ecase (first dep)
@@ -82,9 +88,13 @@
                     (stringp dep))
                 (string-downcase dep))
                (t (error "Can't normalize dependency: ~S" dep)))))
+    ;; See only toplevel forms
     (cond
       ((or (not (consp form))
            (not (symbolp (first form)))) nil)
+      ((member (first form) '(cl:defpackage cl:in-package uiop:define-package)
+               :test 'eq)
+       (eval form))
       ((eq (first form) 'asdf:defsystem)
        (destructuring-bind (system-name &rest system-form) (cdr form)
          (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
@@ -113,13 +123,13 @@
                         (string pkg))))
              (when pkg
                (setf (gethash pkg *package-system*)
-                     system-name))))))
-      ((macro-function (first form))
-       (read-asd-form (macroexpand-1 form))))))
+                     system-name)))))))))
 
 (defun read-asd-file (file)
   (uiop:with-input-file (in file)
-    (let ((*load-pathname* file))
+    (let ((*load-pathname* file)
+          (*load-truename* file)
+          (*load-asd-file* file))
       (uiop:with-safe-io-syntax (:package :asdf-user)
         (let ((*read-eval* t))
           (loop with eof = '#:eof
@@ -133,21 +143,18 @@
 (defmacro with-directory ((system-file system-name dependencies) directory &body body)
   (let ((value (gensym "VALUE"))
         (dir-system-files (gensym "DIR-SYSTEM-FILES")))
-    `(let ((*registry* (make-hash-table :test 'equal))
-           (*package-system* (make-hash-table :test 'eql))
-           (*system-class-name* (make-hash-table :test 'equal))
-           (,dir-system-files (directory-system-files ,directory)))
-       (dolist (,system-file ,dir-system-files)
-         (handler-bind ((style-warning #'muffle-warning))
-           (let ((*load-asd-file* ,system-file))
-             (read-asd-file ,system-file))))
-       (dolist (,system-file ,dir-system-files)
-         (declare (ignorable ,system-file))
-         (let ((,value (gethash ,system-file *registry*)))
-           (dolist (,value ,value)
-             (destructuring-bind (,system-name &rest ,dependencies) ,value
-               (declare (ignorable ,system-name ,dependencies))
-               ,@body)))))))
+    `(with-traversal-context
+       (let ((,dir-system-files (directory-system-files ,directory)))
+         (dolist (,system-file ,dir-system-files)
+           (handler-bind ((style-warning #'muffle-warning))
+             (read-asd-file ,system-file)))
+         (dolist (,system-file ,dir-system-files)
+           (declare (ignorable ,system-file))
+           (let ((,value (gethash ,system-file *registry*)))
+             (dolist (,value ,value)
+               (destructuring-bind (,system-name &rest ,dependencies) ,value
+                 (declare (ignorable ,system-name ,dependencies))
+                 ,@body))))))))
 
 (defun directory-lisp-files (directory)
   (append (uiop:directory-files directory "*.lisp")
