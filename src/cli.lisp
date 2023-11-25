@@ -12,7 +12,8 @@
   (:import-from #:qlot/bundle
                 #:bundle-project)
   (:import-from #:qlot/logger
-                #:message)
+                #:message
+                #:clear-progress)
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
@@ -675,7 +676,9 @@ OPTIONS:
                    ("--no-color" (setf *enable-color* nil))
                    (otherwise))
                  (error 'qlot/errors:command-not-found :command $1)))
-        #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
+        #+sbcl (sb-sys:interactive-interrupt ()
+                 (clear-progress)
+                 (uiop:quit -1))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))
           (print-usage)
