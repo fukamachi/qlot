@@ -1,8 +1,7 @@
 #!/bin/bash
 
-set -eu
-
 QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
+command=$1
 
 ansi() {
   [ $# -gt 0 ] || return
@@ -14,30 +13,27 @@ if ! [ -t 1 ]; then
 fi
 errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 
-if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
-  setup_file="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
-elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
-  setup_file="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
-fi
-
 if [ "$(which ros 2>/dev/null)" != "" ]; then
-  if [ "$setup_file" != "" ]; then
-    lisp="ros +Q -L sbcl-bin run -- --noinform --no-sysinit --no-userinit --non-interactive --load $setup_file"
-  else
-    lisp="ros -L sbcl-bin run -- --noinform --non-interactive"
-  fi
+  lisp="ros +Q -L sbcl-bin run --"
 elif [ "$(which sbcl 2>/dev/null)" != "" ]; then
-  if [ "$setup_file" != "" ]; then
-    lisp="sbcl --noinform --no-sysinit --no-userinit --non-interactive --load $setup_file"
-  else
-    lisp="sbcl --noinform --non-interactive"
-  fi
+  lisp="sbcl"
 else
   errmsg "sbcl is required to run Qlot."
   exit 1
 fi
 
-exec $lisp \
+if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+  setup_file="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
+elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
+  setup_file="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
+else
+  echo "Qlot is not setup yet." >&2
+  echo "Run '$QLOT_SOURCE_DIR/scripts/setup.sh' first." >&2
+  exit 1
+fi
+
+exec $lisp --noinform --no-sysinit --no-userinit --non-interactive \
+  --load "$setup_file" \
   --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
   --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \
   --eval '(qlot/cli:main)' -- "$@"

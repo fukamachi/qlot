@@ -1,0 +1,27 @@
+#!/bin/sh
+
+command=$1
+
+check_qlot_directory() {
+  if [ ! -f .qlot/setup.lisp ]; then
+    echo ".qlot/ is not a quicklisp directory." >&2
+    echo "Run 'qlot install' first." >&2
+    exit 1
+  fi
+}
+
+case "$command" in
+  exec)
+    check_qlot_directory
+    QUICKLISP_HOME=.qlot/
+    CL_SOURCE_REGISTRY="$(pwd)/"
+    exec "$@"
+    ;;
+  sbcl)
+    check_qlot_directory
+    shift
+    exec sbcl --noinform --no-sysinit --no-userinit --load .qlot/setup.lisp "$@"
+    ;;
+  *)
+    exec sbcl --noinform --non-interactive --eval '(ql:quickload :qlot/cli :silent t)' --eval '(qlot/cli:main)' "$@"
+esac
