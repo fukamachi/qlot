@@ -83,7 +83,8 @@
                 (string-downcase dep))
                (t (error "Can't normalize dependency: ~S" dep)))))
     (cond
-      ((not (consp form)) nil)
+      ((or (not (consp form))
+           (not (symbolp (first form)))) nil)
       ((eq (first form) 'asdf:defsystem)
        (destructuring-bind (system-name &rest system-form) (cdr form)
          (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
