@@ -15,8 +15,6 @@
                 #:*qlot-source-directory*)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
-  (:import-from #:qlot/utils/ql
-                #:with-quicklisp-home)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:export #:with-qlot-server
@@ -51,26 +49,26 @@
         (quicklisp-home (or quicklisp-home
                             (and (find :quicklisp *features*)
                                  (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))))
-    (with-quicklisp-home quicklisp-home
-      (handler-case
-          (run-lisp (append
-                     (list `(setf *enable-color* ,*enable-color*))
-                     (list `(uiop:symbol-call :qlot/distify :distify
-                                              ;; Call defrost-source to set '%version' from 'source-version'.
-                                              (defrost-source
-                                                  (make-instance ',(type-of source)
-                                                                 :project-name ,(source-project-name source)
-                                                                 ,@(source-initargs source)
-                                                                 ,@(and (slot-boundp source 'qlot/source/base::version)
-                                                                        `(:version ,(source-version source)))
-                                                                 ,@(source-frozen-slots source)))
-                                              ,destination
-                                              :distinfo-only ,distinfo-only)))
-                    :systems '("qlot/distify")
-                    :source-registry qlot-source-dir)
-        (shell-command-error (e)
-          (error 'qlot-simple-error
-                 :format-control (string-trim '(#\Newline) (shell-command-error-output e))))))))
+    (handler-case
+        (run-lisp (append
+                   (list `(setf *enable-color* ,*enable-color*))
+                   (list `(uiop:symbol-call :qlot/distify :distify
+                                            ;; Call defrost-source to set '%version' from 'source-version'.
+                                            (defrost-source
+                                                (make-instance ',(type-of source)
+                                                               :project-name ,(source-project-name source)
+                                                               ,@(source-initargs source)
+                                                               ,@(and (slot-boundp source 'qlot/source/base::version)
+                                                                      `(:version ,(source-version source)))
+                                                               ,@(source-frozen-slots source)))
+                                            ,destination
+                                            :distinfo-only ,distinfo-only)))
+                  :quicklisp-home quicklisp-home
+                  :systems '("qlot/distify")
+                  :source-registry qlot-source-dir)
+      (shell-command-error (e)
+        (error 'qlot-simple-error
+               :format-control (string-trim '(#\Newline) (shell-command-error-output e)))))))
 
 (defmacro with-qlot-server ((source &key destination distinfo-only quicklisp-home) &body body)
   (let ((g-source (gensym "SOURCE"))

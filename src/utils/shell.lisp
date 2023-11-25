@@ -100,38 +100,40 @@
                       '((uiop:print-backtrace :condition cl-user::c)))
                (uiop:quit -1))))))
 
-(defun build-command-args (forms &key systems source-registry)
+(defun build-command-args (forms &key quicklisp-home systems source-registry)
   (append
-    (default-args)
+   (default-args)
 
-    (when source-registry
-      (-e `(push ,source-registry asdf:*central-registry*)))
+   (when source-registry
+     (-e `(push ,source-registry asdf:*central-registry*)))
 
-    (-e '(setf asdf::*default-source-registries*
-               (quote (asdf::environment-source-registry
-                        asdf::system-source-registry
-                        asdf::system-source-registry-directory))))
+   (-e '(setf asdf::*default-source-registries*
+         (quote (asdf::environment-source-registry
+                 asdf::system-source-registry
+                 asdf::system-source-registry-directory))))
 
-    (let ((setup
+   (let* ((quicklisp-home (or quicklisp-home
+                              (and (find :quicklisp *features*)
+                                   (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
+          (setup
             (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
-                (and (find :quicklisp *features*)
-                     (merge-pathnames #P"setup.lisp"
-                                      (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))))
-      (when setup
-        (-e `(load ,setup))))
+                (and quicklisp-home
+                     (merge-pathnames #P"setup.lisp" quicklisp-home)))))
+     (when setup
+       (-e `(load ,setup))))
 
-    (loop for system in systems
-          append (-e
-                   `(if (find :quicklisp *features*)
-                        (uiop:symbol-call :ql :quickload ,system :silent t)
-                        (let ((*standard-output* (make-broadcast-stream))
-                              (*error-output* (make-broadcast-stream))
-                              (*trace-output* (make-broadcast-stream)))
-                          (asdf:load-system ,system)))))
+   (loop for system in systems
+         append (-e
+                 `(if (find :quicklisp *features*)
+                      (uiop:symbol-call :ql :quickload ,system :silent t)
+                      (let ((*standard-output* (make-broadcast-stream))
+                            (*error-output* (make-broadcast-stream))
+                            (*trace-output* (make-broadcast-stream)))
+                        (asdf:load-system ,system)))))
 
-    (loop for form in forms
-          append (-e
-                   (if (pathnamep form)
+   (loop for form in forms
+         append (-e
+                 (if (pathnamep form)
                      `(load ,form)
                      form)))))
 
@@ -184,8 +186,8 @@
    :input :stream
    :output :stream))
 
-(defun run-lisp (forms &rest args &key systems source-registry (output :interactive))
-  (declare (ignore systems source-registry))
+(defun run-lisp (forms &rest args &key quicklisp-home systems source-registry (output :interactive))
+  (declare (ignore quicklisp-home systems source-registry))
   (remf args :output)
   (safety-shell-command #-ros.init *current-lisp-path*
                         #+ros.init (or (ros:opt "wargv0")
