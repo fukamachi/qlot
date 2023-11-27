@@ -198,7 +198,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (install-all-releases source)
       new-dist)))
 
-(defun update-source (source tmp-dir)
+(defun update-source (source tmp-dir &key system-quicklisp-home)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
@@ -209,7 +209,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (version dist)
                        (version new-dist))
               (map nil #'uninstall (installed-releases dist))
-              (run-distify-source-process source tmp-dir)
+              (run-distify-source-process source tmp-dir
+                                          :quicklisp-home system-quicklisp-home)
               (setf dist (find-dist (source-dist-name source))
                     new-dist (available-update dist))
               (let ((*trace-output* (make-broadcast-stream)))
@@ -379,7 +380,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                 :distinfo-only t
                                                 :quicklisp-home system-qlhome)
                         (debug-log "Using temporary directory '~A'" tmp-dir)
-                        (update-source source tmp-dir))))))
+                        (update-source source tmp-dir
+                                       :system-quicklisp-home system-qlhome))))))
                (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
                  (let* ((dist-name (source-dist-name source))
                         (dist (find-dist dist-name)))
