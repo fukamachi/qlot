@@ -450,7 +450,12 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 2. Add the following function to `~/.lem/init.lisp`.
 
 ```common-lisp
-(define-command slime-qlot-exec (directory) ((prompt-for-directory (format nil "Project directory (~A): " (buffer-directory))))
+(defun prompt-for-project-directory ()
+  (let ((default-project-root (lem-core/commands/project:find-root (buffer-directory))))
+    (prompt-for-directory (format nil "Project directory (~A): " default-project-root)
+                          :default default-project-root)))
+
+(define-command slime-qlot-exec (directory) ((prompt-for-project-directory))
   (let ((command (first (lem-lisp-mode/implementation::list-roswell-with-qlot-commands))))
     (when command
       (lem-lisp-mode:run-slime command :directory directory))))
