@@ -204,10 +204,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (let ((new-dist (available-update dist)))
         (if new-dist
             (progn
-              (message "Updating dist ~S version ~S -> ~S."
-                       (name dist)
-                       (version dist)
-                       (version new-dist))
               (map nil #'uninstall (installed-releases dist))
               (run-distify-source-process source tmp-dir
                                           :quicklisp-home system-quicklisp-home)
@@ -222,7 +218,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (source-version source)))
             (progn
               (setf (source-version source) (version (find-dist (source-dist-name source))))
-              (message "Already have dist ~S version ~S."
+              (message "=> No update on dist ~S version ~S"
                        (source-dist-name source)
                        (source-version source))))
         new-dist))))
@@ -376,6 +372,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                        current-version
                                        (source-version source))))))
                      (t
+                      (message "Updating dist ~S." (source-project-name source))
                       (with-qlot-server (source :destination tmp-dir
                                                 :distinfo-only t
                                                 :quicklisp-home system-qlhome)
