@@ -6,7 +6,6 @@
   :description "A project-local library installer"
   :pathname "src"
   :depends-on ("qlot/main"
-               #+ros.installing "qlot/distify"
                #+ros.installing "qlot/cli")
   :output-files (image-op (o c)
                   (output-files o :qlot/command))
@@ -15,8 +14,7 @@
 
 (defsystem "qlot/command"
   :depends-on ("qlot/cli"
-               "qlot/main"
-               "qlot/install")
+               "qlot/main")
   :build-operation "program-op"
   :build-pathname "qlot"
   :entry-point "qlot/cli::main")
