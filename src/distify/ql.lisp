@@ -13,7 +13,8 @@
                 #:parse-space-delimited-stream)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url
-                #:write-source-distinfo)
+                #:write-source-distinfo
+                #:load-version-from-distinfo)
   (:import-from #:qlot/utils
                 #:take
                 #:https-of)
@@ -62,43 +63,49 @@
                   version))))
 
 (defun distify-ql (source destination &key distinfo-only)
-  (progress "Determining the distinfo URL.")
-  (unless (source-distinfo-url source)
-    (setf (source-distinfo-url source)
-          (get-distinfo-url (source-distribution source)
-                            (slot-value source 'qlot/source/dist::%version))))
-  (load-source-ql-version source)
-
-  (let ((*default-pathname-defaults*
-          (uiop:ensure-absolute-pathname
-            (merge-pathnames
-              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
-              destination))))
-    (ensure-directories-exist *default-pathname-defaults*)
-
-    (progress "Writing the distinfo.")
-    (write-source-distinfo source destination)
+  (let ((distinfo.txt (merge-pathnames
+                       (make-pathname :name (source-project-name source)
+                                      :type "txt")
+                       destination)))
+    (cond
+      ((uiop:file-exists-p distinfo.txt)
+       (load-version-from-distinfo source distinfo.txt))
+      (t
+       (unless (source-distinfo-url source)
+         (progress "Determining the distinfo URL.")
+         (setf (source-distinfo-url source)
+               (get-distinfo-url (source-distribution source)
+                                 (slot-value source 'qlot/source/dist::%version))))
+       (load-source-ql-version source)
+       (progress "Writing the distinfo.")
+       (write-source-distinfo source destination)))
 
     (when distinfo-only
-      (return-from distify-ql))
+      (return-from distify-ql destination))
 
-    (unless (and (uiop:file-exists-p "systems.txt")
-                 (uiop:file-exists-p "releases.txt"))
-      (progress "Getting the distinfo.")
-      (let ((original-distinfo
-              (parse-distinfo-stream (qlot/http:get (source-distinfo-url source)
-                                                    :want-stream t))))
+    (let* ((workspace (uiop:ensure-absolute-pathname
+                       (merge-pathnames
+                        (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
+                        destination)))
+           (systems.txt (merge-pathnames "systems.txt" workspace))
+           (releases.txt (merge-pathnames "releases.txt" workspace)))
+      (ensure-directories-exist workspace)
+      (unless (and (uiop:file-exists-p systems.txt)
+                   (uiop:file-exists-p releases.txt))
         (progress "Getting the metadata files.")
-        (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
-                                 ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
-          (destructuring-bind (file . url) metadata-pair
-            (check-type url string)
-            (let ((data (parse-space-delimited-stream (qlot/http:get (https-of url) :want-stream t)
-                                                      :test (lambda (data)
-                                                              (equal (first data) (source-project-name source)))
-                                                      :include-header t)))
-              (uiop:with-output-file (out (merge-pathnames file)
-                                          :if-exists :supersede)
-                (format out "~{~{~A~^ ~}~%~}" data)))))))
+        (let ((original-distinfo
+                (parse-distinfo-stream (qlot/http:get (source-distinfo-url source)
+                                                      :want-stream t))))
+          (dolist (metadata-pair `(("systems.txt" . ,(cdr (assoc "system-index-url" original-distinfo :test 'equal)))
+                                   ("releases.txt" . ,(cdr (assoc "release-index-url" original-distinfo :test 'equal)))))
+            (destructuring-bind (file . url) metadata-pair
+              (check-type url string)
+              (let ((data (parse-space-delimited-stream (qlot/http:get (https-of url) :want-stream t)
+                                                        :test (lambda (data)
+                                                                (equal (first data) (source-project-name source)))
+                                                        :include-header t)))
+                (uiop:with-output-file (out (merge-pathnames file workspace)
+                                            :if-exists :supersede)
+                  (format out "~{~{~A~^ ~}~%~}" data)))))))
 
-    *default-pathname-defaults*))
+      workspace)))

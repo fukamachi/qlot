@@ -15,7 +15,8 @@
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt
-                #:write-source-distinfo)
+                #:write-source-distinfo
+                #:load-version-from-distinfo)
   (:import-from #:qlot/utils/archive
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
@@ -80,24 +81,31 @@
                   (source-github-ref source)))))
 
 (defun distify-github (source destination &key distinfo-only)
-  (load-source-github-version source)
+  (let ((distinfo.txt (merge-pathnames
+                       (make-pathname :name (source-project-name source)
+                                      :type "txt")
+                       destination)))
+    (cond
+      ((uiop:file-exists-p distinfo.txt)
+       (load-version-from-distinfo source distinfo.txt)
+       (setf (source-github-ref source)
+             (subseq (source-version source) (source-version-prefix source))))
+      (t
+       (load-source-github-version source)
+       (progress "Writing the distinfo to ~S." destination)
+       (write-source-distinfo source destination)
+       (progress "Wrote the distinfo to ~S." destination))))
 
-  (let ((*default-pathname-defaults*
-          (uiop:ensure-absolute-pathname
-            (merge-pathnames
-              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
-              destination))))
-    (ensure-directories-exist *default-pathname-defaults*)
+  (when distinfo-only
+    (return-from distify-github destination))
 
-    (progress "Writing the distinfo to ~S." destination)
-    (write-source-distinfo source destination)
-    (progress "Wrote the distinfo to ~S." destination)
-
-    (when distinfo-only
-      (return-from distify-github))
-
+  (let ((workspace (uiop:ensure-absolute-pathname
+                    (merge-pathnames
+                     (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
+                     destination))))
+    (ensure-directories-exist workspace)
     (with-tmp-directory (softwares-dir)
-      (let ((archive-file (merge-pathnames "archive.tar.gz")))
+      (let ((archive-file (merge-pathnames "archive.tar.gz" workspace)))
         (unless (uiop:file-exists-p archive-file)
           (progress "Downloading ~S." (source-github-url source))
           (let ((cred (github-credentials)))
@@ -106,21 +114,23 @@
                      `(:basic-auth ,cred))))
           (progress "Downloaded ~S." (source-github-url source)))
 
-        (unless (and (uiop:file-exists-p "systems.txt")
-                     (uiop:file-exists-p "releases.txt"))
-          (progress "Extracting a tarball.")
-          (let ((source-directory (extract-tarball archive-file softwares-dir)))
-            (progress "Writing systems.txt.")
-            (uiop:with-output-file (out "systems.txt" :if-exists :supersede)
-              (princ (systems.txt (source-project-name source)
-                                  source-directory)
-                     out))
-            (progress "Writing releases.txt.")
-            (uiop:with-output-file (out "releases.txt" :if-exists :supersede)
-              (princ (releases.txt (source-project-name source)
-                                   (source-version source)
-                                   source-directory
-                                   archive-file)
-                     out))))))
+        (let ((systems.txt (merge-pathnames "systems.txt" workspace))
+              (releases.txt (merge-pathnames "releases.txt" workspace)))
+          (unless (and (uiop:file-exists-p systems.txt)
+                       (uiop:file-exists-p releases.txt))
+            (progress "Extracting a tarball.")
+            (let ((source-directory (extract-tarball archive-file softwares-dir)))
+              (progress "Writing systems.txt.")
+              (uiop:with-output-file (out systems.txt :if-exists :supersede)
+                (princ (systems.txt (source-project-name source)
+                                    source-directory)
+                       out))
+              (progress "Writing releases.txt.")
+              (uiop:with-output-file (out releases.txt :if-exists :supersede)
+                (princ (releases.txt (source-project-name source)
+                                     (source-version source)
+                                     source-directory
+                                     archive-file)
+                       out)))))))
 
-    *default-pathname-defaults*))
+    workspace))

@@ -16,12 +16,11 @@
 (defun distify-dist (source destination &key distinfo-only)
   (declare (ignore distinfo-only))
   (check-type source source-dist)
-  (progress "Determining the distinfo URL.")
   (unless (source-distinfo-url source)
+    (progress "Determining the distinfo URL.")
     (setf (source-distinfo-url source)
           (get-distinfo-url (source-distribution source)
                             (slot-value source 'qlot/source/dist::%version))))
-  (progress "Fetching the distinfo.")
   (let* ((destination (truename destination))
          (relative-path
            ;; distribution name may include slashes
@@ -29,9 +28,12 @@
            ;; of a pathname.
            (uiop:parse-unix-namestring (source-project-name source)
                                        :type "txt"))
-         (target-path (merge-pathnames
-                       relative-path
-                       destination)))
-    (ensure-directories-exist target-path)
-    (qlot/http:fetch (source-distinfo-url source) target-path)
-    destination))
+         (distinfo.txt (merge-pathnames
+                        relative-path
+                        destination)))
+    (ensure-directories-exist distinfo.txt)
+    (unless (uiop:file-exists-p distinfo.txt)
+      (progress "Fetching the distinfo.")
+      (qlot/http:fetch (source-distinfo-url source) distinfo.txt)))
+
+  destination)

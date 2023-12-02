@@ -20,7 +20,8 @@
   (:import-from #:qlot/utils/distify
                 #:releases.txt
                 #:systems.txt
-                #:write-source-distinfo)
+                #:write-source-distinfo
+                #:load-version-from-distinfo)
   (:import-from #:qlot/utils/git
                 #:git-clone
                 #:git-ref
@@ -47,6 +48,7 @@
                   (source-version-prefix source)
                   (source-git-ref source)))))
 
+;; TODO: Move to qlot/utils/distify
 (defun write-metadata-files (source destination source-directory tarball)
   (uiop:with-output-file (out (merge-pathnames "systems.txt" destination)
                               :if-exists :supersede)
@@ -66,52 +68,54 @@
       (setf (source-git-remote-url source)
             (project-upstream-url (source-project-name source)))))
 
-  (progress "Determining the project version.")
-  (load-source-git-version source)
+  (let ((distinfo.txt (merge-pathnames
+                       (make-pathname :name (source-project-name source)
+                                      :type "txt")
+                       destination)))
+    (progress "Determining the project version.")
+    (cond
+      ((uiop:file-exists-p distinfo.txt)
+       (load-version-from-distinfo source distinfo.txt)
+       (setf (source-git-ref source)
+             (subseq (source-version source)
+                     (length (source-version-prefix source)))))
+      (t
+       (load-source-git-version source)))
 
-  (let ((*default-pathname-defaults*
-          (uiop:ensure-absolute-pathname
-            (merge-pathnames
-              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
-              destination))))
-    (ensure-directories-exist *default-pathname-defaults*)
-
-    (progress "Writing the distinfo.")
-    (write-source-distinfo source destination)
+    (unless (uiop:file-exists-p distinfo.txt)
+      (progress "Writing the distinfo.")
+      (write-source-distinfo source destination))
 
     (when distinfo-only
-      (return-from distify-git))
+      (return-from distify-git destination))
 
-    (let ((archive-file (merge-pathnames "archive.tar.gz")))
-      (cond
-        ((not (uiop:file-exists-p archive-file))
-         (with-tmp-directory (softwares-dir)
-           (let ((source-directory (uiop:ensure-directory-pathname
-                                     (merge-pathnames (format nil "~A-~A"
-                                                              (source-project-name source)
-                                                              (source-git-identifier source))
-                                                      softwares-dir))))
-             (progress "Running git clone.")
-             (git-clone (source-git-remote-access-url source)
-                        source-directory
-                        :checkout-to (or (source-git-branch source)
-                                         (source-git-tag source))
-                        :ref (source-git-ref source))
+    (let ((workspace (uiop:ensure-absolute-pathname
+                      (merge-pathnames
+                       (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
+                       destination))))
+      (ensure-directories-exist workspace)
+      (with-tmp-directory (softwares-dir)
+        (let ((archive-file (merge-pathnames "archive.tar.gz" workspace))
+              (source-directory (uiop:ensure-directory-pathname
+                                 (merge-pathnames (format nil "~A-~A"
+                                                          (source-project-name source)
+                                                          (source-git-identifier source))
+                                                  softwares-dir))))
+          (unless (uiop:file-exists-p archive-file)
+            (progress "Running git clone.")
+            (git-clone (source-git-remote-access-url source)
+                       source-directory
+                       :checkout-to (or (source-git-branch source)
+                                        (source-git-tag source))
+                       :ref (source-git-ref source))
 
-             (progress "Creating a tarball.")
-             (create-git-tarball source-directory
-                                 archive-file
-                                 (source-git-ref source))
-             (unless (and (uiop:file-exists-p "systems.txt")
-                          (uiop:file-exists-p "releases.txt"))
-               (progress "Writing metadata files.")
-               (write-metadata-files source *default-pathname-defaults* source-directory archive-file)))))
-        ((not (and (uiop:file-exists-p "systems.txt")
-                   (uiop:file-exists-p "releases.txt")))
-         (with-tmp-directory (softwares-dir)
-           (progress "Extracting a tarball.")
-           (let ((source-directory (extract-tarball archive-file softwares-dir)))
-             (progress "Writing metadata files.")
-             (write-metadata-files source *default-pathname-defaults* source-directory archive-file))))))
+            (progress "Creating a tarball.")
+            (create-git-tarball source-directory
+                                archive-file
+                                (source-git-ref source)))
 
-    *default-pathname-defaults*))
+          (unless (and (uiop:file-exists-p (merge-pathnames "systems.txt" workspace))
+                       (uiop:file-exists-p (merge-pathnames "releases.txt" workspace)))
+            (progress "Writing metadata files.")
+            (write-metadata-files source workspace source-directory archive-file))))
+      workspace)))

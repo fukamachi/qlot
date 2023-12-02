@@ -9,6 +9,7 @@
                 #:lisp-file-dependencies)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream
+                #:parse-distinfo-file
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
   (:import-from #:qlot/utils
@@ -23,7 +24,8 @@
   (:export #:releases.txt
            #:systems.txt
            #:get-distinfo-url
-           #:write-source-distinfo))
+           #:write-source-distinfo
+           #:load-version-from-distinfo))
 (in-package #:qlot/utils/distify)
 
 (defun normalize-pathname (path)
@@ -118,3 +120,9 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                         destination)))
     (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
       (write-distinfo source out))))
+
+(defun load-version-from-distinfo (source distinfo.txt)
+  (check-type distinfo.txt pathname)
+  (let ((distinfo (parse-distinfo-file distinfo.txt)))
+    (setf (source-version source)
+          (cdr (assoc "version" distinfo :test 'equal)))))
