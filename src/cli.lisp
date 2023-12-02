@@ -345,9 +345,9 @@ SYNOPSIS:
        (warn-message "Run 'qlot init --help' to see the usage.")
        (uiop:quit -1))))
 
-  (ensure-package-loaded :qlot/install)
+  (ensure-package-loaded :qlot/init)
   (let* ((qlfile
-           (uiop:symbol-call '#:qlot/install '#:init-project *default-pathname-defaults*))
+           (uiop:symbol-call '#:qlot/init '#:init-project *default-pathname-defaults*))
          (qlfile.lock (make-pathname :type "lock"
                                      :defaults qlfile)))
     (unless (uiop:file-exists-p qlfile.lock)

@@ -4,8 +4,9 @@
   (:import-from #:qlot/install
                 #:install-project
                 #:update-project
-                #:init-project
                 #:*qlot-directory*)
+  (:import-from #:qlot/init
+                #:init-project)
   (:import-from #:qlot/bundle
                 #:bundle-project)
   (:import-from #:qlot/logger
