@@ -25,8 +25,7 @@
                 #:debug-log
                 #:progress)
   (:import-from #:qlot/secure-downloader
-                #:with-secure-installer
-                #:with-download-logs)
+                #:with-secure-installer)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -94,15 +93,14 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
-    (with-secure-installer (:no-logs t)
+    (with-secure-installer ()
       (apply-qlfile-to-qlhome qlfile quicklisp-home
                               :cache-directory cache-directory
                               :quiet quiet)
 
       ;; Install project dependencies
       (when install-deps
-        (with-download-logs
-          (install-dependencies project-root quicklisp-home))))
+        (install-dependencies project-root quicklisp-home)))
 
     (message "Successfully installed.")))
 
