@@ -13,11 +13,8 @@
                 #:source-version
                 #:source-install-url
                 #:freeze-source
-                #:defrost-source
                 #:source=)
   (:import-from #:qlot/parser
-                #:find-lock
-                #:parse-qlfile-lock
                 #:read-qlfile-for-install)
   (:import-from #:qlot/server
                 #:with-qlot-server)
@@ -34,6 +31,9 @@
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
+  (:import-from #:qlot/utils/qlot
+                #:dump-source-registry-conf
+                #:dump-qlfile-lock)
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:with-autoload-on-missing
@@ -41,6 +41,8 @@
                 #:lisp-file-dependencies)
   (:import-from #:qlot/utils/project
                 #:*qlot-directory*
+                #:*default-qlfile*
+                #:ensure-qlfile-pathname
                 #:project-dependencies
                 #:local-quicklisp-installed-p
                 #:check-local-quicklisp
@@ -51,21 +53,15 @@
   (:import-from #:qlot/errors
                 #:qlot-simple-error
                 #:missing-projects
-                #:unnecessary-projects
-                #:qlfile-not-found
-                #:qlfile-lock-not-found)
+                #:qlfile-not-found)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-qlfile
            #:update-qlfile
-           #:check-qlfile
            #:install-project
            #:update-project
-           #:check-project
            #:init-project))
 (in-package #:qlot/install)
-
-(defvar *default-qlfile* #P"qlfile")
 
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome
@@ -199,7 +195,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       new-dist)))
 
 (defun update-source (source tmp-dir)
-  (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
+  (with-package-functions #:ql-dist (find-dist update-in-place available-update version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
         (if new-dist
@@ -221,100 +217,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (source-dist-name source)
                        (source-version source))))
         new-dist))))
-
-(defun dump-source-registry-conf (stream sources)
-  (let ((*print-pretty* nil)
-        (*print-case* :downcase))
-    (format stream
-            "~&(~{~S~^~% ~})~%"
-            `(:source-registry
-              :ignore-inherited-configuration
-              (:also-exclude ".qlot")
-              ,@(loop for source in sources
-                      when (typep source 'source-local)
-                      collect (progn
-                                (message "Adding ~S located at '~A'."
-                                         (source-project-name source)
-                                         (source-local-path source))
-                                `(:tree ,(source-local-registry-directive source))))))))
-
-(defun dump-qlfile-lock (file sources)
-  (uiop:with-output-file (out file :if-exists :supersede)
-    (let ((*print-pretty* nil)
-          (*print-case* :downcase))
-      (loop for source in sources
-            for (project-name . contents) = (freeze-source source)
-            do (format out "~&(~S .~% (~{~S ~S~^~%  ~}))~%" project-name contents)))))
-
-(defun check-qlfile (qlfile &key quiet)
-  (unless (uiop:file-exists-p qlfile)
-    (error 'qlfile-not-found :path qlfile))
-
-  (let* ((sources (read-qlfile-for-install qlfile :silent t))
-         (qlfile.lock (find-lock qlfile))
-         (project-root (uiop:pathname-directory-pathname qlfile))
-         (qlhome (merge-pathnames *qlot-directory* project-root)))
-
-    (unless (uiop:file-exists-p qlfile.lock)
-      (error 'qlfile-lock-not-found :path qlfile.lock))
-
-    (check-local-quicklisp project-root)
-
-    ;; Check if qlfile.lock is up-to-date
-    (let* ((lock-sources (parse-qlfile-lock qlfile.lock))
-           (lock-sources (mapcar #'defrost-source lock-sources))
-           (old-sources
-             (remove-if (lambda (source)
-                          (let ((lock-source
-                                  (find (source-project-name source) lock-sources
-                                        :key #'source-project-name
-                                        :test #'string=)))
-                            (and lock-source
-                                 (source= source lock-source))))
-                        sources)))
-      (when old-sources
-        (error 'missing-projects
-               :projects (mapcar #'source-project-name old-sources))))
-
-    (unless (find-package '#:ql)
-      (load (merge-pathnames #P"setup.lisp" qlhome)))
-
-    ;; Check if all dists are installed and up-to-date
-    (let ((source-registry-up-to-date
-            (or (not (find-if (lambda (source)
-                                (typep source 'source-local))
-                              sources))
-                (and (uiop:file-exists-p (merge-pathnames #P"source-registry.conf" qlhome))
-                     (let ((source-registry-conf
-                             (with-output-to-string (s)
-                               (dump-source-registry-conf s sources))))
-                       (equal source-registry-conf
-                              (uiop:read-file-string (merge-pathnames #P"source-registry.conf" qlhome))))))))
-      (with-quicklisp-home qlhome
-        (with-package-functions #:ql-dist (find-dist version)
-          (let ((old-sources
-                  (remove-if (lambda (source)
-                               (if (typep source 'source-local)
-                                   source-registry-up-to-date
-                                   (let ((dist (find-dist (source-dist-name source))))
-                                     (and dist
-                                          (slot-boundp source 'qlot/source/base::version)
-                                          (equal (version dist)
-                                                 (source-version source))))))
-                             sources)))
-            (when old-sources
-              (error 'missing-projects
-                     :projects (mapcar #'source-project-name old-sources)))))
-        (with-package-functions #:ql-dist (all-dists name)
-          (let ((extra-dists
-                  (remove-if (lambda (dist-name)
-                               (find dist-name sources :test #'string= :key #'source-dist-name))
-                             (mapcar #'name (all-dists)))))
-            (when extra-dists
-              (error 'unnecessary-projects
-                     :projects extra-dists)))))))
-  (unless quiet
-    (message "Lock file is up-to-date.")))
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory quiet)
   (let ((sources (read-qlfile-for-install qlfile
@@ -403,14 +305,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
-(defun ensure-qlfile-pathname (object)
-  (cond
-    ((uiop:file-exists-p object)
-     object)
-    ((uiop:directory-exists-p (uiop:ensure-directory-pathname object))
-     (merge-pathnames *default-qlfile* (uiop:ensure-directory-pathname object)))
-    (t object)))
-
 (defun install-project (object &key (install-deps t) cache-directory quiet)
   (etypecase object
     ((or symbol string)
@@ -455,15 +349,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :install-deps install-deps
                      :cache-directory cache-directory
                      :quiet quiet))))
-
-(defun check-project (object &key quiet)
-  (etypecase object
-    ((or symbol string)
-     (check-project (asdf:find-system object) :quiet quiet))
-    (asdf:system
-     (check-qlfile (asdf:system-relative-pathname object *default-qlfile*) :quiet quiet))
-    (pathname
-     (check-qlfile (ensure-qlfile-pathname object) :quiet quiet))))
 
 (defun init-project (object)
   (etypecase object

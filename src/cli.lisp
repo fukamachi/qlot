@@ -17,6 +17,7 @@
                 #:command-line-arguments
                 #:no-such-program)
   (:import-from #:qlot/utils/project
+                #:*default-qlfile*
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
@@ -391,9 +392,9 @@ NOTE:
 
   (check-local-quicklisp *default-pathname-defaults*)
 
-  (ensure-package-loaded :qlot/install)
+  (ensure-package-loaded :qlot/check)
   (handler-case
-      (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*
+      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*
                         :quiet t)
     ((or missing-projects unnecessary-projects) ()
       (qlot/errors:ros-command-warn "Some installed libraries are different from specified versions.~%Run 'qlot install' to fix this problem.")))
@@ -580,9 +581,9 @@ SYNOPSIS:
        (warn-message "Run 'qlot check --help' to see the usage.")
        (uiop:quit -1))))
 
-  (ensure-package-loaded :qlot/install)
+  (ensure-package-loaded :qlot/check)
   (handler-case
-      (uiop:symbol-call '#:qlot/install '#:check-project *default-pathname-defaults*)
+      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*)
     ((or
       missing-projects
       unnecessary-projects) (e)

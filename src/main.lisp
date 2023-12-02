@@ -5,8 +5,7 @@
                 #:install-project
                 #:update-project
                 #:init-project
-                #:*qlot-directory*
-                #:*default-qlfile*)
+                #:*qlot-directory*)
   (:import-from #:qlot/bundle
                 #:bundle-project)
   (:import-from #:qlot/logger
