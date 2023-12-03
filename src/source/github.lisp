@@ -42,32 +42,38 @@
           (source-github-identifier source)))
 
 (defmethod make-source ((source (eql :github)) &rest initargs)
-  ;; Assume project-name by the repository identifier
-  (when (or (= 1 (length initargs))
-            (eql 1 (position-if #'keywordp initargs)))
-    (let ((repos (first initargs)))
+  (let (project-name)
+    ;; Assume project-name by the repository identifier
+    (unless (or (= 1 (length initargs))
+                (eql 1 (position-if #'keywordp initargs)))
+      (setf project-name (pop initargs)))
+    (handler-case
+        (destructuring-bind (repos &key ref branch tag) initargs
+          (apply #'make-instance 'source-github
+                 :repos repos
+                 :ref ref
+                 :branch branch
+                 :tag tag
+                 (and project-name
+                      (list :project-name project-name))))
+      (error ()
+        (error 'invalid-definition
+               :source :github
+               :usage "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]")))))
+
+(defmethod prepare-source ((source source-github))
+  (unless (source-project-name source)
+    (let ((repos (source-github-repos source)))
       (destructuring-bind (username repository)
           (split-with #\/ repos)
         (declare (ignore username))
-        (setf initargs
-              (cons repository initargs)))))
-  (handler-case
-      (destructuring-bind (project-name repos &key ref branch tag) initargs
-        (make-instance 'source-github
-                       :project-name project-name
-                       :repos repos
-                       :ref ref
-                       :branch branch
-                       :tag tag))
-    (error ()
-      (error 'invalid-definition
-             :source :github
-             :usage "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]"))))
+        (setf (source-project-name source) repository)))))
+
+(defmethod source-identifier ((source source-github))
+  (source-github-repos source))
 
 (defmethod source= ((source1 source-github) (source2 source-github))
-  (and (string= (source-project-name source1)
-                (source-project-name source2))
-       (string= (source-github-repos source1)
+  (and (string= (source-github-repos source1)
                 (source-github-repos source2))
        (equal (source-github-ref source1)
               (source-github-ref source2))
@@ -75,3 +81,10 @@
               (source-github-branch source2))
        (equal (source-github-tag source1)
               (source-github-tag source2))))
+
+(defmethod print-object ((source source-github) stream)
+  (print-unreadable-object (source stream :type t :identity t)
+    (format stream "~A ~A"
+            (source-github-repos source)
+            (or (ignore-errors (source-github-identifier source))
+                "<undetermined>"))))

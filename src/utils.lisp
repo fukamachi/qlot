@@ -7,6 +7,7 @@
            #:starts-with
            #:split-with
            #:take
+           #:find-duplicated-entry
            #:generate-random-string
            #:with-package-functions
            #:pathname-in-directory-p
@@ -59,6 +60,16 @@
   (if (nthcdr n list)
       (subseq list 0 n)
       list))
+
+(defun find-duplicated-entry (set &key (test 'eql) (key #'identity))
+  (block nil
+    (mapl (lambda (sublist)
+            (when (find (funcall key (car sublist)) (cdr sublist)
+                        :key key
+                        :test test)
+              (return (car sublist))))
+          set))
+  nil)
 
 (defun generate-random-string ()
   (let ((*random-state* (make-random-state t)))

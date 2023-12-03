@@ -4,6 +4,7 @@
                 #:install-quicklisp
                 #:install-local-init-files)
   (:import-from #:qlot/source
+                #:prepare-source
                 #:source-dist
                 #:source-dist-name
                 #:source-local
@@ -30,7 +31,9 @@
                 #:with-secure-installer
                 #:with-download-logs)
   (:import-from #:qlot/utils
-                #:with-package-functions)
+                #:with-package-functions
+                #:starts-with
+                #:find-duplicated-entry)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
@@ -51,6 +54,7 @@
                 #:qlot-simple-error
                 #:missing-projects
                 #:unnecessary-projects
+                #:duplicate-project
                 #:qlfile-not-found
                 #:qlfile-lock-not-found)
   #+sbcl
@@ -331,6 +335,12 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                               (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))
           (tmp-dir (or cache-directory (tmp-directory))))
       (ensure-directories-exist tmp-dir)
+      (mapc #'prepare-source sources)
+      (let ((dup (find-duplicated-entry sources
+                                        :key #'source-project-name
+                                        :test 'equal)))
+        (when dup
+          (error 'duplicate-project :name dup)))
       (unwind-protect
            (dolist (source (remove-if (lambda (source)
                                         (typep source 'source-local))
@@ -472,7 +482,20 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     (pathname
      (check-qlfile (ensure-qlfile-pathname object) :quiet quiet))))
 
-(defun init-project (object)
+(defun dist-url (dist)
+  (check-type dist string)
+  (cond
+    ((equal dist "ultralisp")
+     "https://dist.ultralisp.org/")
+    (t
+     (unless (or (starts-with "http://" dist)
+                 (starts-with "https://" dist))
+       (error 'qlot-simple-error
+              :format-control "Unknown dist: ~A"
+              :format-arguments (list dist)))
+     dist)))
+
+(defun init-project (object &key dist)
   (etypecase object
     ((or symbol string)
      (init-project (asdf:find-system object)))
@@ -488,8 +511,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
        ;; Create 'qlfile'
        (unless (uiop:file-exists-p (merge-pathnames *default-qlfile* object))
          (message "Creating ~A" qlfile)
-         (with-open-file (out qlfile :if-does-not-exist :create)
-           (declare (ignorable out))))
+         (with-open-file (out qlfile
+                              :if-does-not-exist :create
+                              :direction :output)
+           (when dist
+             (format out "dist ~A~%" (dist-url dist)))))
        ;; Add .qlot/ to .gitignore (if .git/ directory exists)
        (let ((git-dir (merge-pathnames #P".git/" object)))
          (when (uiop:directory-exists-p git-dir)

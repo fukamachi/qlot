@@ -68,7 +68,6 @@
                                          ,file-var)
                        (format t "~A~%" ,file-var)
                        (force-output))))
-
                  :systems '("qlot/http")
                  :source-registry (or *qlot-source-directory*
                                       (asdf:system-source-directory :qlot)))))
