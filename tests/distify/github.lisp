@@ -3,7 +3,8 @@
         #:rove
         #:qlot/distify/github)
   (:import-from #:qlot/source
-                #:make-source)
+                #:make-source
+                #:prepare-source)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory))
 (in-package #:qlot-tests/distify/github)
@@ -18,6 +19,7 @@
   (let ((source (make-source :github
                              "fukamachi/quri"
                              :ref "adb6d04f1b9ea99fa7f18044df4c86b6c68023af")))
+    (prepare-source source)
     (distify-github source *tmp-directory*)
 
     (let ((distinfo.txt (merge-pathnames #P"quri.txt" *tmp-directory*))

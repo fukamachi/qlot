@@ -4,6 +4,7 @@
                 #:install-quicklisp
                 #:install-local-init-files)
   (:import-from #:qlot/source
+                #:prepare-source
                 #:source-dist
                 #:source-dist-name
                 #:source-local
@@ -27,7 +28,9 @@
   (:import-from #:qlot/secure-downloader
                 #:with-secure-installer)
   (:import-from #:qlot/utils
-                #:with-package-functions)
+                #:with-package-functions
+                #:starts-with
+                #:find-duplicated-entry)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/qlot
@@ -52,6 +55,7 @@
   (:import-from #:qlot/errors
                 #:qlot-simple-error
                 #:missing-projects
+                #:duplicate-project
                 #:qlfile-not-found)
   #+sbcl
   (:import-from #:sb-posix)
@@ -227,6 +231,12 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
     (let ((preference (get-universal-time))
           (tmp-dir (or cache-directory (tmp-directory))))
       (ensure-directories-exist tmp-dir)
+      (mapc #'prepare-source sources)
+      (let ((dup (find-duplicated-entry sources
+                                        :key #'source-project-name
+                                        :test 'equal)))
+        (when dup
+          (error 'duplicate-project :name dup)))
       (unwind-protect
            (dolist (source (remove-if (lambda (source)
                                         (typep source 'source-local))

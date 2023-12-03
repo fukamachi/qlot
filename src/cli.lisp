@@ -333,25 +333,35 @@ OPTIONS:
            (format *error-output* "~&qlot init - Initialize a project for Qlot
 
 SYNOPSIS:
-    qlot init
+    qlot init [--dist NAME-OR-URL]
+
+OPTIONS:
+    --dist [<name>|<url>]
+        Add a dist to the initial qlfile.
 ")
            (uiop:quit -1)))
 
-    (do-options (option argv)
-      ("--help"
-       (print-init-usage))
-      (otherwise
-       (error-message "qlot: extra arguments for 'qlot init'")
-       (warn-message "Run 'qlot init --help' to see the usage.")
-       (uiop:quit -1))))
+    (let (primary-dist)
+      (do-options (option argv)
+        ("--help"
+         (print-init-usage))
+        ("--dist"
+         (when primary-dist
+           (error-message "qlot: Can't specify multiple --dist")
+           (uiop:quit -1))
+         (setf primary-dist (pop argv)))
+        (otherwise
+         (error-message "qlot: extra arguments for 'qlot init'")
+         (warn-message "Run 'qlot init --help' to see the usage.")
+         (uiop:quit -1)))
 
-  (ensure-package-loaded :qlot/init)
-  (let* ((qlfile
-           (uiop:symbol-call '#:qlot/init '#:init-project *default-pathname-defaults*))
-         (qlfile.lock (make-pathname :type "lock"
-                                     :defaults qlfile)))
-    (unless (uiop:file-exists-p qlfile.lock)
-      (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))
+      (ensure-package-loaded :qlot/init)
+      (let* ((qlfile (uiop:symbol-call '#:qlot/init '#:init-project *default-pathname-defaults*
+                                       :dist primary-dist))
+             (qlfile.lock (make-pathname :type "lock"
+                                         :defaults qlfile)))
+        (unless (uiop:file-exists-p qlfile.lock)
+          (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))))
 
 (defun qlot-command-exec (argv)
   (flet ((print-exec-usage ()
@@ -451,66 +461,72 @@ EXAMPLES:
     qlot add fukamachi/mito --ref 8c795b
     qlot add ultralisp egao1980-cl-idna
     qlot add git datafly https://github.com/fukamachi/datafly
+
+OPTIONS:
+    --no-install
+        Don't invoke an installation after adding
 ")
            (uiop:quit -1)))
 
-    ;; Parse options
-    (when (and (first argv)
-               (starts-with "--" (first argv)))
-      (block nil
-        (do-options (option argv)
-          ("--help"
-           (print-add-usage))
-          ("--debug"
-           (qlot-option-debug))
-          (otherwise
-           (when (and (starts-with "--" option)
-                      (not (equal "--" option)))
-             (qlot-unknown-option option))
-           (unless (equal "--" option)
-             (push option argv))
-           (return)))))
+    (let (no-install)
+      ;; Parse options
+      (when (and (first argv)
+                 (starts-with "--" (first argv)))
+        (block nil
+          (do-options (option argv)
+            ("--help"
+             (print-add-usage))
+            ("--debug"
+             (qlot-option-debug))
+            ("--no-install"
+             )
+            (otherwise
+             (when (and (starts-with "--" option)
+                        (not (equal "--" option)))
+               (qlot-unknown-option option))
+             (unless (equal "--" option)
+               (push option argv))
+             (return)))))
 
-    (unless argv
-      (error-message "qlot: requires a new library information")
-      (warn-message "Run 'qlot add --help' to see the usage.")
-      (uiop:quit -1))
+      (unless argv
+        (error-message "qlot: requires a new library information")
+        (warn-message "Run 'qlot add --help' to see the usage.")
+        (uiop:quit -1))
 
-    ;; Complete the source type
-    (unless (member (first argv)
-                    '("dist" "git" "github" "http" "local" "ql" "ultralisp")
-                    :test 'equal)
+      ;; Complete the source type
+      (unless (member (first argv)
+                      '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                      :test 'equal)
+        (setf argv
+              (if (find #\/ (first argv) :test 'char=)
+                  (cons "github" argv)
+                  (cons "ql" argv))))
+
       (setf argv
-            (if (find #\/ (first argv) :test 'char=)
-                (cons "github" argv)
-                (cons "ql" argv)))))
+            (mapcar (lambda (arg)
+                      (if (starts-with "--" arg)
+                          (format nil ":~A" (subseq arg 2))
+                          arg))
+                    argv))
 
-  (setf argv
-        (mapcar (lambda (arg)
-                  (if (starts-with "--" arg)
-                      (format nil ":~A" (subseq arg 2))
-                      arg))
-                argv))
-
-  (ensure-package-loaded '(:qlot/add :qlot/install))
-
-  (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install)))
-        (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
-                                     (uiop:temporary-directory))))
-    (unless (uiop:file-exists-p qlfile)
-      (message "Creating ~A" qlfile)
-      (with-open-file (out qlfile :if-does-not-exist :create)
-        (declare (ignorable out))))
-    (uiop:copy-file qlfile qlfile.bak)
-    (uiop:symbol-call '#:qlot/add '#:add-project argv qlfile)
-    (handler-bind ((error
-                     (lambda (e)
-                       (declare (ignore e))
-                       (uiop:copy-file qlfile.bak qlfile))))
-      (uiop:symbol-call '#:qlot/install '#:install-project
-                        *default-pathname-defaults*
-                        :install-deps nil
-                        :quiet t))))
+      (ensure-package-loaded '(:qlot/add :qlot/install))
+      (let ((qlfile *default-qlfile*)
+            (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                         (uiop:temporary-directory))))
+        (unless (uiop:file-exists-p qlfile)
+          (message "Creating ~A" qlfile)
+          (with-open-file (out qlfile :if-does-not-exist :create)
+            (declare (ignorable out))))
+        (uiop:copy-file qlfile qlfile.bak)
+        (uiop:symbol-call '#:qlot/add '#:add-project argv qlfile)
+        (unless no-install
+          (handler-bind ((error
+                           (lambda (e)
+                             (declare (ignore e))
+                             (uiop:copy-file qlfile.bak qlfile))))
+            (uiop:symbol-call '#:qlot/install '#:install-project *default-pathname-defaults*
+                              :install-deps nil
+                              :quiet t)))))))
 
 (defun qlot-command-remove (argv)
   (flet ((print-remove-usage ()

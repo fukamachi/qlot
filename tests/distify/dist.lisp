@@ -3,7 +3,8 @@
         #:rove
         #:qlot/distify/dist)
   (:import-from #:qlot/source
-                #:make-source)
+                #:make-source
+                #:prepare-source)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-file)
   (:import-from #:qlot/utils/tmp
@@ -20,6 +21,7 @@
 
 (deftest distify-dist-tests
   (let ((source (make-source :dist "ultralisp" "http://dist.ultralisp.org/")))
+    (prepare-source source)
     (distify-dist source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "ultralisp"
@@ -30,6 +32,7 @@
         (ok (equal (aget data "name") "ultralisp")))))
 
   (let ((source (make-source :dist "ultralisp" "http://dist.ultralisp.org/" "20190904101505")))
+    (prepare-source source)
     (distify-dist source *tmp-directory*)
 
     (let ((distinfo.txt (make-pathname :name "ultralisp"
