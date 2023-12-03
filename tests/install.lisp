@@ -2,7 +2,8 @@
   (:use #:cl
         #:rove)
   (:import-from #:qlot/install
-                #:install-qlfile)
+                #:install-qlfile
+                #:update-qlfile)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:import-from #:qlot/utils/ql
@@ -27,9 +28,9 @@
   (with-tmp-directory (tmp-dir)
     (copy-qlfile tmp-dir)
 
-    (let ((qlhome (merge-pathnames #P".qlot/" tmp-dir)))
-      (install-qlfile (merge-pathnames #P"qlfile" tmp-dir)
-                      :quicklisp-home qlhome)
+    (let ((qlhome (merge-pathnames #P".qlot/" tmp-dir))
+          (qlfile (merge-pathnames #P"qlfile" tmp-dir)))
+      (install-qlfile qlfile :quicklisp-home qlhome)
 
       (ok (set-equal (mapcar #'directory-name
                              (uiop:subdirectories (merge-pathnames #P"dists/" qlhome)))
@@ -43,19 +44,19 @@
                      :test 'string=)
           "dists are installed")
 
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/quicklisp/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/quicklisp/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "2018-02-28")))
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/ultralisp/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/ultralisp/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "20190904101505")))
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/ironclad/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/ironclad/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "git-66ddf32d8afc6581315c72422bf2343eab65009e")))
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/cl-ppcre/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/cl-ppcre/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "ql-2018-08-31")))
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/lsx/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/lsx/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/fukamachi-lack/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/fukamachi-lack/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "ultralisp-20190904101505")))
-      (let ((data (parse-distinfo-file (merge-pathnames (format nil "dists/mito/distinfo.txt") qlhome))))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/mito/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "ql-upstream-8c795b7b4de7dc635f1d2442ef1faf8f23d283e6")))
 
       ;; Check if Dexador, qlot/distify depends on, is not installed in the local Quicklisp
@@ -71,4 +72,23 @@
                            "mito"))
         (ok (uiop:directory-exists-p
               (merge-pathnames (format nil "dists/~A/software/" dist-name)
-                               qlhome)))))))
+                               qlhome))))
+
+      (update-qlfile qlfile
+                     :quicklisp-home qlhome
+                     :projects '("fukamachi-lack"))
+
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/quicklisp/distinfo.txt" qlhome))))
+        (ok (equal (aget data "version") "2018-02-28")))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/ultralisp/distinfo.txt" qlhome))))
+        (ok (equal (aget data "version") "20190904101505")))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/ironclad/distinfo.txt" qlhome))))
+        (ok (equal (aget data "version") "git-66ddf32d8afc6581315c72422bf2343eab65009e")))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/cl-ppcre/distinfo.txt" qlhome))))
+        (ok (equal (aget data "version") "ql-2018-08-31")))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/lsx/distinfo.txt" qlhome))))
+        (ok (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/fukamachi-lack/distinfo.txt" qlhome))))
+        (ng (equal (aget data "version") "ultralisp-20190904101505")))
+      (let ((data (parse-distinfo-file (merge-pathnames "dists/mito/distinfo.txt" qlhome))))
+        (ok (equal (aget data "version") "ql-upstream-8c795b7b4de7dc635f1d2442ef1faf8f23d283e6"))))))

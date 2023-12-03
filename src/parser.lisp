@@ -2,7 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/source
                 #:make-source
-                #:source-project-name
+                #:source-identifier
                 #:source-dist-name
                 #:source-defrost-args
                 #:defrost-source
@@ -70,16 +70,16 @@
                          (parse-qlfile-line line))
           when source
           collect
-             (if (find (source-project-name source) sources
+             (if (find (source-identifier source) sources
                        :test #'string=
-                       :key #'source-project-name)
+                       :key #'source-identifier)
                  (error 'qlfile-parse-failed
                         :file file
                         :lineno lineno
                         :line line
                         :error
                         (make-condition 'duplicate-project
-                                        :name (source-project-name source)))
+                                        :name (source-identifier source)))
                  source)
           into sources
           finally (return sources))))
@@ -114,11 +114,11 @@
   (flet ((make-sources-map (sources)
            (let ((hash (make-hash-table :test 'equal)))
              (dolist (source sources)
-               (setf (gethash (source-project-name source) hash) source))
+               (setf (gethash (source-identifier source) hash) source))
              hash)))
     (let ((lock-sources-map (make-sources-map lock-sources)))
       (loop for source in sources
-            for lock-source = (gethash (source-project-name source)
+            for lock-source = (gethash (source-identifier source)
                                        lock-sources-map)
             collect
             (if (source= source lock-source)

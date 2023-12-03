@@ -1,6 +1,6 @@
-(defpackage #:qlot/local-init/qlot-setup
+(defpackage #:qlot/local-init/setup
   (:use #:cl))
-(in-package #:qlot/local-init/qlot-setup)
+(in-package #:qlot/local-init/setup)
 
 (defun setup-source-registry ()
   #+ros.init (setf roswell:*local-project-directories* nil)

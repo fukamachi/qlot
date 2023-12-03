@@ -30,28 +30,25 @@
 ## Usage
 
 ```
-# "qlfile" of "myapp"
-git clack https://github.com/fukamachi/clack.git
-github fukamachi/datafly :branch v0.7.x
-ql log4cl 2014-03-17
-ql mito :upstream
-```
-
-```
 $ cd /path/to/myapp
 
-# Installing libraries project-locally.
+# Initialize the project to start using Qlot.
+$ qlot init
+
+# Install libraries project-locally.
 $ qlot install
 
-# Updating specific libraries
+# Add the upstream version of a library
+$ qlot add mito --upstream
+
+# Add a library from GitHub
+$ qlot add fukamachi/anypool
+
+# Update specific libraries
 $ qlot update mito
 
-# Updating all depending libraries of a project.
-$ qlot update
-
-# Execute a command with a project-local Quicklisp
-$ qlot exec ros -S . run
-$ qlot exec clackup app.lisp
+# Run a REPL with a project-local Quicklisp
+$ qlot exec sbcl
 ```
 
 ## What Qlot is trying to solve
@@ -72,7 +69,7 @@ This is what Qlot is trying to solve.
 
 * [Roswell](https://github.com/roswell/roswell/) or [SBCL](https://www.sbcl.org/)
 * OpenSSL (Unix only)
-  * **[Ubuntu/Debian]** `apt install libssl-dev`
+  * **[Ubuntu/Debian]** `sudo apt install libssl-dev`
   * **[macOS]** `brew install openssl`
 * git (for installation from git repositories)
 
@@ -136,11 +133,11 @@ The advantage of this method is no dependencies are required other than `sbcl` a
 ```shell
 # Getting the latest version
 $ curl -sL https://api.github.com/repos/fukamachi/qlot/releases/latest | jq -rM '.name'
-1.2.16
+1.3.5
 ```
 
 ```shell
-$ curl https://github.com/fukamachi/qlot/releases/download/1.2.16/qlot-1.2.16.tar.gz -o qlot.tar.gz
+$ curl https://github.com/fukamachi/qlot/releases/download/1.3.5/qlot-1.3.5.tar.gz -o qlot.tar.gz
 $ tar xfz qlot.tar.gz
 $ cd qlot
 $ scripts/setup.sh
@@ -168,6 +165,14 @@ To update Qlot, run `git pull && scripts/setup.sh`.
 
 ```shell
 $ docker run --rm -it fukamachi/qlot
+```
+
+You can build it by yourself with `docker build`:
+
+```shell
+$ git clone https://github.com/fukamachi/qlot
+$ cd qlot
+$ docker build -t qlot .
 ```
 
 ## Optional settings
@@ -414,14 +419,14 @@ local rove ~/Programs/lib/rove
 ### dist
 
 ```
-dist <dist name> <distribution URL> [<dist version>]
+dist <distribution URL> [<dist version>]
 ```
 
 `dist` allows to use a custom Quicklisp dist, like Ultralisp.
 
 ```
-dist quicklisp http://beta.quicklisp.org/dist/quicklisp.txt
-dist ultralisp http://dist.ultralisp.org/
+dist http://beta.quicklisp.org/dist/quicklisp.txt
+dist http://dist.ultralisp.org/
 ```
 
 ## Priorities of distributions
@@ -445,7 +450,12 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 2. Add the following function to `~/.lem/init.lisp`.
 
 ```common-lisp
-(define-command slime-qlot-exec (directory) ((prompt-for-directory (format nil "Project directory (~A): " (buffer-directory))))
+(defun prompt-for-project-directory ()
+  (let ((default-project-root (lem-core/commands/project:find-root (buffer-directory))))
+    (prompt-for-directory (format nil "Project directory (~A): " default-project-root)
+                          :default default-project-root)))
+
+(define-command slime-qlot-exec (directory) ((prompt-for-project-directory))
   (let ((command (first (lem-lisp-mode/implementation::list-roswell-with-qlot-commands))))
     (when command
       (lem-lisp-mode:run-slime command :directory directory))))
@@ -459,33 +469,29 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 
 1. Add one of the following functions to `init.el`.
 
-#### a) SBCL version
+#### a) SLIME
 
 ```emacs-lisp
-(defun slime-qlot-exec (directory)
-  (interactive (list (read-directory-name "Project directory: ")))
-  (slime-start :program "sbcl"
-               :program-args `("--no-userinit" "--no-sysinit" "--load" ,(concat (file-name-as-directory directory) ".qlot/setup.lisp"))
-               :directory directory
-               :name 'qlot
-               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":")))))
+(setq slime-lisp-implementations
+      '((sbcl ("sbcl") :coding-system utf-8-unix)
+        (qlot ("qlot" "exec" "sbcl") :coding-system utf-8-unix)))
 ```
 
-#### b) Roswell version
+See the [SLIME manual](https://slime.common-lisp.dev/doc/html/Multiple-Lisps.html#Multiple-Lisps) to set up multiple Lisps.
+
+#### b) Sly
 
 ```emacs-lisp
-(defun slime-qlot-exec (directory)
-  (interactive (list (read-directory-name "Project directory: ")))
-  (slime-start :program "qlot"
-               :program-args '("exec" "ros" "-S" "." "run")
-               :directory directory
-               :name 'qlot
-               :env (list (concat "PATH=" (mapconcat 'identity exec-path ":")))))
+(setq sly-lisp-implementations
+      '((sbcl ("sbcl") :coding-system utf-8-unix)
+        (qlot ("qlot" "exec" "sbcl") :coding-system utf-8-unix)))
 ```
-NOTE for [sly](https://github.com/joaotavora/sly) users: Define `sly-qlot-exec` as the above code replaced `slime-start` with `sly-start`.
 
-2. Relaunch the Emacs.
-3. Invoke `M-x slime-qlot-exec RET /path/to/project/`.
+See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up multiple Lisps.
+
+2. Relaunch the Emacs or load the config file.
+3. `M-x cd RET /path/to/project` to change the directory.
+4. Invoke `M-- M-x slime RET qlot RET`.
 
 ### Vim/Neovim
 
