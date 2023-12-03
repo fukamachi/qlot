@@ -13,7 +13,6 @@
                 #:color-text)
   (:import-from #:qlot/utils/cli
                 #:exec
-                #:which
                 #:command-line-arguments
                 #:no-such-program)
   (:import-from #:qlot/utils/project
