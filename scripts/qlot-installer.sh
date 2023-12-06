@@ -65,29 +65,30 @@ success 'Welcome to Qlot automatic installer!'
 echo ''
 echo "Installation path: $QLOT_HOME"
 
-if [ -f "$QLOT_SOURCE_DIR/qlot.asd" ]; then
-  rm -rf "$QLOT_SOURCE_DIR/"
-fi
-
 mkdir -p "$QLOT_HOME"
-mkdir -p "$QLOT_SOURCE_DIR"
+mkdir -p "$QLOT_HOME/tmp"
 
 #
 # Download
 
-if [ -f "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz" ]; then
-  echo "Already have an archive: $QLOT_SOURCE_DIR/tmp/qlot.tar.gz"
+if [ -f "$QLOT_HOME/tmp/qlot.tar.gz" ]; then
+  echo "Already have an archive: $QLOT_HOME/tmp/qlot.tar.gz"
 else
   echo -n "Downloading an archive from '$QLOT_ARCHIVE'..."
-  mkdir -p "$QLOT_SOURCE_DIR/tmp"
   if [ "$(which curl 2>/dev/null)" != "" ]; then
-    curl -sL "$QLOT_ARCHIVE" -o "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz"
+    curl -sL "$QLOT_ARCHIVE" -o "$QLOT_HOME/tmp/qlot.tar.gz"
   else
-    wget -q "$QLOT_ARCHIVE" -O "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz"
+    wget -q "$QLOT_ARCHIVE" -O "$QLOT_HOME/tmp/qlot.tar.gz"
   fi
 fi
 
-tar zxf "$QLOT_SOURCE_DIR/tmp/qlot.tar.gz" -C "$QLOT_SOURCE_DIR" --strip-component 1
+tar zxf "$QLOT_HOME/tmp/qlot.tar.gz" -C "$QLOT_HOME/tmp"
+
+if [ -d "$QLOT_SOURCE_DIR/" ]; then
+  rm -rf "$QLOT_SOURCE_DIR/"
+fi
+mv "$(ls -d "$QLOT_HOME"/tmp/qlot-*)" "$QLOT_SOURCE_DIR"
+
 echo "done"
 
 #
