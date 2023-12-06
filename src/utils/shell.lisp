@@ -116,7 +116,7 @@
                               (and (find :quicklisp *features*)
                                    (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
           (setup
-            (or (probe-file (asdf:system-relative-pathname :qlot #P".bundle-libs/bundle.lisp"))
+            (or (probe-file (merge-pathnames #P".bundle-libs/bundle.lisp" *qlot-source-directory*))
                 (and quicklisp-home
                      (merge-pathnames #P"setup.lisp" quicklisp-home)))))
      (when setup
