@@ -87,7 +87,7 @@ tar zxf "$QLOT_HOME/tmp/qlot.tar.gz" -C "$QLOT_HOME/tmp"
 if [ -d "$QLOT_SOURCE_DIR/" ]; then
   rm -rf "$QLOT_SOURCE_DIR/"
 fi
-mv "$(ls -d "$QLOT_HOME"/tmp/qlot*)" "$QLOT_SOURCE_DIR"
+mv "$(find "$QLOT_HOME"/tmp/ -type d -maxdepth 1 -name "qlot*")" "$QLOT_SOURCE_DIR"
 
 echo "done"
 
