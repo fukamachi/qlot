@@ -13,8 +13,8 @@
                 #:invalid-definition)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
-  (:import-from #:qlot/utils/shell
-                #:run-lisp)
+  (:import-from #:qlot/utils/quickdocs
+                #:project-upstream-url)
   (:export #:source-ql
            #:source-ql-all
            #:source-ql-upstream))
@@ -83,12 +83,7 @@
 (defmethod freeze-source :before ((source source-ql-upstream))
   (unless (source-git-remote-url source)
     (setf (source-git-remote-url source)
-          (run-lisp `((write-string
-                       (uiop:symbol-call :qlot/utils/quickdocs :project-upstream-url
-                                         ,(source-project-name source))))
-                    :systems '("qlot/utils/quickdocs")
-                    :source-registry (asdf:system-source-directory :qlot)
-                    :output :string))))
+          (project-upstream-url (source-project-name source)))))
 
 (defmethod source-frozen-slots ((source source-ql-upstream))
   (append (call-next-method)

@@ -2,13 +2,13 @@
   (:nicknames #:qlot.source.dist)
   (:use #:cl
         #:qlot/source/base)
+  (:import-from #:qlot/http)
   (:import-from #:qlot/utils/ql
+                #:parse-distinfo-file
                 #:make-versioned-distinfo-url)
   (:import-from #:qlot/utils
                 #:https-of
                 #:starts-with)
-  (:import-from #:qlot/utils/shell
-                #:run-lisp)
   (:import-from #:qlot/errors
                 #:invalid-definition)
   (:export #:source-dist
@@ -52,13 +52,9 @@
 (defmethod prepare-source ((source source-dist))
   (unless (source-project-name source)
     (let ((project-name
-            (run-lisp `((uiop:with-temporary-file (:pathname cl-user::tmp-file)
-                          (uiop:symbol-call :qlot/http :fetch ,(source-distribution source) cl-user::tmp-file)
-                          (write-string
-                           (cdr (assoc "name" (uiop:symbol-call :qlot/utils/ql :parse-distinfo-file cl-user::tmp-file) :test 'equal)))))
-                      :systems '("qlot/http" "qlot/utils/ql")
-                      :source-registry (asdf:system-source-directory :qlot)
-                      :output :string)))
+            (uiop:with-temporary-file (:pathname tmp-file)
+              (qlot/http:fetch (source-distribution source) tmp-file)
+              (cdr (assoc "name" (parse-distinfo-file tmp-file) :test 'equal)))))
       (setf (source-project-name source) project-name))))
 
 (defmethod defrost-source :after ((source source-dist-project))
