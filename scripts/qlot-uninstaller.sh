@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 QLOT_HOME=${QLOT_HOME:-~/.qlot}
 

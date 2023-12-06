@@ -78,7 +78,7 @@ This is what Qlot is trying to solve.
 ### Automatic installer (recommended)
 
 ```shell
-$ curl -L https://qlot.tech/installer | bash
+$ curl -L https://qlot.tech/installer | sh
 ```
 
 It also requires `curl` (or `wget`) and `tar`.
