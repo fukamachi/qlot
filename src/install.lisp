@@ -203,7 +203,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       new-dist)))
 
 (defun update-source (source tmp-dir &key system-quicklisp-home)
-  (with-package-functions #:ql-dist (find-dist update-in-place available-update name version uninstall installed-releases)
+  (with-package-functions #:ql-dist (find-dist update-in-place available-update version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
       (let ((new-dist (available-update dist)))
         (if new-dist
