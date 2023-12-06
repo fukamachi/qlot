@@ -2,7 +2,6 @@
   (:use #:cl)
   (:export #:exec
            #:no-such-program
-           #:which
            #:command-line-arguments))
 (in-package #:qlot/utils/cli)
 
@@ -54,12 +53,3 @@
   (uiop:run-program args
                     :output t
                     :error-output t))
-
-(defun which (cmd)
-  (handler-case
-      (string-right-trim '(#\Newline)
-                         (with-output-to-string (s)
-                           (uiop:run-program `("which" ,cmd)
-                                             :output s)))
-    (uiop/run-program:subprocess-error ()
-      nil)))

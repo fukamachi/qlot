@@ -78,7 +78,7 @@ This is what Qlot is trying to solve.
 ### Automatic installer (recommended)
 
 ```shell
-$ curl -L https://qlot.tech/installer | bash
+$ curl -L https://qlot.tech/installer | sh
 ```
 
 It also requires `curl` (or `wget`) and `tar`.
@@ -419,14 +419,14 @@ local rove ~/Programs/lib/rove
 ### dist
 
 ```
-dist <dist name> <distribution URL> [<dist version>]
+dist <distribution URL> [<dist version>]
 ```
 
 `dist` allows to use a custom Quicklisp dist, like Ultralisp.
 
 ```
-dist quicklisp http://beta.quicklisp.org/dist/quicklisp.txt
-dist ultralisp http://dist.ultralisp.org/
+dist http://beta.quicklisp.org/dist/quicklisp.txt
+dist http://dist.ultralisp.org/
 ```
 
 ## Priorities of distributions
@@ -450,7 +450,12 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 2. Add the following function to `~/.lem/init.lisp`.
 
 ```common-lisp
-(define-command slime-qlot-exec (directory) ((prompt-for-directory (format nil "Project directory (~A): " (buffer-directory))))
+(defun prompt-for-project-directory ()
+  (let ((default-project-root (lem-core/commands/project:find-root (buffer-directory))))
+    (prompt-for-directory (format nil "Project directory (~A): " default-project-root)
+                          :default default-project-root)))
+
+(define-command slime-qlot-exec (directory) ((prompt-for-project-directory))
   (let ((command (first (lem-lisp-mode/implementation::list-roswell-with-qlot-commands))))
     (when command
       (lem-lisp-mode:run-slime command :directory directory))))

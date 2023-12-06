@@ -10,10 +10,12 @@
            #:source-initargs
            #:source-defrost-args
            #:make-source
+           #:prepare-source
            #:source-frozen-slots
            #:freeze-source
            #:defrost-source
            #:source-dist-name
+           #:source-identifier
            #:source=
            #:write-distinfo
            #:source-install-url
@@ -22,7 +24,8 @@
 
 (defclass source ()
   ((project-name :initarg :project-name
-                 :reader source-project-name)
+                 :initform nil
+                 :accessor source-project-name)
    (version :initarg :version
             :accessor source-version)
 
@@ -42,6 +45,10 @@
   (:method (source &rest args)
     (declare (ignore args))
     (error 'unknown-source :name source)))
+
+(defgeneric prepare-source (source)
+  (:method (source)
+    (declare (ignore source))))
 
 (defgeneric source-frozen-slots (source)
   (:method ((source source))
@@ -66,12 +73,14 @@
                               (otherwise (intern (string k) class-pkg)))
             when (slot-exists-p source slot-name)
             do (setf (slot-value source slot-name) v)))
-    source))
+    source)
+  (:method :after ((source source))
+    (prepare-source source)))
 
 (defmethod print-object ((source source) stream)
   (print-unreadable-object (source stream :type t :identity t)
     (format stream "~A ~A"
-            (source-project-name source)
+            (source-identifier source)
             (if (slot-boundp source 'version)
                 (source-version source)
                 "<no version>"))))
@@ -79,6 +88,10 @@
 (defgeneric source-dist-name (source)
   (:method ((source source))
     (source-project-name source)))
+
+(defgeneric source-identifier (source)
+  (:method ((source source))
+    (source-dist-name source)))
 
 (defgeneric source= (source1 source2)
   (:method (source1 source2)

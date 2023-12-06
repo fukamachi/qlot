@@ -19,8 +19,11 @@
            #:local-quicklisp-installed-p
            #:check-local-quicklisp
            #:local-quicklisp-home
-           #:project-dependencies))
+           #:project-dependencies
+           #:ensure-qlfile-pathname))
 (in-package #:qlot/utils/project)
+
+(defvar *default-qlfile* #P"qlfile")
 
 (defvar *qlot-directory* #P".qlot/")
 (defvar *default-qlfile* #P"qlfile")
@@ -120,3 +123,11 @@
       (remove-if (lambda (dep)
                    (find (name dep) project-system-names :test 'equal))
                  all-dependencies))))
+
+(defun ensure-qlfile-pathname (object)
+  (cond
+    ((uiop:file-exists-p object)
+     object)
+    ((uiop:directory-exists-p (uiop:ensure-directory-pathname object))
+     (merge-pathnames *default-qlfile* (uiop:ensure-directory-pathname object)))
+    (t object)))

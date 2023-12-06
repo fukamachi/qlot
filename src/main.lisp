@@ -1,14 +1,16 @@
 (defpackage #:qlot
   (:nicknames #:qlot/main)
   (:use #:cl)
+  (:import-from #:qlot/add)
+  (:import-from #:qlot/bundle
+                #:bundle-project)
+  (:import-from #:qlot/check)
+  (:import-from #:qlot/init
+                #:init-project)
   (:import-from #:qlot/install
                 #:install-project
                 #:update-project
-                #:init-project
-                #:*qlot-directory*
-                #:*default-qlfile*)
-  (:import-from #:qlot/bundle
-                #:bundle-project)
+                #:*qlot-directory*)
   (:import-from #:qlot/logger
                 #:*debug*
                 #:*logger-message-stream*

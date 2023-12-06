@@ -1,18 +1,9 @@
 (defpackage #:qlot/cli
   (:use #:cl)
-  (:import-from #:qlot/add
-                #:add-project
-                #:remove-project)
-  (:import-from #:qlot/install
-                #:install-project
-                #:update-project
-                #:check-project
-                #:init-project
-                #:*default-qlfile*)
-  (:import-from #:qlot/bundle
-                #:bundle-project)
   (:import-from #:qlot/logger
-                #:message)
+                #:message
+                #:*logger-message-stream*
+                #:clear-progress)
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
@@ -23,10 +14,10 @@
                 #:color-text)
   (:import-from #:qlot/utils/cli
                 #:exec
-                #:which
                 #:command-line-arguments
                 #:no-such-program)
   (:import-from #:qlot/utils/project
+                #:*default-qlfile*
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
@@ -47,6 +38,15 @@
   (princ (apply #'color-text :yellow control args)
          *error-output*)
   (fresh-line *error-output*))
+
+(defun ensure-package-loaded (package-names)
+  (let ((package-names (ensure-list package-names))
+        (*standard-output* (make-broadcast-stream))
+        (*trace-output* (make-broadcast-stream)))
+    (dolist (package-name package-names)
+      (check-type package-name keyword)
+      (unless (find-package package-name)
+        (asdf:load-system package-name)))))
 
 (defun extend-source-registry (current-value dir-to-add)
   "According to ASDF documentation:
@@ -119,6 +119,8 @@ GLOBAL OPTIONS:
         Directory to run the Qlot command
     --no-color
         Don't colorize the output
+    --quiet
+        Don't output except errors and warnings
 
 TOPLEVEL OPTIONS:
     --version
@@ -206,6 +208,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
          do (case-equal
              ,option
              ("--no-color" (setf *enable-color* nil))
+             ("--quiet" (setf *logger-message-stream* (make-broadcast-stream)))
              ("--dir"
               (unless ,argv
                 (qlot/errors:ros-command-error "~A requires a value" ,option))
@@ -267,14 +270,16 @@ OPTIONS:
       (otherwise
        (error-message "qlot: '~A' is an unknown argument" option)
        (unless (starts-with "--" option)
-         (warn-message "Did you mean:~%  $ qlot add ~A" option))
+         (message (color-text :yellow "Did you mean:~%    qlot add ~A" option)))
        (uiop:quit -1)))
-    (install-project *default-pathname-defaults*
-                     :install-deps install-deps
-                     :cache-directory (and cache
-                                           (uiop:ensure-absolute-pathname
-                                            (uiop:ensure-directory-pathname cache)
-                                            *default-pathname-defaults*)))))
+    (ensure-package-loaded :qlot/install)
+    (uiop:symbol-call '#:qlot/install '#:install-project
+                      *default-pathname-defaults*
+                      :install-deps install-deps
+                      :cache-directory (and cache
+                                            (uiop:ensure-absolute-pathname
+                                             (uiop:ensure-directory-pathname cache)
+                                             *default-pathname-defaults*)))))
 
 (defun qlot-command-update (argv)
   (let ((install-deps t)
@@ -315,37 +320,51 @@ OPTIONS:
            (qlot-unknown-option option)
            (setf projects
                  (append projects (list option))))))
-    (update-project *default-pathname-defaults*
-                    :projects projects
-                    :install-deps install-deps
-                    :cache-directory (and cache
-                                          (uiop:ensure-absolute-pathname
-                                           (uiop:ensure-directory-pathname cache)
-                                           *default-pathname-defaults*))
-                    :quiet (not (null projects)))))
+    (ensure-package-loaded :qlot/install)
+    (uiop:symbol-call '#:qlot/install '#:update-project
+                      *default-pathname-defaults*
+                      :projects projects
+                      :install-deps install-deps
+                      :cache-directory (and cache
+                                            (uiop:ensure-absolute-pathname
+                                             (uiop:ensure-directory-pathname cache)
+                                             *default-pathname-defaults*))
+                      :quiet (not (null projects)))))
 
 (defun qlot-command-init (argv)
   (flet ((print-init-usage ()
            (format *error-output* "~&qlot init - Initialize a project for Qlot
 
 SYNOPSIS:
-    qlot init
+    qlot init [--dist NAME-OR-URL]
+
+OPTIONS:
+    --dist [<name>|<url>]
+        Add a dist to the initial qlfile.
 ")
            (uiop:quit -1)))
 
-    (do-options (option argv)
-      ("--help"
-       (print-init-usage))
-      (otherwise
-       (error-message "qlot: extra arguments for 'qlot init'")
-       (warn-message "Run 'qlot init --help' to see the usage.")
-       (uiop:quit -1))))
+    (let (primary-dist)
+      (do-options (option argv)
+        ("--help"
+         (print-init-usage))
+        ("--dist"
+         (when primary-dist
+           (error-message "qlot: Can't specify multiple --dist")
+           (uiop:quit -1))
+         (setf primary-dist (pop argv)))
+        (otherwise
+         (error-message "qlot: extra arguments for 'qlot init'")
+         (warn-message "Run 'qlot init --help' to see the usage.")
+         (uiop:quit -1)))
 
-  (let* ((qlfile (init-project *default-pathname-defaults*))
-         (qlfile.lock (make-pathname :type "lock"
-                                     :defaults qlfile)))
-    (unless (uiop:file-exists-p qlfile.lock)
-      (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))
+      (ensure-package-loaded :qlot/init)
+      (let* ((qlfile (uiop:symbol-call '#:qlot/init '#:init-project *default-pathname-defaults*
+                                       :dist primary-dist))
+             (qlfile.lock (make-pathname :type "lock"
+                                         :defaults qlfile)))
+        (unless (uiop:file-exists-p qlfile.lock)
+          (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))))
 
 (defun qlot-command-exec (argv)
   (flet ((print-exec-usage ()
@@ -386,9 +405,10 @@ NOTE:
 
   (check-local-quicklisp *default-pathname-defaults*)
 
+  (ensure-package-loaded :qlot/check)
   (handler-case
-      (check-project *default-pathname-defaults*
-                     :quiet t)
+      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*
+                        :quiet t)
     ((or missing-projects unnecessary-projects) ()
       (qlot/errors:ros-command-warn "Some installed libraries are different from specified versions.~%Run 'qlot install' to fix this problem.")))
 
@@ -444,63 +464,72 @@ EXAMPLES:
     qlot add fukamachi/mito --ref 8c795b
     qlot add ultralisp egao1980-cl-idna
     qlot add git datafly https://github.com/fukamachi/datafly
+
+OPTIONS:
+    --no-install
+        Don't invoke an installation after adding
 ")
            (uiop:quit -1)))
 
-    ;; Parse options
-    (when (and (first argv)
-               (starts-with "--" (first argv)))
-      (block nil
-        (do-options (option argv)
-          ("--help"
-           (print-add-usage))
-          ("--debug"
-           (qlot-option-debug))
-          (otherwise
-           (when (and (starts-with "--" option)
-                      (not (equal "--" option)))
-             (qlot-unknown-option option))
-           (unless (equal "--" option)
-             (push option argv))
-           (return)))))
+    (let (no-install)
+      ;; Parse options
+      (when (and (first argv)
+                 (starts-with "--" (first argv)))
+        (block nil
+          (do-options (option argv)
+            ("--help"
+             (print-add-usage))
+            ("--debug"
+             (qlot-option-debug))
+            ("--no-install"
+             )
+            (otherwise
+             (when (and (starts-with "--" option)
+                        (not (equal "--" option)))
+               (qlot-unknown-option option))
+             (unless (equal "--" option)
+               (push option argv))
+             (return)))))
 
-    (unless argv
-      (error-message "qlot: requires a new library information")
-      (warn-message "Run 'qlot add --help' to see the usage.")
-      (uiop:quit -1))
+      (unless argv
+        (error-message "qlot: requires a new library information")
+        (warn-message "Run 'qlot add --help' to see the usage.")
+        (uiop:quit -1))
 
-    ;; Complete the source type
-    (unless (member (first argv)
-                    '("dist" "git" "github" "http" "local" "ql" "ultralisp")
-                    :test 'equal)
+      ;; Complete the source type
+      (unless (member (first argv)
+                      '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                      :test 'equal)
+        (setf argv
+              (if (find #\/ (first argv) :test 'char=)
+                  (cons "github" argv)
+                  (cons "ql" argv))))
+
       (setf argv
-            (if (find #\/ (first argv) :test 'char=)
-                (cons "github" argv)
-                (cons "ql" argv)))))
+            (mapcar (lambda (arg)
+                      (if (starts-with "--" arg)
+                          (format nil ":~A" (subseq arg 2))
+                          arg))
+                    argv))
 
-  (setf argv
-        (mapcar (lambda (arg)
-                  (if (starts-with "--" arg)
-                      (format nil ":~A" (subseq arg 2))
-                      arg))
-                argv))
-
-  (let ((qlfile *default-qlfile*)
-        (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
-                                     (uiop:temporary-directory))))
-    (unless (uiop:file-exists-p qlfile)
-      (message "Creating ~A" qlfile)
-      (with-open-file (out qlfile :if-does-not-exist :create)
-        (declare (ignorable out))))
-    (uiop:copy-file qlfile qlfile.bak)
-    (add-project argv qlfile)
-    (handler-bind ((error
-                     (lambda (e)
-                       (declare (ignore e))
-                       (uiop:copy-file qlfile.bak qlfile))))
-      (install-project *default-pathname-defaults*
-                       :install-deps nil
-                       :quiet t))))
+      (ensure-package-loaded '(:qlot/add :qlot/install))
+      (let ((qlfile *default-qlfile*)
+            (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
+                                         (uiop:temporary-directory))))
+        (unless (uiop:file-exists-p qlfile)
+          (message "Creating ~A" qlfile)
+          (with-open-file (out qlfile :if-does-not-exist :create)
+            (declare (ignorable out))))
+        (uiop:copy-file qlfile qlfile.bak)
+        (uiop:symbol-call '#:qlot/add '#:add-project argv qlfile)
+        (unless no-install
+          (handler-bind ((error
+                           (lambda (e)
+                             (declare (ignore e))
+                             (uiop:copy-file qlfile.bak qlfile))))
+            (uiop:symbol-call '#:qlot/install '#:install-project *default-pathname-defaults*
+                              :install-deps nil
+                              :quiet t)))))))
 
 (defun qlot-command-remove (argv)
   (flet ((print-remove-usage ()
@@ -532,12 +561,14 @@ SYNOPSIS:
         (warn-message "Run 'qlot remove --help' to see the usage.")
         (uiop:quit -1))
 
-      (let ((qlfile *default-qlfile*))
+      (ensure-package-loaded '(:qlot/add :qlot/install))
+      (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
         (when (uiop:file-exists-p qlfile)
           (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
                                              (uiop:temporary-directory))))
             (uiop:copy-file qlfile qlfile.bak)
-            (let ((removed-projects (remove-project names qlfile)))
+            (let ((removed-projects
+                    (uiop:symbol-call '#:qlot/add '#:remove-project names qlfile)))
               (unless removed-projects
                 (message "Nothing to remove in '~A'." qlfile)
                 (return-from qlot-command-remove))
@@ -546,9 +577,10 @@ SYNOPSIS:
                                (lambda (e)
                                  (declare (ignore e))
                                  (uiop:copy-file qlfile.bak qlfile))))
-                (install-project *default-pathname-defaults*
-                                 :install-deps nil
-                                 :quiet t)))))))))
+                (uiop:symbol-call '#:qlot/install '#:install-project
+                                  *default-pathname-defaults*
+                                  :install-deps nil
+                                  :quiet t)))))))))
 
 (defun qlot-command-check (argv)
   (flet ((print-check-usage ()
@@ -568,13 +600,14 @@ SYNOPSIS:
        (warn-message "Run 'qlot check --help' to see the usage.")
        (uiop:quit -1))))
 
+  (ensure-package-loaded :qlot/check)
   (handler-case
-      (check-project *default-pathname-defaults*)
+      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*)
     ((or
       missing-projects
       unnecessary-projects) (e)
-      (error-message (princ-to-string e))
-      (warn-message "Make it up-to-date with `qlot install`.")
+      (message (color-text :red (princ-to-string e)))
+      (message (color-text :yellow "Make it up-to-date with `qlot install`."))
       (uiop:quit 1))))
 
 (defun qlot-command-bundle (argv)
@@ -610,8 +643,10 @@ OPTIONS:
          (warn-message "Run 'qlot bundle --help' to see the usage.")
          (uiop:quit -1)))
 
-      (bundle-project *default-pathname-defaults*
-                      :exclude exclude))))
+      (ensure-package-loaded :qlot/bundle)
+      (uiop:symbol-call '#:qlot/bundle '#:bundle-project
+                        *default-pathname-defaults*
+                        :exclude exclude))))
 
 (defun qlot-command-toplevel (argv)
   (do-options (option argv)
@@ -675,7 +710,9 @@ OPTIONS:
                    ("--no-color" (setf *enable-color* nil))
                    (otherwise))
                  (error 'qlot/errors:command-not-found :command $1)))
-        #+sbcl (sb-sys:interactive-interrupt () (uiop:quit -1 t))
+        #+sbcl (sb-sys:interactive-interrupt ()
+                 (clear-progress)
+                 (uiop:quit -1))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))
           (print-usage)
