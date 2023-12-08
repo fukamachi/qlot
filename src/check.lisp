@@ -15,7 +15,9 @@
   (:import-from #:qlot/server
                 #:with-qlot-server)
   (:import-from #:qlot/logger
-                #:message)
+                #:message
+                #:progress
+                #:clear-progress)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -128,6 +130,7 @@
     (pathname
      (let* ((qlfile (ensure-qlfile-pathname object))
             (sources (parse-qlfile qlfile))
+            ;; TODO: Check if the specified project is in qlfile
             (sources
               (if (null projects)
                   sources
@@ -135,20 +138,28 @@
                                    (find (source-project-name source) projects
                                          :test 'equal))
                                  sources)))
-            (quicklisp-home (local-quicklisp-home object)))
+            (quicklisp-home (local-quicklisp-home object))
+            (new-update-projects '()))
        (unless (find-package '#:ql)
          (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
        (with-quicklisp-home quicklisp-home
          (with-tmp-directory (tmp-dir)
-           (dolist (source sources)
+           (dolist (source sources (reverse new-update-projects))
              (with-package-functions #:ql-dist (find-dist version available-update)
                (let ((dist (find-dist (source-dist-name source))))
                  (if dist
-                     (with-qlot-server (source :destination tmp-dir :distinfo-only t)
-                       (when (available-update dist)
-                         (message "New version of ~S is available.~%  Current: ~A~%   Latest: ~A"
-                                  (source-project-name source)
-                                  (version dist)
-                                  (source-version source))))
-                     (message "~S is not installed yet."
+                     (progn
+                       (progress "Checking update of ~S..." (source-project-name source))
+                       (with-qlot-server (source :destination tmp-dir
+                                                 :distinfo-only t
+                                                 :silent t)
+                         (if (available-update dist)
+                             (progn
+                               (push (source-project-name source) new-update-projects)
+                               (message "New version of ~S is available.~%  Current: ~A~%  Latest:  ~A"
+                                        (source-project-name source)
+                                        (version dist)
+                                        (source-version source)))
+                             (clear-progress))))
+                     (message "~S is not installed yet. Skipped."
                               (source-project-name source))))))))))))

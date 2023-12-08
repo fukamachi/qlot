@@ -630,8 +630,11 @@ SYNOPSIS:
            (push option projects))))
 
       (ensure-package-loaded :qlot/check)
-      (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
-                        :projects projects))))
+      (let ((outdated-projects
+              (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
+                                :projects projects)))
+        (when outdated-projects
+          (uiop:quit 1))))))
 
 (defun qlot-command-bundle (argv)
   (flet ((print-bundle-usage ()
