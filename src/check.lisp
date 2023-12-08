@@ -130,7 +130,6 @@
     (pathname
      (let* ((qlfile (ensure-qlfile-pathname object))
             (sources (parse-qlfile qlfile))
-            ;; TODO: Check if the specified project is in qlfile
             (sources
               (if (null projects)
                   sources
@@ -140,6 +139,11 @@
                                  sources)))
             (quicklisp-home (local-quicklisp-home object))
             (new-update-projects '()))
+       (when projects
+         (let ((missing (set-difference projects (mapcar #'source-project-name sources)
+                                        :test 'equal)))
+           (when missing
+             (error 'missing-projects :projects missing))))
        (unless (find-package '#:ql)
          (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
        (with-quicklisp-home quicklisp-home
