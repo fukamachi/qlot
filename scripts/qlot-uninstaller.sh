@@ -10,7 +10,7 @@ ansi() {
 
 rm -rf "$QLOT_HOME"
 
-if [ `id -u` == "0" ]; then
+if [ `id -u` -eq 0 ]; then
   rm /usr/local/bin/qlot
 fi
 
