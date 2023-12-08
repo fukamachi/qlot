@@ -20,14 +20,14 @@
   ;; works as expected.
   (defun qlot-http-fetch (url &rest rest)
     (if (find :quicklisp *features*)
-        (progv (list (intern (string '#:*proxy-utl*) '#:ql))
+        (progv (list (intern (string '#:*proxy-url*) '#:ql))
             (list
              ;; do not use proxy if connect localhost
              (if (eql (search #1="qlot://localhost/" url
                               :end2 (length #1#))
                       0)
                  nil
-                 (symbol-value (intern (string '#:*proxy-utl*) '#:ql))))
+                 (symbol-value (intern (string '#:*proxy-url*) '#:ql))))
           (apply #'orig-http-fetch url rest))
         (apply #'orig-http-fetch url rest))))
 
