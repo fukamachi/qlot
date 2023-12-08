@@ -105,14 +105,15 @@ in CL_SOURCE_REGISTRY environment variable."
           "~&Usage: ~A COMMAND [ARGS..]
 
 COMMANDS:
-    init     Initialize a project to start using Qlot.
-    install  Install libraries to './.qlot'.
-    update   Update specific libraries and rewrite their versions in 'qlfile.lock'.
-    add      Add a new library to qlfile and trigger 'qlot install'.
-    remove   Remove specific projects from 'qlfile' and trigger 'qlot install'.
-    check    Verify if dependencies are satisfied.
-    exec     Invoke the following shell-command with the project local Quicklisp.
-    bundle   Bundle project dependencies to './.bundle-libs'.
+    init      Initialize a project to start using Qlot.
+    install   Install libraries to './.qlot'.
+    update    Update specific libraries and rewrite their versions in 'qlfile.lock'.
+    add       Add a new library to qlfile and trigger 'qlot install'.
+    remove    Remove specific projects from 'qlfile' and trigger 'qlot install'.
+    check     Verify if dependencies are satisfied.
+    outdated  Check available updates of libraries.
+    exec      Invoke the following shell-command with the project local Quicklisp.
+    bundle    Bundle project dependencies to './.bundle-libs'.
 
 GLOBAL OPTIONS:
     --dir <directory>
@@ -612,7 +613,7 @@ SYNOPSIS:
 
 (defun qlot-command-outdated (argv)
   (flet ((print-outdated-usage ()
-           (format *error-output* "~&qlot outdated - Check available updates of libraries
+           (format *error-output* "~&qlot outdated - Check available updates of libraries.
 
 SYNOPSIS:
     qlot outdated [name...]
