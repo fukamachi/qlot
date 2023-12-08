@@ -3,7 +3,7 @@
 VERSION=${VERSION:-heads/master}
 QLOT_ARCHIVE=${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
 
-if [ `id -u` == "0" ]; then
+if [ `id -u` -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
   QLOT_SOURCE_DIR="$QLOT_HOME"
@@ -32,7 +32,7 @@ check_requirement() {
       return
     fi
   done
-  if [ $# == 1 ]; then
+  if [ $# -eq 1 ]; then
     errmsg "$1 is required to install Qlot"
   else
     printf -v all_cmds '%s, ' "$@"
@@ -101,7 +101,7 @@ install_log_path="$QLOT_LOGS_DIR/install-$(date '+%s').log"
 echo "Setting it up. This may take a while..."
 scripts/setup.sh > "$install_log_path" 2>&1
 
-if [ "$?" != "0" ]; then
+if [ $? -ne 0 ]; then
   errmsg "Setup process is failed. See '$install_log_path' for the detailed logs."
   errmsg "If it can be a bug, please report an issue at https://github.com/fukamachi/qlot/issues."
   exit $?
@@ -115,7 +115,7 @@ echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
 echo ''
 
-if [ `id -u` != "0" ]; then
+if [ `id -u` -ne 0 ]; then
   echo "The executable script is located at '$QLOT_BIN_DIR/qlot'."
   echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
   echo ''
