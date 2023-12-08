@@ -105,14 +105,15 @@ in CL_SOURCE_REGISTRY environment variable."
           "~&Usage: ~A COMMAND [ARGS..]
 
 COMMANDS:
-    init     Initialize a project to start using Qlot.
-    install  Install libraries to './.qlot'.
-    update   Update specific libraries and rewrite their versions in 'qlfile.lock'.
-    add      Add a new library to qlfile and trigger 'qlot install'.
-    remove   Remove specific projects from 'qlfile' and trigger 'qlot install'.
-    check    Verify if dependencies are satisfied.
-    exec     Invoke the following shell-command with the project local Quicklisp.
-    bundle   Bundle project dependencies to './.bundle-libs'.
+    init      Initialize a project to start using Qlot.
+    install   Install libraries to './.qlot'.
+    update    Update specific libraries and rewrite their versions in 'qlfile.lock'.
+    add       Add a new library to qlfile and trigger 'qlot install'.
+    remove    Remove specific projects from 'qlfile' and trigger 'qlot install'.
+    check     Verify if dependencies are satisfied.
+    outdated  Check available updates of libraries.
+    exec      Invoke the following shell-command with the project local Quicklisp.
+    bundle    Bundle project dependencies to './.bundle-libs'.
 
 GLOBAL OPTIONS:
     --dir <directory>
@@ -610,6 +611,32 @@ SYNOPSIS:
       (message (color-text :yellow "Make it up-to-date with `qlot install`."))
       (uiop:quit 1))))
 
+(defun qlot-command-outdated (argv)
+  (flet ((print-outdated-usage ()
+           (format *error-output* "~&qlot outdated - Check available updates of libraries.
+
+SYNOPSIS:
+    qlot outdated [name...]
+")
+           (uiop:quit -1)))
+    (let (projects)
+      (do-options (option argv)
+        ("--help"
+         (print-outdated-usage))
+        (otherwise
+         (when (and (starts-with "--" option)
+                    (not (equal "--" option)))
+           (qlot-unknown-option option))
+         (unless (equal "--" option)
+           (push option projects))))
+
+      (ensure-package-loaded :qlot/check)
+      (let ((outdated-projects
+              (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
+                                :projects projects)))
+        (when outdated-projects
+          (uiop:quit 1))))))
+
 (defun qlot-command-bundle (argv)
   (flet ((print-bundle-usage ()
            (format *error-output* "~&qlot bundle - Bundle project dependencies.
@@ -699,6 +726,8 @@ OPTIONS:
                  (qlot-command-remove argv))
                 ((equal "check" $1)
                  (qlot-command-check argv))
+                ((equal "outdated" $1)
+                 (qlot-command-outdated argv))
                 ((equal "bundle" $1)
                  (qlot-command-bundle argv))
                 ((and $1 (starts-with "--" $1))

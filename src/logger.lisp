@@ -5,6 +5,7 @@
   (:export #:*logger-message-stream*
            #:*logger-debug-stream*
            #:*debug*
+           #:*enable-progress*
            #:progress
            #:clear-progress
            #:message
@@ -18,6 +19,7 @@
   (make-synonym-stream '*standard-output**))
 
 (defvar *debug* nil)
+(defvar *enable-progress* t)
 
 (defvar *previous-progress* "")
 
@@ -34,13 +36,14 @@
   text)
 
 (defun progress (format-control &rest format-arguments)
-  (let* ((out *logger-message-stream*)
-         (text (apply #'format nil format-control format-arguments))
-         (text (concatenate 'string *padding* text)))
-    (write-string (color-text :gray text) out)
-    (fill-spaces-to-clear-progress text)
-    (write-char #\Return out)
-    (force-output out)))
+  (when *enable-progress*
+    (let* ((out *logger-message-stream*)
+           (text (apply #'format nil format-control format-arguments))
+           (text (concatenate 'string *padding* text)))
+      (write-string (color-text :gray text) out)
+      (fill-spaces-to-clear-progress text)
+      (write-char #\Return out)
+      (force-output out))))
 
 (defun clear-progress ()
   (when (= 0 (length *previous-progress*))

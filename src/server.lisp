@@ -2,6 +2,8 @@
   (:use #:cl)
   (:import-from #:qlot/distify
                 #:distify)
+  (:import-from #:qlot/logger
+                #:*enable-progress*)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:export #:with-qlot-server))
@@ -29,7 +31,7 @@
         (when (uiop:file-exists-p file)
           file)))))
 
-(defmacro with-qlot-server ((source &key destination distinfo-only quicklisp-home) &body body)
+(defmacro with-qlot-server ((source &key destination distinfo-only quicklisp-home silent) &body body)
   (declare (ignore quicklisp-home))
   (let ((g-source (gensym "SOURCE"))
         (fetch-scheme-functions (gensym "FETCH-SCHEME-FUNCTIONS"))
@@ -39,7 +41,8 @@
        (,@(if destination
               `(let ((,g-destination ,destination)))
               `(with-tmp-directory (,g-destination)))
-        (distify ,g-source ,g-destination :distinfo-only ,distinfo-only)
+        (let ((*enable-progress* (not ,silent)))
+          (distify ,g-source ,g-destination :distinfo-only ,distinfo-only))
         (progv (list ,fetch-scheme-functions '*handler*)
             (list (cons '("qlot" . qlot-fetch)
                         (symbol-value ,fetch-scheme-functions))
