@@ -8,16 +8,16 @@ QLOT_ARCHIVE=${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VER
 if [ `id -u` -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
   QLOT_TMP_DIR=/tmp/qlot
   QLOT_SOURCE_DIR="$QLOT_HOME"
   QLOT_LOGS_DIR=/tmp/qlot/logs
-  QLOT_BIN_DIR="$QLOT_BASE/bin"
 else
   QLOT_HOME=${QLOT_HOME:-~/.qlot}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
   QLOT_TMP_DIR="$QLOT_HOME/tmp"
   QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
   QLOT_LOGS_DIR="$QLOT_HOME/logs"
-  QLOT_BIN_DIR="$QLOT_HOME/bin"
 fi
 
 ansi() {
