@@ -2,6 +2,8 @@
   (:use #:cl)
   (:import-from #:qlot/utils
                 #:starts-with)
+  (:import-from #:qlot/logger
+                #:*debug*)
   (:export #:with-autoload-on-missing
            #:directory-system-files
            #:system-class-name
@@ -173,7 +175,10 @@
       (flet ((primary-system-prefix-p (package-name)
                (check-type package-name string)
                (starts-with (format nil "~A/" primary-system-name) package-name)))
-        (let ((defpackage-form (asdf/package-inferred-system::file-defpackage-form file)))
+        (let ((defpackage-form (let ((*error-output* (if *debug*
+                                                         *error-output*
+                                                         (make-broadcast-stream))))
+                                 (asdf/package-inferred-system::file-defpackage-form file))))
           (when defpackage-form
             (let* ((package-names (mapcar #'string-downcase
                                           (cons (second defpackage-form)
