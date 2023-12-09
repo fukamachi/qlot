@@ -1,16 +1,20 @@
 #!/bin/sh
 
+set -eu
+
 VERSION=${VERSION:-heads/master}
 QLOT_ARCHIVE=${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
 
 if [ `id -u` -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
+  QLOT_TMP_DIR=/tmp/qlot
   QLOT_SOURCE_DIR="$QLOT_HOME"
   QLOT_LOGS_DIR=/tmp/qlot/logs
   QLOT_BIN_DIR="$QLOT_BASE/bin"
 else
   QLOT_HOME=${QLOT_HOME:-~/.qlot}
+  QLOT_TMP_DIR="$QLOT_HOME/tmp"
   QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
   QLOT_LOGS_DIR="$QLOT_HOME/logs"
   QLOT_BIN_DIR="$QLOT_HOME/bin"
@@ -66,28 +70,28 @@ echo ''
 echo "Installation path: $QLOT_HOME"
 
 mkdir -p "$QLOT_HOME"
-mkdir -p "$QLOT_HOME/tmp"
+mkdir -p "$QLOT_TMP_DIR"
 
 #
 # Download
 
-if [ -f "$QLOT_HOME/tmp/qlot.tar.gz" ]; then
-  echo "Already have an archive: $QLOT_HOME/tmp/qlot.tar.gz"
+if [ -f "$QLOT_TMP_DIR/qlot.tar.gz" ]; then
+  echo "Already have an archive: $QLOT_TMP_DIR/qlot.tar.gz"
 else
   echo -n "Downloading an archive from '$QLOT_ARCHIVE'..."
   if [ "$(which curl 2>/dev/null)" != "" ]; then
-    curl -sL "$QLOT_ARCHIVE" -o "$QLOT_HOME/tmp/qlot.tar.gz"
+    curl -sL "$QLOT_ARCHIVE" -o "$QLOT_TMP_DIR/qlot.tar.gz"
   else
-    wget -q "$QLOT_ARCHIVE" -O "$QLOT_HOME/tmp/qlot.tar.gz"
+    wget -q "$QLOT_ARCHIVE" -O "$QLOT_TMP_DIR/qlot.tar.gz"
   fi
 fi
 
-tar zxf "$QLOT_HOME/tmp/qlot.tar.gz" -C "$QLOT_HOME/tmp"
+tar zxf "$QLOT_TMP_DIR/qlot.tar.gz" -C "$QLOT_TMP_DIR"
 
 if [ -d "$QLOT_SOURCE_DIR/" ]; then
   rm -rf "$QLOT_SOURCE_DIR/"
 fi
-mv "$(find "$QLOT_HOME"/tmp/ -type d -maxdepth 1 -name "qlot*")" "$QLOT_SOURCE_DIR"
+mv "$(find "$QLOT_TMP_DIR" -maxdepth 1 -mindepth 1 -type d -name "qlot*")" "$QLOT_SOURCE_DIR"
 
 echo "done"
 
