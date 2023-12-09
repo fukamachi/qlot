@@ -75,27 +75,34 @@
                                           (make-broadcast-stream))))
                   (with-autoload-on-missing
                     (asdf:load-asd system-file))))))
-          ;; XXX: This doesn't work if it's a class inherits package-inferred-system.
-          (when (eq (system-class-name system-name) :package-inferred-system)
-            (let* ((lisp-files
-                     (set-difference
-                      (directory-lisp-files (uiop:pathname-directory-pathname system-file))
-                      pis-already-seen-files
-                      :test 'equal))
-                   (pis-dependencies
-                    (loop for file in lisp-files
-                          for (file-deps pkg-name) = (multiple-value-list
-                                                      (lisp-file-dependencies file :test test))
-                          when pkg-name
-                          append (progn (debug-log "'~A' requires ~S" pkg-name file-deps)
-                                        file-deps))))
-              (setf dependencies
-                    (delete-duplicates
-                     (remove-if-not (or test #'identity)
-                                    (nconc dependencies pis-dependencies))
-                     :test 'equal))
-              (setf pis-already-seen-files
-                    (append pis-already-seen-files lisp-files))))
+          (block nil
+            (let ((system-class-name (system-class-name system-name)))
+              (when system-class-name
+                (let ((system-class
+                        (find-class (uiop:intern* system-class-name '#:asdf/interface) nil)))
+                  (unless system-class
+                    (warn "Class ~S couldn't be found." system-class-name)
+                    (return))
+                  (when (subtypep system-class (find-class 'asdf:package-inferred-system))
+                    (let* ((lisp-files
+                             (set-difference
+                              (directory-lisp-files (uiop:pathname-directory-pathname system-file))
+                              pis-already-seen-files
+                              :test 'equal))
+                           (pis-dependencies
+                             (loop for file in lisp-files
+                                   for (file-deps pkg-name) = (multiple-value-list
+                                                               (lisp-file-dependencies file :test test))
+                                   when pkg-name
+                                   append (progn (debug-log "'~A' requires ~S" pkg-name file-deps)
+                                                 file-deps))))
+                      (setf dependencies
+                            (delete-duplicates
+                             (remove-if-not (or test #'identity)
+                                            (nconc dependencies pis-dependencies))
+                             :test 'equal))
+                      (setf pis-already-seen-files
+                            (append pis-already-seen-files lisp-files))))))))
           (let ((dependencies (remove-if-not #'find-system dependencies)))
             (debug-log "'~A' requires ~S" system-name dependencies)
             (setf all-dependencies
