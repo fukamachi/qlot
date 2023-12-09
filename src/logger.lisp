@@ -16,7 +16,7 @@
   (make-synonym-stream '*standard-output*))
 
 (defvar *logger-debug-stream*
-  (make-synonym-stream '*standard-output**))
+  (make-synonym-stream '*standard-output*))
 
 (defvar *debug* nil)
 (defvar *enable-progress* t)

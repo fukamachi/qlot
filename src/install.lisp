@@ -49,6 +49,9 @@
                 #:local-quicklisp-installed-p
                 #:check-local-quicklisp
                 #:local-quicklisp-home)
+  (:import-from #:qlot/utils/shell
+                #:run-lisp
+                #:*qlot-source-directory*)
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory
                 #:delete-tmp-directory)
@@ -57,6 +60,8 @@
                 #:missing-projects
                 #:duplicate-project
                 #:qlfile-not-found)
+  (:import-from #:qlot/color
+                #:*enable-color*)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-qlfile
@@ -66,15 +71,31 @@
 (in-package #:qlot/install)
 
 (defun install-dependencies (project-root qlhome)
-  (with-quicklisp-home qlhome
-    (let ((all-dependencies (project-dependencies project-root)))
-      (with-package-functions #:ql-dist (ensure-installed release name)
-        (let ((releases (delete-duplicates (mapcar #'release all-dependencies)
-                                           :key #'name
-                                           :test 'equal
-                                           :from-end t)))
-          (message "Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed." (length releases))
-          (mapc #'ensure-installed releases))))))
+  (uiop:with-temporary-file (:pathname tmp)
+    (run-lisp `((load ,(merge-pathnames #P"setup.lisp" qlhome))
+                (setf *enable-color* ,*enable-color*)
+                (with-open-file (cl-user::out ,tmp
+                                              :direction :output
+                                              :if-exists :supersede)
+                  (prin1
+                   (delete-duplicates
+                    (mapcar
+                     (lambda (cl-user::dep)
+                       (uiop:symbol-call '#:ql-dist '#:name
+                                         (uiop:symbol-call '#:ql-dist '#:release
+                                                           cl-user::dep)))
+                     (project-dependencies ,project-root))
+                    :test 'equal
+                    :from-end t)
+                   cl-user::out)))
+              :systems '("qlot/utils/project" "qlot/color")
+              :source-registry *qlot-source-directory*)
+    (let ((all-dependencies (uiop:read-file-form tmp)))
+      (with-quicklisp-home qlhome
+        (with-package-functions #:ql-dist (ensure-installed find-release)
+          (let ((releases (mapcar #'find-release all-dependencies)))
+            (message "Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed." (length releases))
+            (mapc #'ensure-installed releases)))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
