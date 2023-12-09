@@ -92,9 +92,6 @@
     (cond
       ((or (not (consp form))
            (not (symbolp (first form)))) nil)
-      ((member (first form) '(cl:defpackage cl:in-package uiop:define-package)
-               :test 'eq)
-       (eval form))
       ((eq (first form) 'asdf:defsystem)
        (destructuring-bind (system-name &rest system-form) (cdr form)
          (let ((defsystem-depends-on (getf system-form :defsystem-depends-on))
