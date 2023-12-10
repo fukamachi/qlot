@@ -68,7 +68,7 @@
 
 (defmacro with-traversal-context (&body body)
   `(let ((*registry* (make-hash-table :test 'equal))
-         (*package-system* (make-hash-table :test 'eql))
+         (*package-system* (make-hash-table :test 'equal))
          (*system-class-name* (make-hash-table :test 'equal)))
      ,@body))
 
@@ -116,13 +116,18 @@
       ((eq (first form) 'asdf:register-system-packages)
        (destructuring-bind (system-name package-names)
            (rest form)
-         (dolist (pkg package-names)
-           (let ((pkg (typecase pkg
-                        (symbol (symbol-name pkg))
-                        (string pkg))))
-             (when pkg
-               (setf (gethash pkg *package-system*)
-                     system-name)))))))))
+         (when (consp package-names)
+           (dolist (pkg
+                    ;; unquote
+                    (if (member (first package-names) '(quote list))
+                        (second package-names)
+                        package-names))
+             (let ((pkg (typecase pkg
+                          (symbol (symbol-name pkg))
+                          (string pkg))))
+               (when pkg
+                 (setf (gethash pkg *package-system*)
+                       system-name))))))))))
 
 (defun read-asd-file (file)
   (uiop:with-input-file (in file)
