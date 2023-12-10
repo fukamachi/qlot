@@ -2,6 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/utils/asdf
                 #:system-class-name
+                #:system-pathname
                 #:with-directory
                 #:directory-system-files
                 #:directory-lisp-files
@@ -72,20 +73,25 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
       (let ((system-class-name (system-class-name system-name)))
         ;; XXX: This doesn't work if it's a class inherits package-inferred-system.
         (when (eq system-class-name :package-inferred-system)
-          (loop for file in (directory-lisp-files source-directory)
-                for sub-system-name = (lisp-file-system-name file
-                                                             source-directory
-                                                             system-name)
-                when sub-system-name
-                do (format s "~A ~A ~A~{ ~A~}~%"
-                           project-name
-                           (enough-namestring file source-directory)
-                           sub-system-name
-                           (delete-duplicates
-                            (mapcar #'string-downcase
-                                    (lisp-file-dependencies file))
-                            :test 'equal
-                            :from-end t))))))))
+          (let* ((system-pathname (system-pathname system-name))
+                 (system-pathname (if system-pathname
+                                      (uiop:ensure-directory-pathname
+                                       (merge-pathnames system-pathname source-directory))
+                                      source-directory)))
+            (loop for file in (directory-lisp-files system-pathname)
+                  for sub-system-name = (lisp-file-system-name file
+                                                               system-pathname
+                                                               system-name)
+                  when sub-system-name
+                  do (format s "~A ~A ~A~{ ~A~}~%"
+                             project-name
+                             (enough-namestring file source-directory)
+                             sub-system-name
+                             (delete-duplicates
+                              (mapcar #'string-downcase
+                                      (lisp-file-dependencies file))
+                              :test 'equal
+                              :from-end t)))))))))
 
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data
