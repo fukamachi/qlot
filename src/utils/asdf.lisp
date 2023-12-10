@@ -7,6 +7,7 @@
   (:export #:with-autoload-on-missing
            #:directory-system-files
            #:system-class-name
+           #:system-pathname
            #:with-directory
            #:directory-lisp-files
            #:lisp-file-system-name
@@ -65,11 +66,13 @@
 (defvar *package-system*)
 (defvar *load-asd-file*)
 (defvar *system-class-name*)
+(defvar *system-pathname*)
 
 (defmacro with-traversal-context (&body body)
   `(let ((*registry* (make-hash-table :test 'equal))
          (*package-system* (make-hash-table :test 'equal))
-         (*system-class-name* (make-hash-table :test 'equal)))
+         (*system-class-name* (make-hash-table :test 'equal))
+         (*system-pathname* (make-hash-table :test 'equal)))
      ,@body))
 
 (defun read-asd-form (form)
@@ -112,7 +115,9 @@
                          #'string<))
                  (gethash *load-asd-file* *registry*))
            (setf (gethash system-name *system-class-name*)
-                 (getf system-form :class)))))
+                 (getf system-form :class))
+           (setf (gethash system-name *system-pathname*)
+                 (getf system-form :pathname)))))
       ((eq (first form) 'asdf:register-system-packages)
        (destructuring-bind (system-name package-names)
            (rest form)
@@ -143,6 +148,9 @@
 
 (defun system-class-name (system-name)
   (gethash system-name *system-class-name*))
+
+(defun system-pathname (system-name)
+  (gethash system-name *system-pathname*))
 
 (defmacro with-directory ((system-file system-name dependencies) directory &body body)
   (let ((value (gensym "VALUE"))
