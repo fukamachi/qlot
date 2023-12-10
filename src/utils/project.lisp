@@ -7,7 +7,9 @@
                 #:lisp-file-dependencies
                 #:system-class-name)
   (:import-from #:qlot/utils
-                #:with-package-functions)
+                #:with-package-functions
+                #:starts-with
+                #:split-with)
   (:import-from #:qlot/logger
                 #:*debug*
                 #:progress
@@ -27,6 +29,33 @@
 
 (defvar *qlot-directory* #P".qlot/")
 (defvar *default-qlfile* #P"qlfile")
+
+(defun compile-exclude-rule (rule)
+  (when (< 0 (length rule))
+    (let ((rule-parts (split-with #\* rule))
+          (starts-with-star
+            (char= #\* (aref rule 0)))
+          (ends-with-star
+            (char= #\* (aref rule (1- (length rule))))))
+      (lambda (str)
+        (block out
+          (when (< 0 (length str))
+            (let ((current 0))
+              (loop with initial = t
+                    for part in rule-parts
+                    do (when (or (null initial)
+                                 starts-with-star)
+                         (let ((pos (search part str :start2 current)))
+                           (unless pos
+                             (return-from out nil))
+                           (setf current pos)))
+                       (unless (starts-with part str :start current)
+                         (return-from out nil))
+                       (incf current (length part))
+                       (setf initial nil))
+              (if ends-with-star
+                  t
+                  (= current (length str))))))))))
 
 (defun local-quicklisp-installed-p (project-root)
   (let ((qlhome (merge-pathnames *qlot-directory* project-root)))
@@ -49,13 +78,19 @@
       (merge-pathnames *qlot-directory* project-root)
       *default-pathname-defaults*)))
 
-(defun project-dependencies (project-root &key test)
+(defun project-dependencies (project-root &key exclude)
   (with-package-functions #:ql-dist (find-system name)
-    (let ((all-dependencies '())
-          (pis-already-seen-files '())
-          (loaded-asd-files '())
-          (project-system-names '())
-          (file-counts 0))
+    (let* ((all-dependencies '())
+           (pis-already-seen-files '())
+           (loaded-asd-files '())
+           (project-system-names '())
+           (file-counts 0)
+           (exclude-functions (mapcar #'compile-exclude-rule exclude))
+           (test (and exclude-functions
+                      (lambda (system-name)
+                        (not (some (lambda (fn)
+                                     (funcall fn system-name))
+                                   exclude-functions))))))
       (with-directory (system-file system-name dependencies) project-root
         (pushnew system-name project-system-names :test 'equal)
         (when (or (null test)
@@ -122,10 +157,10 @@
                                  (mapcan #'system-dependencies (copy-seq (required-systems system)))))))))
             (setf all-dependencies
                   (delete-duplicates
-                    (loop for dependency in all-dependencies
-                          append (system-dependencies dependency))
-                    :key #'name
-                    :test 'string=)))))
+                   (loop for dependency in all-dependencies
+                         append (system-dependencies dependency))
+                   :key #'name
+                   :test 'string=)))))
 
       (remove-if (lambda (dep)
                    (find (name dep) project-system-names :test 'equal))
