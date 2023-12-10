@@ -22,7 +22,7 @@
           (read-from-string
             (with-output-to-string (out)
               (uiop:run-program
-                `("ros" "--no-rc" "-s" "qlot/cli" "-s" "qlot/utils/project" "-s" "qlot/color" "-s" "qlot/bundle"
+                `("ros" "--no-rc" "-s" "qlot/cli" "-s" "qlot/utils/project" "-s" "qlot/color"
                   "-l" ,(uiop:native-namestring (asdf:system-relative-pathname :qlot #P"tests/check-dependencies-script.lisp"))
                   "-e" "(qlot-tests/check-dependencies-script:main)")
                 :output out)))))
