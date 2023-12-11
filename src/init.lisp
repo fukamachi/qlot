@@ -2,6 +2,8 @@
   (:use #:cl)
   (:import-from #:qlot/utils/project
                 #:*default-qlfile*)
+  (:import-from #:qlot/utils
+                #:starts-with)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
