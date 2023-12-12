@@ -12,6 +12,7 @@
                 #:update-project
                 #:*qlot-directory*)
   (:import-from #:qlot/logger
+                #:message
                 #:*debug*
                 #:*logger-message-stream*
                 #:*logger-debug-stream*)
@@ -20,7 +21,12 @@
   (:import-from #:qlot/utils
                 #:pathname-in-directory-p
                 #:merge-hash-tables)
-  (:export #:init
+  (:import-from #:qlot/utils/shell
+                #:*qlot-source-directory*)
+  #+sbcl
+  (:import-from #:sb-posix)
+  (:export #:install-shell-command
+           #:init
            #:install
            #:update
            #:with-local-quicklisp
@@ -31,6 +37,60 @@
            #:*logger-message-stream*
            #:*logger-debug-stream*))
 (in-package #:qlot)
+
+#-sbcl
+(defun install-shell-command (destination &key quicklisp-home)
+  (declare (ignore destination quicklisp-home))
+  (error "This function is available only for SBCL."))
+
+#+sbcl
+(defun install-shell-command (destination &key quicklisp-home)
+  (check-type destination (or pathname string))
+  (unless (and (typep destination '(or pathname string))
+               (uiop:directory-pathname-p destination))
+    (error "Requires a directory pathname but given ~S." destination))
+  ;; Find a setup file
+  (let ((setup-file
+          (cond
+            (quicklisp-home
+             (or (and (uiop:directory-pathname-p quicklisp-home)
+                      (uiop:file-exists-p (merge-pathnames "setup.lisp" quicklisp-home)))
+                 (error "Invalid Quicklisp home: ~A" quicklisp-home)))
+            ((uiop:file-exists-p
+              (merge-pathnames ".qlot/setup.lisp"
+                               *qlot-source-directory*)))
+            ((uiop:file-exists-p
+              (merge-pathnames ".bundle-libs/bundle.lisp"
+                               *qlot-source-directory*)))
+            ((find-package '#:ql)
+             (or (uiop:file-exists-p (merge-pathnames "setup.lisp" (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))
+                 (error "Invalid Quicklisp home")))
+            (t
+             (error "Requires Quicklisp to install, but it's not loaded and :quicklisp-home isn't given."))))
+        (directory (uiop:ensure-pathname destination)))
+    (ensure-directories-exist directory)
+    (let ((qlot-path (merge-pathnames "qlot" directory)))
+      (message "Installing a shell command to '~A'." qlot-path)
+      (restart-case
+          (when (uiop:file-exists-p qlot-path)
+            (error "File already exists: ~A" qlot-path))
+        (overwrite-file ()
+          :report "Overwrite the file."))
+      (with-open-file (out qlot-path
+                           :direction :output
+                           :if-exists :supersede
+                           :if-does-not-exist :create)
+        (format out "#!/bin/sh
+exec ~A --noinform --no-sysinit --no-userinit --non-interactive \\
+  --load '~A' \\
+  --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \\
+  --eval '(qlot/cli:main)' \"$@\"~%"
+                #+ros.init "ros +Q -L sbcl-bin run --"
+                #-ros.init "sbcl"
+                setup-file))
+      #+sbcl (sb-posix:chmod qlot-path #o700)
+      (message "Successfully installed!")))
+  (values))
 
 (defun init (object)
   (init-project object))
