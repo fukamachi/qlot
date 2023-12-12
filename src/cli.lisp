@@ -40,13 +40,14 @@
   (fresh-line *error-output*))
 
 (defun ensure-package-loaded (package-names)
-  (let ((package-names (ensure-list package-names))
-        (*standard-output* (make-broadcast-stream))
-        (*trace-output* (make-broadcast-stream)))
-    (dolist (package-name package-names)
-      (check-type package-name keyword)
-      (unless (find-package package-name)
-        (asdf:load-system package-name)))))
+  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning))
+    (let ((package-names (ensure-list package-names))
+          (*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (dolist (package-name package-names)
+        (check-type package-name keyword)
+        (unless (find-package package-name)
+          (asdf:load-system package-name))))))
 
 (defun extend-source-registry (current-value dir-to-add)
   "According to ASDF documentation:
