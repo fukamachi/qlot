@@ -117,9 +117,17 @@ Run `ros update qlot` to update Qlot.
 If [Quicklisp](https://www.quicklisp.org/) is set up on your home directory, Qlot can be installed by `ql:quickload`.
 
 ```shell
-$ sbcl --noinform --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
-$ sudo printf '#!/bin/sh\nexec sbcl --noinform --non-interactive --eval "(ql:quickload :qlot/cli :silent t)" --eval "(qlot/cli:main)" "$@"\n' > /usr/local/bin/qlot
-$ sudo chmod u+x /usr/local/bin/qlot
+$ sbcl --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
+```
+
+To install a shell command "qlot", run the following additionally:
+
+```shell
+# Install to ~/.local/bin/qlot
+$ sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command #P"~/.local/bin/")' --quit
+
+# Install to /usr/local/bin/qlot
+$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
 ```
 
 To update Qlot, run `(ql:update-all-dists)` in the REPL.
@@ -141,8 +149,7 @@ $ curl https://github.com/fukamachi/qlot/releases/download/1.3.5/qlot-1.3.5.tar.
 $ tar xfz qlot.tar.gz
 $ cd qlot
 $ scripts/setup.sh
-$ sudo printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
-$ sudo chmod u+x /usr/local/bin/qlot
+$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
 ```
 
 ### Install from source
@@ -151,8 +158,7 @@ $ sudo chmod u+x /usr/local/bin/qlot
 $ git clone https://github.com/fukamachi/qlot
 $ cd qlot
 $ scripts/setup.sh
-$ sudo printf '#!/bin/sh\nexec '`pwd`'/scripts/run.sh "$@"\n' > /usr/local/bin/qlot
-$ sudo chmod u+x /usr/local/bin/qlot
+$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
 ```
 
 To update Qlot, run `git pull && scripts/setup.sh`.
