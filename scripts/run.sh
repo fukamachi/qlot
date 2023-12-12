@@ -23,18 +23,20 @@ else
   exit 1
 fi
 
-if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
-  setup_file="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
-elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
-  setup_file="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
-else
-  echo "Qlot is not setup yet." >&2
-  echo "Run '$QLOT_SOURCE_DIR/scripts/setup.sh' first." >&2
-  exit 1
+if [ "$QLOT_SETUP_FILE" = "" ]; then
+  if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+    QLOT_SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
+  elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
+    QLOT_SETUP_FILE="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
+  else
+    echo "Qlot is not setup yet." >&2
+    echo "Run '$QLOT_SOURCE_DIR/scripts/setup.sh' first." >&2
+    exit 1
+  fi
 fi
 
 exec $lisp --noinform --no-sysinit --no-userinit --non-interactive \
-  --load "$setup_file" \
+  --load "$QLOT_SETUP_FILE" \
   --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
   --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \
   --eval '(qlot/cli:main)' -- "$@"

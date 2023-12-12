@@ -81,13 +81,10 @@
                            :if-exists :supersede
                            :if-does-not-exist :create)
         (format out "#!/bin/sh
-exec ~A --noinform --no-sysinit --no-userinit --non-interactive \\
-  --load '~A' \\
-  --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \\
-  --eval '(qlot/cli:main)' \"$@\"~%"
-                #+ros.init "ros +Q -L sbcl-bin run --"
-                #-ros.init "sbcl"
-                setup-file))
+export QLOT_SETUP_FILE=~A
+exec ~Ascripts/run.sh \"$@\"~%"
+                setup-file
+                *qlot-source-directory*))
       #+sbcl (sb-posix:chmod qlot-path #o700)
       (message "Successfully installed!")))
   (values))
