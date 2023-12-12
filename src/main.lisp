@@ -57,10 +57,10 @@
                       (uiop:file-exists-p (merge-pathnames "setup.lisp" quicklisp-home)))
                  (error "Invalid Quicklisp home: ~A" quicklisp-home)))
             ((uiop:file-exists-p
-              (merge-pathnames ".qlot/setup.lisp"
+              (merge-pathnames ".bundle-libs/bundle.lisp"
                                *qlot-source-directory*)))
             ((uiop:file-exists-p
-              (merge-pathnames ".bundle-libs/bundle.lisp"
+              (merge-pathnames ".qlot/setup.lisp"
                                *qlot-source-directory*)))
             ((find-package '#:ql)
              (or (uiop:file-exists-p (merge-pathnames "setup.lisp" (symbol-value (intern (string '#:*quicklisp-home*) '#:ql))))
@@ -71,11 +71,6 @@
     (ensure-directories-exist directory)
     (let ((qlot-path (merge-pathnames "qlot" directory)))
       (message "Installing a shell command to '~A'." qlot-path)
-      (restart-case
-          (when (uiop:file-exists-p qlot-path)
-            (error "File already exists: ~A" qlot-path))
-        (overwrite-file ()
-          :report "Overwrite the file."))
       (with-open-file (out qlot-path
                            :direction :output
                            :if-exists :supersede
@@ -85,7 +80,7 @@ export QLOT_SETUP_FILE=~A
 exec ~Ascripts/run.sh \"$@\"~%"
                 setup-file
                 *qlot-source-directory*))
-      #+sbcl (sb-posix:chmod qlot-path #o700)
+      #+sbcl (sb-posix:chmod qlot-path #o755)
       (message "Successfully installed!")))
   (values))
 
