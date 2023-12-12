@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eu
+set -e
 
 QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
 
