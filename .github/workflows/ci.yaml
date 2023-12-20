@@ -37,3 +37,7 @@ jobs:
           rove qlot.asd
       - name: Run setup.sh
         run: scripts/setup.sh
+      - name: Run install.sh
+        run: scripts/install.sh
+      - name: Run qlot-uninstaller.sh
+        run: scripts/qlot-uninstaller.sh
