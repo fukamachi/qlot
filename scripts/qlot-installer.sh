@@ -13,8 +13,12 @@ if [ `id -u` -eq 0 ]; then
   QLOT_SOURCE_DIR="$QLOT_HOME"
   QLOT_LOGS_DIR=/tmp/qlot/logs
 else
-  QLOT_HOME=${QLOT_HOME:-~/.qlot}
-  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
+  if [ -n "${XDG_DATA_HOME:-}" ]; then
+    QLOT_HOME="$XDG_DATA_HOME/qlot"
+  else
+    QLOT_HOME=${QLOT_HOME:-~/.qlot}
+  fi
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-${XDG_BIN_HOME:-"$QLOT_HOME/bin"}}
   QLOT_TMP_DIR="$QLOT_HOME/tmp"
   QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
   QLOT_LOGS_DIR="$QLOT_HOME/logs"
@@ -111,9 +115,13 @@ if [ $? -ne 0 ]; then
   exit $?
 fi
 
-mkdir -p "$QLOT_BIN_DIR"
-printf '#!/bin/sh\nexec %s/scripts/run.sh "$@"\n' "$QLOT_SOURCE_DIR" > "$QLOT_BIN_DIR/qlot"
-chmod 755 "$QLOT_BIN_DIR/qlot"
+QLOT_BIN_DIR="$QLOT_BIN_DIR" scripts/install.sh >> "$install_log_path" 2>&1
+
+if [ $? -ne 0 ]; then
+  errmsg "Install process is failed. See '$install_log_path' for the detailed logs."
+  errmsg "If it can be a bug, please report an issue at https://github.com/fukamachi/qlot/issues."
+  exit $?
+fi
 
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."

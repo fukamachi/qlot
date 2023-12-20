@@ -46,8 +46,7 @@
 #+sbcl
 (defun install-shell-command (destination &key quicklisp-home)
   (check-type destination (or pathname string))
-  (unless (and (typep destination '(or pathname string))
-               (uiop:directory-pathname-p destination))
+  (unless (typep destination '(or pathname string))
     (error "Requires a directory pathname but given ~S." destination))
   ;; Find a setup file
   (let ((setup-file
@@ -67,7 +66,7 @@
                  (error "Invalid Quicklisp home")))
             (t
              (error "Requires Quicklisp to install, but it's not loaded and :quicklisp-home isn't given."))))
-        (directory (uiop:ensure-pathname destination)))
+        (directory (uiop:ensure-directory-pathname destination)))
     (ensure-directories-exist directory)
     (let ((qlot-path (merge-pathnames "qlot" directory)))
       (message "Installing a shell command to '~A'." qlot-path)

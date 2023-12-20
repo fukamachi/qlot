@@ -47,13 +47,3 @@ else
     --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
     --eval '(ql:quickload (list :qlot :qlot/cli))'
 fi
-
-systems_directory() {
-  $lisp --noinform --no-sysinit --no-userinit --non-interactive \
-    --eval '(require :asdf)' --eval '(princ (uiop:native-namestring (uiop:xdg-data-home #P"common-lisp/systems/")))'
-}
-registry_dir=$(systems_directory)
-mkdir -p "$registry_dir"
-if [ ! -f "${registry_dir}qlot.asd" ]; then
-  ln -s "$QLOT_SOURCE_DIR/qlot.asd" "${registry_dir}qlot.asd"
-fi

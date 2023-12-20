@@ -150,7 +150,7 @@ $ curl https://github.com/fukamachi/qlot/releases/download/1.3.5/qlot-1.3.5.tar.
 $ tar xfz qlot.tar.gz
 $ cd qlot
 $ scripts/setup.sh
-$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
+$ sudo scripts/install.sh
 ```
 
 ### Install from source
@@ -159,7 +159,7 @@ $ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/
 $ git clone https://github.com/fukamachi/qlot
 $ cd qlot
 $ scripts/setup.sh
-$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
+$ sudo scripts/install.sh
 ```
 
 To update Qlot, run `git pull && scripts/setup.sh`.
