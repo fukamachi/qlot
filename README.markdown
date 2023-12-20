@@ -1,6 +1,7 @@
 # Qlot
 
 [![Build Status](https://github.com/fukamachi/qlot/workflows/CI/badge.svg)](https://github.com/fukamachi/qlot/actions)
+[![](https://api.quickdocs.org/badge/qlot.svg)](https://quickdocs.org/qlot)
 
 **Qlot** (pronounced `kyü-'lät`, like culotte) is a project-local library installer using Quicklisp facility. This aims to be like [Bundler](http://bundler.io) of Ruby or [Carton](http://search.cpan.org/~miyagawa/Carton/lib/Carton.pm) of Perl.
 
