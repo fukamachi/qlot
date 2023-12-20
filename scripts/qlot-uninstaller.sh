@@ -1,6 +1,15 @@
 #!/bin/sh
 
-QLOT_HOME=${QLOT_HOME:-~/.qlot}
+set -eux
+
+if [ `id -u` -eq 0 ]; then
+  QLOT_BASE=${QLOT_BASE:-/usr/local}
+  QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
+else
+  QLOT_HOME=${QLOT_HOME:-~/.qlot}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
+fi
 
 ansi() {
   [ $# -gt 0 ] || return
@@ -8,18 +17,15 @@ ansi() {
 }
 [ -t 1 ] || ansi() { :; }
 
-rm -rf "$QLOT_HOME"
-
-if [ `id -u` -eq 0 ]; then
-  rm /usr/local/bin/qlot
-fi
+rm "$QLOT_BIN_DIR"/qlot
+rm -r "$QLOT_HOME"
 
 if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
 elif [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros +Q -L sbcl-bin run --"
 else
-  exit
+  exit 1
 fi
 
 systems_directory() {
@@ -28,7 +34,9 @@ systems_directory() {
 }
 
 registry_dir=$(systems_directory)
-rm -f "${registry_dir}qlot.asd"
+if [ -d "$registry_dir" ]; then
+  rm -f "${registry_dir}qlot.asd"
+fi
 
 printf "%sQlot has been successfully deleted.%s\n" "$(ansi 32)" "$(ansi 0)"
 echo 'Bye!'
