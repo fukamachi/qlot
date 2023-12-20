@@ -8,7 +8,7 @@ if [ `id -u` -eq 0 ]; then
   QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
 else
   QLOT_HOME=${QLOT_HOME:-~/.qlot}
-  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-${XDG_BIN_HOME:-"$QLOT_HOME/bin"}}
 fi
 
 ansi() {

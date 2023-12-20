@@ -14,7 +14,7 @@ if [ `id -u` -eq 0 ]; then
   QLOT_LOGS_DIR=/tmp/qlot/logs
 else
   QLOT_HOME=${QLOT_HOME:-~/.qlot}
-  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-${XDG_BIN_HOME:-"$QLOT_HOME/bin"}}
   QLOT_TMP_DIR="$QLOT_HOME/tmp"
   QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
   QLOT_LOGS_DIR="$QLOT_HOME/logs"

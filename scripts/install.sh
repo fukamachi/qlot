@@ -13,10 +13,9 @@ errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 
 if [ `id -u` -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
-  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-$QLOT_BASE/bin}
 else
-  QLOT_HOME=${QLOT_HOME:-~/.qlot}
-  QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
+  QLOT_BIN_DIR=${QLOT_BIN_DIR:-${XDG_BIN_HOME:-~/.qlot/bin}}
 fi
 
 mkdir -p "$QLOT_BIN_DIR"
