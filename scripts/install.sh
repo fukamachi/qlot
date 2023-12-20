@@ -34,11 +34,10 @@ printf '#!/bin/sh\nexport QLOT_SETUP_FILE=%s\nexec %s/scripts/run.sh "$@"\n' \
 chmod 755 "$QLOT_BIN_DIR/qlot"
 
 if [ `id -u` -eq 0 ]; then
-  XDG_DATA_HOME=/usr/local/share
+  REGISTRY_DIR=/usr/local/share/common-lisp/systems
 else
-  XDG_DATA_HOME=${XDG_DATA_HOME:-~/.local/share}
+  REGISTRY_DIR="${XDG_DATA_HOME:-~/.local/share}/common-lisp/systems"
 fi
-REGISTRY_DIR="$XDG_DATA_HOME/common-lisp/systems"
 
 mkdir -p "$REGISTRY_DIR"
 if [ ! -f "$REGISTRY_DIR/qlot.asd" ]; then

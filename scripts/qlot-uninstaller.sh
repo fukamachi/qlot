@@ -7,7 +7,11 @@ if [ `id -u` -eq 0 ]; then
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
   QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
 else
-  QLOT_HOME=${QLOT_HOME:-~/.qlot}
+  if [ -z "$XDG_DATA_HOME" ]; then
+    QLOT_HOME=${QLOT_HOME:~/.qlot}
+  else
+    QLOT_HOME="$XDG_DATA_HOME/qlot"
+  fi
   QLOT_BIN_DIR=${QLOT_BIN_DIR:-${XDG_BIN_HOME:-"$QLOT_HOME/bin"}}
 fi
 
