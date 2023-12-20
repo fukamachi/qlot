@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eux
+set -eu
 
 if [ `id -u` -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
@@ -20,22 +20,15 @@ ansi() {
 rm "$QLOT_BIN_DIR"/qlot
 rm -r "$QLOT_HOME"
 
-if [ "$(which sbcl 2>/dev/null)" != "" ]; then
-  lisp="sbcl"
-elif [ "$(which ros 2>/dev/null)" != "" ]; then
-  lisp="ros +Q -L sbcl-bin run --"
+if [ `id -u` -eq 0 ]; then
+  XDG_DATA_HOME=/usr/local/share
 else
-  exit 1
+  XDG_DATA_HOME=${XDG_DATA_HOME:-~/.local/share}
 fi
+REGISTRY_DIR="$XDG_DATA_HOME/common-lisp/systems"
 
-systems_directory() {
-  $lisp --noinform --no-sysinit --no-userinit --non-interactive \
-    --eval '(require :asdf)' --eval '(princ (uiop:native-namestring (uiop:xdg-data-home #P"common-lisp/systems/")))'
-}
-
-registry_dir=$(systems_directory)
-if [ -d "$registry_dir" ]; then
-  rm -f "${registry_dir}qlot.asd"
+if [ -d "$REGISTRY_DIR" ]; then
+  rm -f "$REGISTRY_DIR/qlot.asd"
 fi
 
 printf "%sQlot has been successfully deleted.%s\n" "$(ansi 32)" "$(ansi 0)"

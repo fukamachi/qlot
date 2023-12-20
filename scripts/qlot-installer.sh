@@ -111,9 +111,13 @@ if [ $? -ne 0 ]; then
   exit $?
 fi
 
-mkdir -p "$QLOT_BIN_DIR"
-printf '#!/bin/sh\nexec %s/scripts/run.sh "$@"\n' "$QLOT_SOURCE_DIR" > "$QLOT_BIN_DIR/qlot"
-chmod 755 "$QLOT_BIN_DIR/qlot"
+QLOT_BIN_DIR="$QLOT_BIN_DIR" scripts/install.sh >> "$install_log_path" 2>&1
+
+if [ $? -ne 0 ]; then
+  errmsg "Install process is failed. See '$install_log_path' for the detailed logs."
+  errmsg "If it can be a bug, please report an issue at https://github.com/fukamachi/qlot/issues."
+  exit $?
+fi
 
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
