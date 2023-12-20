@@ -19,10 +19,7 @@ else
   QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_HOME/bin"}
 fi
 
-if [ ! -d "$QLOT_BIN_DIR" ]; then
-  errmsg "Directory not exist: $QLOT_BIN_DIR"
-  exit 1
-fi
+mkdir -p "$QLOT_BIN_DIR"
 
 if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
   SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
