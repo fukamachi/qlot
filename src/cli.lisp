@@ -141,7 +141,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 (defun append-load-setup-to-sbcl-argv (argv)
   (flet ((runtime-option-p (option)
            (and (member option
-                        '("--help" "--version" "--core" "--dynamic-space-size" "--control-stack-size" "--tls-limit")
+                        '("--noinform" "--help" "--version" "--core" "--dynamic-space-size" "--control-stack-size" "--tls-limit")
                         :test 'equal)
                 t))
          (option-string-p (option)
