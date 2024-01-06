@@ -22,3 +22,5 @@
 (defsystem "qlot/tests"
   :depends-on ("qlot-tests")
   :in-order-to ((test-op (test-op "qlot-tests"))))
+
+(register-system-packages "lparallel" '(:lparallel :lparallel.queue))

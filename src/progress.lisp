@@ -3,14 +3,14 @@
   (:import-from #:qlot/color
                 #:color-text)
   (:import-from #:bordeaux-threads)
-  (:import-from #:chanl
-                #:unbounded-channel
-                #:send
-                #:recv)
   (:import-from #:lparallel
                 #:pmapc
                 #:*kernel*
                 #:make-kernel)
+  (:import-from #:lparallel.queue
+                #:make-queue
+                #:push-queue
+                #:pop-queue)
   (:export #:make-progress
            #:make-line
            #:print-progress
@@ -133,12 +133,12 @@
       (setf (progress-line-type *progress-line*) type))
     (let ((text (apply #'format nil control args)))
       (setf (progress-line-body *progress-line*) text)
-      (send *mailbox* *progress-line*)
+      (push-queue *progress-line* *mailbox*)
       text)))
 
 (defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn)
   (let* ((manager (make-progress nil))
-         (*mailbox* (make-instance 'unbounded-channel))
+         (*mailbox* (make-queue))
          (bt2:*default-special-bindings* (cons `(*mailbox* . ,*mailbox*)
                                                bt2:*default-special-bindings*))
          (*kernel* (make-kernel concurrency
@@ -146,7 +146,7 @@
          (progress-thread
            (bt2:make-thread
             (lambda ()
-              (loop for line = (recv *mailbox*)
+              (loop for line = (pop-queue *mailbox*)
                     do (refresh-progress-line manager line)))
             :name "qlot progress manager")))
     (unwind-protect
