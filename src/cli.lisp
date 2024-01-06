@@ -3,7 +3,7 @@
   (:import-from #:qlot/logger
                 #:message
                 #:*logger-message-stream*
-                #:clear-progress)
+                #:clear-whisper)
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
@@ -690,7 +690,7 @@ OPTIONS:
   (uiop:quit -1))
 
 (defun qlot-command (&optional $1 &rest argv)
-  (let ((*enable-color* (null (uiop:getenvp "QLOT_NO_COLOR"))))
+  (let ((*enable-color* (null (uiop:getenvp "QLOT_NO_TERMINAL"))))
     (handler-bind ((qlot/errors:qlot-warning
                      (lambda (c)
                        (warn-message "WARNING: ~A" c)
@@ -741,7 +741,7 @@ OPTIONS:
                    (otherwise))
                  (error 'qlot/errors:command-not-found :command $1)))
         #+sbcl (sb-sys:interactive-interrupt ()
-                 (clear-progress)
+                 (clear-whisper)
                  (uiop:quit -1))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))

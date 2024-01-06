@@ -5,9 +5,9 @@
   (:export #:*logger-message-stream*
            #:*logger-debug-stream*
            #:*debug*
-           #:*enable-progress*
-           #:progress
-           #:clear-progress
+           #:*enable-whisper*
+           #:whisper
+           #:clear-whisper
            #:message
            #:debug-log))
 (in-package #:qlot/logger)
@@ -19,39 +19,32 @@
   (make-synonym-stream '*standard-output*))
 
 (defvar *debug* nil)
-(defvar *enable-progress* t)
+(defvar *enable-whisper* t)
 
 (defvar *previous-progress* "")
 
 (defparameter *padding* "- ")
 
-(defun fill-spaces-to-clear-progress (text)
-  (write-string
-   (make-string (max 0
-                     (- (length *previous-progress*)
-                        (length text)))
-                :initial-element #\Space)
-   *logger-message-stream*)
-  (setf *previous-progress* text)
-  text)
+(defun terminal-p ()
+  (not (uiop:getenvp "QLOT_NO_TERMINAL")))
 
-(defun progress (format-control &rest format-arguments)
-  (when *enable-progress*
+(defun whisper (format-control &rest format-arguments)
+  (when *enable-whisper*
     (let* ((out *logger-message-stream*)
            (text (apply #'format nil format-control format-arguments))
            (text (concatenate 'string *padding* text)))
-      (write-string (color-text :gray text) out)
-      (fill-spaces-to-clear-progress text)
+      (when (terminal-p)
+        (format out "~C[2K" #\Esc))
       (write-char #\Return out)
-      (force-output out))))
+      (write-string (color-text :gray text) out)
+      (force-output out)
+      (setf *previous-progress* text))))
 
-(defun clear-progress ()
+(defun clear-whisper ()
   (when (= 0 (length *previous-progress*))
-    (return-from clear-progress))
-  (write-char #\Return *logger-message-stream*)
-  (write-string
-   (make-string (length *previous-progress*) :initial-element #\Space)
-   *logger-message-stream*)
+    (return-from clear-whisper))
+  (when (terminal-p)
+    (format *logger-message-stream* "~C[2K" #\Esc))
   (write-char #\Return *logger-message-stream*)
   (force-output *logger-message-stream*)
   (setf *previous-progress* "")
@@ -60,14 +53,14 @@
 (defun message (format-control &rest format-arguments)
   (let ((out *logger-message-stream*)
         (text (apply #'format nil format-control format-arguments)))
+    (clear-whisper)
     (write-string text out)
-    (fill-spaces-to-clear-progress text)
     (write-char #\Newline out))
   (values))
 
 (defun debug-log (format-control &rest format-arguments)
   (when *debug*
-    (clear-progress)
+    (clear-whisper)
     (format *logger-debug-stream*
             "[debug] ~A~%"
             (apply #'format nil format-control format-arguments)))

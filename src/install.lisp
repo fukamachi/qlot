@@ -22,11 +22,14 @@
   (:import-from #:qlot/distify
                 #:distify)
   (:import-from #:qlot/logger
+                #:*enable-whisper*
                 #:message
-                #:debug-log
-                #:progress)
+                #:debug-log)
   (:import-from #:qlot/secure-downloader
                 #:with-secure-installer)
+  (:import-from #:qlot/progress
+                #:run-in-parallel
+                #:progress)
   (:import-from #:qlot/utils
                 #:with-package-functions
                 #:starts-with
@@ -54,12 +57,14 @@
                 #:tmp-directory
                 #:delete-tmp-directory)
   (:import-from #:qlot/color
-                #:color-text)
+                #:color-text
+                #:*enable-color*)
   (:import-from #:qlot/errors
                 #:qlot-simple-error
                 #:missing-projects
                 #:duplicate-project
                 #:qlfile-not-found)
+  (:import-from #:bordeaux-threads)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-qlfile
@@ -223,13 +228,15 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                        (source-version source))))
         new-dist))))
 
-(defun progress-indicator (current max)
-  (color-text :gray
-              (format nil "[~A/~A]"
-                      (format nil "~v,' d"
-                              (length (princ-to-string max))
-                              current)
-                      max)))
+(defun progress-indicator (current max &key label)
+  (concatenate 'string
+               (color-text :gray
+                           (format nil "[~A/~A]"
+                                   (format nil "~v,' d"
+                                           (length (princ-to-string max))
+                                           current)
+                                   max))
+               (format nil "~@[ ~A~]" label)))
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory quiet)
   (let ((sources (read-qlfile-for-install qlfile
@@ -251,69 +258,78 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (error 'duplicate-project :name dup)))
       (unwind-protect
            (let* ((sources-to-install
-                    (remove-if (lambda (source)
-                                 (typep source 'source-local))
-                               sources))
-                  (max-count (length sources-to-install)))
-             (loop for i from 1 to max-count
-                   for source in sources-to-install
-                   do (with-quicklisp-home qlhome
-                        (with-package-functions #:ql-dist (find-dist version)
-                          (let ((dist (find-dist (source-dist-name source))))
-                            (cond
-                              ((not dist)
-                               (message "~A Installing dist ~S."
-                                        (progress-indicator i max-count)
-                                        (source-project-name source))
-                               (with-qlot-server (source :destination tmp-dir)
-                                 (debug-log "Using temporary directory '~A'" tmp-dir)
-                                 (install-source source))
-                               (message "=> Newly installed ~S version ~S."
-                                        (source-project-name source)
-                                        (source-version source)))
-                              ((and (slot-boundp source 'qlot/source/base::version)
-                                    (equal (version dist)
-                                           (source-version source)))
-                               (unless quiet
-                                 (message "~A Already have dist ~S version ~S."
-                                          (progress-indicator i max-count)
-                                          (source-project-name source)
-                                          (source-version source))))
-                              ((string= (source-dist-name source) "quicklisp")
-                               (message "~A Installing dist ~S."
-                                        (progress-indicator i max-count)
-                                        (source-project-name source))
-                               (with-package-functions #:ql-dist (uninstall version)
-                                 (let* ((current-dist (find-dist "quicklisp"))
-                                        (current-version (version current-dist)))
-                                   (uninstall (find-dist "quicklisp"))
-                                   (with-qlot-server (source :destination tmp-dir)
-                                     (debug-log "Using temporary directory '~A'" tmp-dir)
-                                     (install-source source))
-                                   (if (equal current-version (source-version source))
-                                       (message "=> No update on dist \"quicklisp\" version ~S."
-                                                current-version)
-                                       (message "=> Updated dist \"quicklisp\" version ~S -> ~S."
-                                                current-version
-                                                (source-version source))))))
-                              (t
-                               (message "~A Updating dist ~S."
-                                        (progress-indicator i max-count)
-                                        (source-project-name source))
-                               (with-qlot-server (source :destination tmp-dir
-                                                         :distinfo-only t)
-                                 (debug-log "Using temporary directory '~A'" tmp-dir)
-                                 (update-source source tmp-dir))))))
-                        (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
-                          (let* ((dist-name (source-dist-name source))
-                                 (dist (find-dist dist-name)))
-                            (unless dist
-                              (error 'qlot-simple-error
-                                     :format-control "Unable to find dist with name ~S. You should use one of these names in the qlfile: ~A"
-                                     :format-arguments (list dist-name
-                                                             (mapcar #'name (all-dists)))))
-                            (setf (preference dist)
-                                  (incf preference)))))))
+                   (remove-if (lambda (source)
+                                (typep source 'source-local))
+                              sources))
+                 (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
+                                                           (*enable-whisper* . nil)
+                                                           (,(uiop:intern* '#:*fetch-scheme-functions* '#:ql-http) . ',(symbol-value (uiop:intern* '#:*fetch-scheme-functions* '#:ql-http))))
+                                                         bt2:*default-special-bindings*))
+                 (lock (bt2:make-lock))
+                 (install-lock (bt2:make-lock))
+                 (current-count 0)
+                 (max-count (length sources-to-install)))
+             (run-in-parallel
+              (lambda (source)
+                (with-quicklisp-home qlhome
+                  (with-package-functions #:ql-dist (find-dist version)
+                    (let ((dist (find-dist (source-dist-name source))))
+                      (cond
+                        ((not dist)
+                         (progress :in-progress "Installing ~S."
+                                   (source-dist-name source))
+                         (with-qlot-server (source :destination tmp-dir :silent t)
+                           (bt2:with-lock-held (install-lock)
+                             (install-source source)))
+                         (progress :done "Newly installed ~S version ~S."
+                                   (source-dist-name source)
+                                   (source-version source)))
+                        ((and (slot-boundp source 'qlot/source/base::version)
+                              (equal (version dist)
+                                     (source-version source)))
+                         (unless quiet
+                           (progress :done "Already have dist ~S version ~S."
+                                     (source-project-name source)
+                                     (source-project-name source)
+                                     (source-version source))))
+                        ((string= (source-dist-name source) "quicklisp")
+                         (with-package-functions #:ql-dist (uninstall version)
+                           (let* ((current-dist (find-dist "quicklisp"))
+                                  (current-version (version current-dist)))
+                             (uninstall (find-dist "quicklisp"))
+                             (with-qlot-server (source :destination tmp-dir :silent t)
+                               (bt2:with-lock-held (install-lock)
+                                 (install-source source)))
+                             (if (equal current-version (source-version source))
+                                 (progress :done "No update on dist \"quicklisp\" version ~S."
+                                           current-version)
+                                 (progress :done "Updated dist \"quicklisp\" version ~S -> ~S."
+                                           current-version
+                                           (source-version source))))))
+                        (t
+                         (with-qlot-server (source :destination tmp-dir
+                                                   :distinfo-only t
+                                                   :silent t)
+                           (bt2:with-lock-held (install-lock)
+                             (update-source source tmp-dir)))))))
+                  (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
+                    (let* ((dist-name (source-dist-name source))
+                           (dist (find-dist dist-name)))
+                      (unless dist
+                        (error 'qlot-simple-error
+                               :format-control "Unable to find dist with name ~S. You should use one of these names in the qlfile: ~A"
+                               :format-arguments (list dist-name
+                                                       (mapcar #'name (all-dists)))))
+                      (setf (preference dist)
+                            (incf preference))))))
+              sources-to-install
+              :concurrency 4
+              :job-header-fn
+              (lambda (source)
+                (bt2:with-lock-held (lock)
+                  (let ((i (incf current-count)))
+                    (progress-indicator i max-count
+                                        :label (source-project-name source)))))))
         (unless cache-directory
           (delete-tmp-directory tmp-dir)))
       (with-quicklisp-home qlhome

@@ -12,7 +12,8 @@
                 #:split-with)
   (:import-from #:qlot/logger
                 #:*debug*
-                #:progress
+                #:whisper
+                #:message
                 #:debug-log)
   (:import-from #:qlot/errors
                 #:qlot-directory-not-found
@@ -97,7 +98,7 @@
                   (funcall test system-name))
           (unless (find system-file loaded-asd-files :test 'equal)
             (push system-file loaded-asd-files)
-            (progress "Loading '~A'..." system-file)
+            (whisper "Loading '~A'..." system-file)
             (incf file-counts)
             (let ((errout *error-output*))
               (handler-bind ((error
@@ -142,7 +143,7 @@
             (debug-log "'~A' requires ~S" system-name dependencies)
             (setf all-dependencies
                   (nconc all-dependencies dependencies)))))
-      (progress "Loaded ~A system files." file-counts)
+      (message "Loaded ~A system files." file-counts)
       (with-package-functions #:ql-dist (required-systems name)
         (let ((already-seen (make-hash-table :test 'equal)))
           (labels ((find-system-with-fallback (system-name)

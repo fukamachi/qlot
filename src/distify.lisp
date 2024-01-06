@@ -12,7 +12,7 @@
                 #:source-http
                 #:source-dist
                 #:source-dist-project)
-  (:import-from #:qlot/logger
+  (:import-from #:qlot/progress
                 #:progress)
   (:import-from #:qlot/errors
                 #:qlot-error)

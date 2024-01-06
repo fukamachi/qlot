@@ -10,7 +10,7 @@ ansi() {
 }
 if ! [ -t 1 ]; then
   ansi() { :; }
-  export QLOT_NO_COLOR=1
+  export QLOT_NO_TERMINAL=1
 fi
 errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 

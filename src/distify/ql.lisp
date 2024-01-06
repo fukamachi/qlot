@@ -6,7 +6,7 @@
                 #:source-version-prefix
                 #:source-distinfo-url
                 #:source-distribution)
-  (:import-from #:qlot/logger
+  (:import-from #:qlot/progress
                 #:progress)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-stream

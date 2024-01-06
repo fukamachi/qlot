@@ -5,7 +5,7 @@
                 #:source-distribution
                 #:source-distinfo-url
                 #:source-project-name)
-  (:import-from #:qlot/logger
+  (:import-from #:qlot/progress
                 #:progress)
   (:import-from #:qlot/utils/distify
                 #:get-distinfo-url)

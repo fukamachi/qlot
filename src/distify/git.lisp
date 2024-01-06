@@ -15,7 +15,7 @@
                 #:source-git-identifier)
   (:import-from #:qlot/source/ql
                 #:source-ql-upstream)
-  (:import-from #:qlot/logger
+  (:import-from #:qlot/progress
                 #:progress)
   (:import-from #:qlot/utils/distify
                 #:releases.txt
