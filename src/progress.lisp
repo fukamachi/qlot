@@ -1,5 +1,7 @@
 (defpackage #:qlot/progress
   (:use #:cl)
+  (:import-from #:qlot/logger
+                #:*terminal*)
   (:import-from #:qlot/color
                 #:color-text)
   (:import-from #:bordeaux-threads)
@@ -73,23 +75,20 @@
 
 (defvar *progress-output* nil)
 
-(defun terminal-p ()
-  (not (uiop:getenvp "QLOT_NO_TERMINAL")))
-
 (defun move-up (n)
-  (when (terminal-p)
+  (when *terminal*
     (format *progress-output* "~C[~DA" #\Esc n)))
 
 (defun clear-line ()
-  (when (terminal-p)
+  (when *terminal*
     (format *progress-output* "~C[2K" #\Esc)))
 
 (defmacro with-excursion ((stream) &body body)
   `(let ((*progress-output* ,stream))
-     (when (terminal-p)
+     (when *terminal*
        (format *progress-output* "~C[s" #\Esc))
      (prog1 (progn ,@body)
-       (when (terminal-p)
+       (when *terminal*
          (format *progress-output* "~C[u" #\Esc))
        (force-output *progress-output*))))
 

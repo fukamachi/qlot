@@ -3,6 +3,7 @@
   (:import-from #:qlot/logger
                 #:message
                 #:*logger-message-stream*
+                #:*terminal*
                 #:clear-whisper)
   (:import-from #:qlot/errors
                 #:missing-projects
@@ -690,7 +691,10 @@ OPTIONS:
   (uiop:quit -1))
 
 (defun qlot-command (&optional $1 &rest argv)
-  (let ((*enable-color* (null (uiop:getenvp "QLOT_NO_TERMINAL"))))
+  (let* ((no-terminal-env (uiop:getenvp "QLOT_NO_TERMINAL"))
+         (*terminal* (or (not no-terminal-env)
+                         (uiop:getenvp "CI")))
+         (*enable-color* *terminal*))
     (handler-bind ((qlot/errors:qlot-warning
                      (lambda (c)
                        (warn-message "WARNING: ~A" c)

@@ -23,6 +23,7 @@
                 #:distify)
   (:import-from #:qlot/logger
                 #:*enable-whisper*
+                #:*terminal*
                 #:message
                 #:debug-log)
   (:import-from #:qlot/secure-downloader
@@ -262,6 +263,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                 (typep source 'source-local))
                               sources))
                  (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
+                                                           (*terminal* . ,*terminal*)
                                                            (*enable-whisper* . nil)
                                                            (,(uiop:intern* '#:*fetch-scheme-functions* '#:ql-http) . ',(symbol-value (uiop:intern* '#:*fetch-scheme-functions* '#:ql-http))))
                                                          bt2:*default-special-bindings*))

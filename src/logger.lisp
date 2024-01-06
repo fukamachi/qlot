@@ -6,6 +6,7 @@
            #:*logger-debug-stream*
            #:*debug*
            #:*enable-whisper*
+           #:*terminal*
            #:whisper
            #:clear-whisper
            #:message
@@ -23,17 +24,16 @@
 
 (defvar *previous-progress* "")
 
-(defparameter *padding* "- ")
+(defvar *terminal* nil)
 
-(defun terminal-p ()
-  (not (uiop:getenvp "QLOT_NO_TERMINAL")))
+(defparameter *padding* "- ")
 
 (defun whisper (format-control &rest format-arguments)
   (when *enable-whisper*
     (let* ((out *logger-message-stream*)
            (text (apply #'format nil format-control format-arguments))
            (text (concatenate 'string *padding* text)))
-      (when (terminal-p)
+      (when *terminal*
         (format out "~C[2K" #\Esc))
       (write-char #\Return out)
       (write-string (color-text :gray text) out)
@@ -43,7 +43,7 @@
 (defun clear-whisper ()
   (when (= 0 (length *previous-progress*))
     (return-from clear-whisper))
-  (when (terminal-p)
+  (when *terminal*
     (format *logger-message-stream* "~C[2K" #\Esc))
   (write-char #\Return *logger-message-stream*)
   (force-output *logger-message-stream*)
