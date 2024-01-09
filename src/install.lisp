@@ -221,14 +221,14 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
               (install-all-releases source)
-              (message "=> Updated dist ~S to version ~S."
-                       (source-project-name source)
-                       (source-version source)))
+              (progress :done "Updated dist ~S to version ~S."
+                        (source-project-name source)
+                        (source-version source)))
             (progn
               (setf (source-version source) (version (find-dist (source-dist-name source))))
-              (message "=> No update on dist ~S version ~S"
-                       (source-dist-name source)
-                       (source-version source))))
+              (progress :done "No update on dist ~S version ~S"
+                        (source-dist-name source)
+                        (source-version source))))
         new-dist))))
 
 (defun progress-indicator (current max &key label)
