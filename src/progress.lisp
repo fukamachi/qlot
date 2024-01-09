@@ -156,4 +156,4 @@
                              (funcall (or job-header-fn #'princ-to-string) job))))
              (funcall worker-fn job)))
          jobs)
-      (bt2:destroy-thread progress-thread))))
+      (ignore-errors (bt2:destroy-thread progress-thread)))))
