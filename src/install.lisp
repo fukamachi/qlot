@@ -248,8 +248,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      :test #'string=)))
         (when missing
           (error 'missing-projects :projects missing))))
-    (let ((preference (get-universal-time))
-          (tmp-dir (or cache-directory (tmp-directory))))
+    (let ((tmp-dir (or cache-directory (tmp-directory))))
       (ensure-directories-exist tmp-dir)
       (mapc #'prepare-source sources)
       (let ((dup (find-duplicated-entry sources
@@ -313,17 +312,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                    :distinfo-only t
                                                    :silent t)
                            (bt2:with-lock-held (install-lock)
-                             (update-source source tmp-dir)))))))
-                  (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
-                    (let* ((dist-name (source-dist-name source))
-                           (dist (find-dist dist-name)))
-                      (unless dist
-                        (error 'qlot-simple-error
-                               :format-control "Unable to find dist with name ~S. You should use one of these names in the qlfile: ~A"
-                               :format-arguments (list dist-name
-                                                       (mapcar #'name (all-dists)))))
-                      (setf (preference dist)
-                            (incf preference))))))
+                             (update-source source tmp-dir)))))))))
               sources-to-install
               :concurrency 4
               :job-header-fn
@@ -331,7 +320,20 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (bt2:with-lock-held (lock)
                   (let ((i (incf current-count)))
                     (progress-indicator i max-count
-                                        :label (source-project-name source)))))))
+                                        :label (source-project-name source))))))
+             (let ((preference (get-universal-time)))
+               (with-quicklisp-home qlhome
+                 (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
+                   (dolist (source sources-to-install)
+                     (let* ((dist-name (source-dist-name source))
+                            (dist (find-dist dist-name)))
+                       (unless dist
+                         (error 'qlot-simple-error
+                                :format-control "Unable to find dist with name ~S. You should use one of these names in the qlfile: ~A"
+                                :format-arguments (list dist-name
+                                                        (mapcar #'name (all-dists)))))
+                       (setf (preference dist)
+                             (incf preference))))))))
         (unless cache-directory
           (delete-tmp-directory tmp-dir)))
       (with-quicklisp-home qlhome
