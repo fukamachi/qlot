@@ -89,6 +89,7 @@
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
                                    cache-directory
+                                   concurrency
                                    quiet)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
@@ -110,6 +111,7 @@
     (with-secure-installer ()
       (apply-qlfile-to-qlhome qlfile quicklisp-home
                               :cache-directory cache-directory
+                              :concurrency concurrency
                               :quiet quiet)
 
       ;; Install project dependencies
@@ -239,7 +241,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                    max))
                (format nil "~@[ ~A~]" label)))
 
-(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory quiet)
+(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory concurrency quiet)
+  (check-type concurrency (or null (integer 0)))
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
                                           :projects projects)))
@@ -314,7 +317,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                            (bt2:with-lock-held (install-lock)
                              (update-source source tmp-dir)))))))))
               sources-to-install
-              :concurrency 4
+              :concurrency (or concurrency 4)
               :job-header-fn
               (lambda (source)
                 (bt2:with-lock-held (lock)
@@ -355,12 +358,13 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
-(defun install-project (object &key (install-deps t) cache-directory quiet)
+(defun install-project (object &key (install-deps t) cache-directory concurrency quiet)
   (etypecase object
     ((or symbol string)
      (install-project (asdf:find-system object)
                       :install-deps install-deps
                       :cache-directory cache-directory
+                      :concurrency concurrency
                       :quiet quiet))
     (asdf:system
       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
@@ -368,11 +372,13 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                        object *qlot-directory*)
                       :install-deps install-deps
                       :cache-directory cache-directory
+                      :concurrency concurrency
                       :quiet quiet))
     (pathname
       (install-qlfile (ensure-qlfile-pathname object)
                       :install-deps install-deps
                       :cache-directory cache-directory
+                      :concurrency concurrency
                       :quiet quiet))))
 
 (defun update-project (object &key projects
