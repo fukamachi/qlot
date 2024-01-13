@@ -26,13 +26,10 @@
 
 (defvar *terminal* nil)
 
-(defparameter *padding* "- ")
-
 (defun whisper (format-control &rest format-arguments)
   (when *enable-whisper*
-    (let* ((out *logger-message-stream*)
-           (text (apply #'format nil format-control format-arguments))
-           (text (concatenate 'string *padding* text)))
+    (let ((out *logger-message-stream*)
+          (text (apply #'format nil format-control format-arguments)))
       (when *terminal*
         (format out "~C[2K" #\Esc))
       (write-char #\Return out)
