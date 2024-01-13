@@ -82,8 +82,8 @@
 (defun clear-line ()
   (if *terminal*
       (progn
-        (format *progress-output* "~C[2K" #\Esc)
-        (write-char #\Return *progress-output*))
+        (write-char #\Return *progress-output*)
+        (format *progress-output* "~C[0K" #\Esc))
       (fresh-line *progress-output*)))
 
 (defmacro with-excursion ((stream) &body body)
