@@ -341,8 +341,7 @@ OPTIONS:
                       :cache-directory (and cache
                                             (uiop:ensure-absolute-pathname
                                              (uiop:ensure-directory-pathname cache)
-                                             *default-pathname-defaults*))
-                      :quiet (not (null projects)))))
+                                             *default-pathname-defaults*)))))
 
 (defun qlot-command-init (argv)
   (flet ((print-init-usage ()
@@ -541,8 +540,7 @@ OPTIONS:
                              (declare (ignore e))
                              (uiop:copy-file qlfile.bak qlfile))))
             (uiop:symbol-call '#:qlot/install '#:install-project *default-pathname-defaults*
-                              :install-deps nil
-                              :quiet t)))))))
+                              :install-deps nil)))))))
 
 (defun qlot-command-remove (argv)
   (flet ((print-remove-usage ()
@@ -592,8 +590,7 @@ SYNOPSIS:
                                  (uiop:copy-file qlfile.bak qlfile))))
                 (uiop:symbol-call '#:qlot/install '#:install-project
                                   *default-pathname-defaults*
-                                  :install-deps nil
-                                  :quiet t)))))))))
+                                  :install-deps nil)))))))))
 
 (defun qlot-command-check (argv)
   (flet ((print-check-usage ()
