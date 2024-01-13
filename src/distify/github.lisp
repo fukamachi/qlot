@@ -10,7 +10,7 @@
                 #:source-github-tag
                 #:source-github-identifier
                 #:source-github-url)
-  (:import-from #:qlot/logger
+  (:import-from #:qlot/progress
                 #:progress)
   (:import-from #:qlot/utils/distify
                 #:releases.txt

@@ -3,7 +3,7 @@
   (:import-from #:qlot/distify
                 #:distify)
   (:import-from #:qlot/logger
-                #:*enable-progress*)
+                #:*enable-whisper*)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
   (:export #:with-qlot-server))
@@ -41,7 +41,7 @@
        (,@(if destination
               `(let ((,g-destination ,destination)))
               `(with-tmp-directory (,g-destination)))
-        (let ((*enable-progress* (not ,silent)))
+        (let ((*enable-whisper* (not ,silent)))
           (distify ,g-source ,g-destination :distinfo-only ,distinfo-only))
         (progv (list ,fetch-scheme-functions '*handler*)
             (list (cons '("qlot" . qlot-fetch)

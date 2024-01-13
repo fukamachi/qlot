@@ -3,7 +3,8 @@
   (:import-from #:qlot/logger
                 #:message
                 #:*logger-message-stream*
-                #:clear-progress)
+                #:*terminal*
+                #:clear-whisper)
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
@@ -245,12 +246,19 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 
 (defun qlot-command-install (argv)
   (let ((install-deps t)
-        (cache nil))
+        (cache nil)
+        concurrency)
     (do-options (option argv)
       ("--no-deps"
        (setf install-deps nil))
       (("--cache" cache-dir)
        (setf cache cache-dir))
+      (("--jobs" jobs)
+       (unless (every (lambda (char)
+                        (char<= #\0 char #\9))
+                      jobs)
+         (qlot/errors:ros-command-error "Invalid option value for --jobs: ~A" jobs))
+       (setf concurrency (parse-integer jobs)))
       ("--debug"
        (qlot-option-debug))
       ("--help"
@@ -265,6 +273,8 @@ OPTIONS:
         Don't install dependencies of all systems from the current directory.
     --cache [directory]
         Keep intermediate files for fast reinstallation.
+    --jobs [concurrency]
+        The number of threads to install simultaneously. (Default: 4)
     --debug
         A flag to enable debug logging.
 ")
@@ -281,12 +291,14 @@ OPTIONS:
                       :cache-directory (and cache
                                             (uiop:ensure-absolute-pathname
                                              (uiop:ensure-directory-pathname cache)
-                                             *default-pathname-defaults*)))))
+                                             *default-pathname-defaults*))
+                      :concurrency concurrency)))
 
 (defun qlot-command-update (argv)
   (let ((install-deps t)
         (cache nil)
-        (projects nil))
+        (projects nil)
+        concurrency)
     (do-options (option argv)
       (("--project" name)
        (qlot/errors:ros-command-warn "'--project' option is deprecated. Please use 'qlot update <name>' instead.")
@@ -299,6 +311,12 @@ OPTIONS:
        (setf install-deps nil))
       (("--cache" cache-dir)
        (setf cache cache-dir))
+      (("--jobs" jobs)
+       (unless (every (lambda (char)
+                        (char<= #\0 char #\9))
+                      jobs)
+         (qlot/errors:ros-command-error "Invalid option value for --jobs: ~A" jobs))
+       (setf concurrency (parse-integer jobs)))
       ("--debug"
        (qlot-option-debug))
       ("--help"
@@ -313,6 +331,8 @@ OPTIONS:
         Don't install dependencies of all systems from the current directory.
     --cache [directory]
         Keep intermediate files for fast reinstallation.
+    --jobs [concurrency]
+        The number of threads to install simultaneously. (Default: 4)
     --debug
         A flag to enable debug logging.
 ")
@@ -331,7 +351,7 @@ OPTIONS:
                                             (uiop:ensure-absolute-pathname
                                              (uiop:ensure-directory-pathname cache)
                                              *default-pathname-defaults*))
-                      :quiet (not (null projects)))))
+                      :concurrency concurrency)))
 
 (defun qlot-command-init (argv)
   (flet ((print-init-usage ()
@@ -530,8 +550,7 @@ OPTIONS:
                              (declare (ignore e))
                              (uiop:copy-file qlfile.bak qlfile))))
             (uiop:symbol-call '#:qlot/install '#:install-project *default-pathname-defaults*
-                              :install-deps nil
-                              :quiet t)))))))
+                              :install-deps nil)))))))
 
 (defun qlot-command-remove (argv)
   (flet ((print-remove-usage ()
@@ -581,8 +600,7 @@ SYNOPSIS:
                                  (uiop:copy-file qlfile.bak qlfile))))
                 (uiop:symbol-call '#:qlot/install '#:install-project
                                   *default-pathname-defaults*
-                                  :install-deps nil
-                                  :quiet t)))))))))
+                                  :install-deps nil)))))))))
 
 (defun qlot-command-check (argv)
   (flet ((print-check-usage ()
@@ -690,7 +708,10 @@ OPTIONS:
   (uiop:quit -1))
 
 (defun qlot-command (&optional $1 &rest argv)
-  (let ((*enable-color* (null (uiop:getenvp "QLOT_NO_COLOR"))))
+  (let* ((no-terminal-env (uiop:getenvp "QLOT_NO_TERMINAL"))
+         (*terminal* (or (not no-terminal-env)
+                         (uiop:getenvp "CI")))
+         (*enable-color* *terminal*))
     (handler-bind ((qlot/errors:qlot-warning
                      (lambda (c)
                        (warn-message "WARNING: ~A" c)
@@ -741,7 +762,7 @@ OPTIONS:
                    (otherwise))
                  (error 'qlot/errors:command-not-found :command $1)))
         #+sbcl (sb-sys:interactive-interrupt ()
-                 (clear-progress)
+                 (clear-whisper)
                  (uiop:quit -1))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))

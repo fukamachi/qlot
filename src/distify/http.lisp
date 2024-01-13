@@ -6,7 +6,7 @@
                 #:source-http-archive-md5
                 #:source-version
                 #:source-version-prefix)
-  (:import-from #:qlot/logger
+  (:import-from #:qlot/progress
                 #:progress)
   (:import-from #:qlot/utils/distify
                 #:releases.txt

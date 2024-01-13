@@ -4,18 +4,20 @@
   (:import-from #:qlot/proxy
                 #:*proxy*)
   (:import-from #:qlot/logger
-                #:progress)
+                #:whisper)
   (:import-from #:qlot/utils
                 #:https-of)
   (:export #:with-secure-installer))
 (in-package #:qlot/secure-downloader)
 
-(defun https-fetch (url file &rest args)
+(defun https-fetch (url file &rest args &key quiet &allow-other-keys)
   (declare (ignore args))
   (let ((url (https-of url)))
-    (progress "Downloading ~S." url)
-    (qlot/http:fetch url file)
-    (progress "Downloaded ~S." url)))
+    (unless quiet
+      (whisper "Downloading ~S." url))
+    (multiple-value-prog1 (qlot/http:fetch url file)
+      (unless quiet
+        (whisper "Downloaded ~S." url)))))
 
 (defmacro with-secure-installer (() &body body)
   `(progv (list (intern #.(string '#:*fetch-scheme-functions*) '#:ql-http)

@@ -5,6 +5,8 @@
   (:import-from #:qlot/utils/shell
                 #:run-lisp
                 #:*qlot-source-directory*)
+  (:import-from #:qlot/logger
+                #:*terminal*)
   (:import-from #:qlot/color
                 #:*enable-color*)
   (:export #:project-dependencies-in-child-process))
@@ -14,6 +16,7 @@
   (uiop:with-temporary-file (:pathname tmp)
     (run-lisp `((load ,(merge-pathnames #P"setup.lisp" quicklisp-home))
                 (setf *enable-color* ,*enable-color*)
+                (setf *terminal* ,*terminal*)
                 (with-open-file (cl-user::out ,tmp
                                               :direction :output
                                               :if-exists :supersede)

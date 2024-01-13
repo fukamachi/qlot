@@ -15,9 +15,10 @@
   (:import-from #:qlot/server
                 #:with-qlot-server)
   (:import-from #:qlot/logger
-                #:message
-                #:progress
-                #:clear-progress)
+                #:message)
+  (:import-from #:qlot/logger
+                #:whisper
+                #:clear-whisper)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
@@ -153,7 +154,7 @@
                (let ((dist (find-dist (source-dist-name source))))
                  (if dist
                      (progn
-                       (progress "Checking update of ~S..." (source-project-name source))
+                       (whisper "Checking update of ~S..." (source-project-name source))
                        (with-qlot-server (source :destination tmp-dir
                                                  :distinfo-only t
                                                  :silent t)
@@ -164,6 +165,6 @@
                                         (source-project-name source)
                                         (version dist)
                                         (source-version source)))
-                             (clear-progress))))
+                             (clear-whisper))))
                      (message "~S is not installed yet. Skipped."
                               (source-project-name source))))))))))))

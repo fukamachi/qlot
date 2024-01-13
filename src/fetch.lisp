@@ -12,7 +12,8 @@
 (defun fetch-file (url file &rest args &key quietly &allow-other-keys)
   (declare (ignore args))
   (ensure-directories-exist file)
-  (format t "~&; Fetching '~A'.~%" url)
+  (unless quietly
+    (format t "~&; Fetching '~A'.~%" url))
   (let ((now (get-internal-real-time)))
     (multiple-value-bind (body-stream status headers)
         (qlot/http:get url :want-stream t :force-binary t)
@@ -43,14 +44,20 @@
                              do (write-char #\#))
                        (force-output)
                        (setf current-progress new-progress)))))))
-    (format t "~&; Done '~A' (~$KB) in ~A seconds.~%"
-            (file-namestring file)
-            (/ (file-size file) 1024)
-            (coerce
-             (/ (- (get-internal-real-time) now)
-                internal-time-units-per-second)
-             'float)))
+    (unless quietly
+      (format t "~&; Done '~A' (~$KB) in ~A seconds.~%"
+              (file-namestring file)
+              (/ (file-size file) 1024)
+              (coerce
+               (/ (- (get-internal-real-time) now)
+                  internal-time-units-per-second)
+               'float))))
   file)
+
+(defun parse-options (args)
+  (loop for arg in args
+        if (equal arg "--quiet")
+        append (list :quietly t)))
 
 (defun main ()
   (destructuring-bind (&optional $0 $1 &rest argv)
@@ -59,6 +66,9 @@
     (let ((args (if (equal $1 "--")
                     argv
                     (cons $1 argv))))
-      (unless (= (length args) 2)
+      (unless (<= 2 (length args))
         (format *error-output* "~&Error: Invalid number of arguments.~%"))
-      (apply #'fetch-file args))))
+      (destructuring-bind (url file &rest option-args)
+          args
+        (apply #'fetch-file url file
+               (parse-options option-args))))))

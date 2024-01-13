@@ -39,5 +39,11 @@ jobs:
         run: scripts/setup.sh
       - name: Run install.sh
         run: scripts/install.sh
+      - name: Run qlot install for Lem
+        run: |
+          PATH="~/.qlot/bin:~/.roswell/bin:$PATH"
+          git clone https://github.com/lem-project/lem
+          cd lem
+          qlot install
       - name: Run qlot-uninstaller.sh
         run: scripts/qlot-uninstaller.sh
