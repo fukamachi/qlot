@@ -121,7 +121,8 @@
 (defun update-qlfile (qlfile &key quicklisp-home
                                   projects
                                   (install-deps t)
-                                  cache-directory)
+                                  cache-directory
+                                  concurrency)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
 
@@ -139,7 +140,8 @@
       (apply-qlfile-to-qlhome qlfile quicklisp-home
                               :ignore-lock t
                               :projects projects
-                              :cache-directory cache-directory)
+                              :cache-directory cache-directory
+                              :concurrency concurrency)
 
       ;; Install project dependencies
       (when install-deps
@@ -383,21 +385,25 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun update-project (object &key projects
                                    (install-deps t)
-                                   cache-directory)
+                                   cache-directory
+                                   concurrency)
   (etypecase object
     ((or symbol string)
      (update-project (asdf:find-system object)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory))
+                     :cache-directory cache-directory
+                     :concurrency concurrency))
     (asdf:system
       (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                      :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory))
+                     :cache-directory cache-directory
+                     :concurrency concurrency))
     (pathname
       (update-qlfile (ensure-qlfile-pathname object)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory))))
+                     :cache-directory cache-directory
+                     :concurrency concurrency))))

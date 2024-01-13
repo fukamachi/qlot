@@ -297,7 +297,8 @@ OPTIONS:
 (defun qlot-command-update (argv)
   (let ((install-deps t)
         (cache nil)
-        (projects nil))
+        (projects nil)
+        concurrency)
     (do-options (option argv)
       (("--project" name)
        (qlot/errors:ros-command-warn "'--project' option is deprecated. Please use 'qlot update <name>' instead.")
@@ -310,6 +311,12 @@ OPTIONS:
        (setf install-deps nil))
       (("--cache" cache-dir)
        (setf cache cache-dir))
+      (("--jobs" jobs)
+       (unless (every (lambda (char)
+                        (char<= #\0 char #\9))
+                      jobs)
+         (qlot/errors:ros-command-error "Invalid option value for --jobs: ~A" jobs))
+       (setf concurrency (parse-integer jobs)))
       ("--debug"
        (qlot-option-debug))
       ("--help"
@@ -324,6 +331,8 @@ OPTIONS:
         Don't install dependencies of all systems from the current directory.
     --cache [directory]
         Keep intermediate files for fast reinstallation.
+    --jobs [concurrency]
+        The number of threads to install simultaneously. (Default: 4)
     --debug
         A flag to enable debug logging.
 ")
@@ -341,7 +350,8 @@ OPTIONS:
                       :cache-directory (and cache
                                             (uiop:ensure-absolute-pathname
                                              (uiop:ensure-directory-pathname cache)
-                                             *default-pathname-defaults*)))))
+                                             *default-pathname-defaults*))
+                      :concurrency concurrency)))
 
 (defun qlot-command-init (argv)
   (flet ((print-init-usage ()
