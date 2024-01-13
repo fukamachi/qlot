@@ -257,9 +257,17 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (error 'duplicate-project :name dup)))
       (unwind-protect
            (let* ((sources-to-install
-                   (remove-if (lambda (source)
-                                (typep source 'source-local))
-                              sources))
+                    (with-quicklisp-home qlhome
+                      (with-package-functions #:ql-dist (find-dist version)
+                        (remove-if (lambda (source)
+                                     (let ((dist (find-dist (source-dist-name source))))
+                                       (and dist
+                                            (slot-boundp source 'qlot/source/base::version)
+                                            (equal (version dist)
+                                                   (source-version source)))))
+                                   (remove-if (lambda (source)
+                                                (typep source 'source-local))
+                                              sources)))))
                  (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
                                                            (*terminal* . ,*terminal*)
                                                            (*enable-whisper* . nil)
