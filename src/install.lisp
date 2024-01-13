@@ -74,6 +74,12 @@
            #:update-project))
 (in-package #:qlot/install)
 
+(defmacro without-linewrap (() &body body)
+  `(progn
+     (format t "~C[?7l" #\Esc)
+     (unwind-protect (progn ,@body)
+       (format t "~C[?7h" #\Esc))))
+
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome
     (let ((all-dependencies (with-package-functions #:ql-dist (find-system)
@@ -107,14 +113,15 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
-    (with-secure-installer ()
-      (apply-qlfile-to-qlhome qlfile quicklisp-home
-                              :cache-directory cache-directory
-                              :concurrency concurrency)
+    (without-linewrap ()
+      (with-secure-installer ()
+        (apply-qlfile-to-qlhome qlfile quicklisp-home
+                                :cache-directory cache-directory
+                                :concurrency concurrency)
 
-      ;; Install project dependencies
-      (when install-deps
-        (install-dependencies project-root quicklisp-home)))
+        ;; Install project dependencies
+        (when install-deps
+          (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
 
@@ -136,16 +143,17 @@
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
-    (with-secure-installer ()
-      (apply-qlfile-to-qlhome qlfile quicklisp-home
-                              :ignore-lock t
-                              :projects projects
-                              :cache-directory cache-directory
-                              :concurrency concurrency)
+    (without-linewrap ()
+      (with-secure-installer ()
+        (apply-qlfile-to-qlhome qlfile quicklisp-home
+                                :ignore-lock t
+                                :projects projects
+                                :cache-directory cache-directory
+                                :concurrency concurrency)
 
-      ;; Install project dependencies
-      (when install-deps
-        (install-dependencies project-root quicklisp-home)))
+        ;; Install project dependencies
+        (when install-deps
+          (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
 
