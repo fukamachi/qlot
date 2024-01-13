@@ -76,9 +76,11 @@
 
 (defmacro without-linewrap (() &body body)
   `(progn
-     (format t "~C[?7l" #\Esc)
+     (when *terminal*
+       (format t "~C[?7l" #\Esc))
      (unwind-protect (progn ,@body)
-       (format t "~C[?7h" #\Esc))))
+       (when *terminal*
+         (format t "~C[?7h" #\Esc)))))
 
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome

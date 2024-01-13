@@ -30,9 +30,11 @@
   (when *enable-whisper*
     (let ((out *logger-message-stream*)
           (text (apply #'format nil format-control format-arguments)))
-      (when *terminal*
-        (format out "~C[2K" #\Esc))
-      (write-char #\Return out)
+      (if *terminal*
+          (progn
+            (format out "~C[2K" #\Esc)
+            (write-char #\Return out))
+          (fresh-line out))
       (write-string (color-text :gray text) out)
       (force-output out)
       (setf *previous-progress* text))))
