@@ -268,7 +268,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
         (when dup
           (error 'duplicate-project :name dup)))
       (unwind-protect
-           (let* ((sources-to-install
+           (let* ((sources-non-local
+                    (remove-if (lambda (source)
+                                 (typep source 'source-local))
+                               sources))
+                  (sources-to-install
                     (with-quicklisp-home qlhome
                       (with-package-functions #:ql-dist (find-dist version)
                         (remove-if (lambda (source)
@@ -277,9 +281,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                             (slot-boundp source 'qlot/source/base::version)
                                             (equal (version dist)
                                                    (source-version source)))))
-                                   (remove-if (lambda (source)
-                                                (typep source 'source-local))
-                                              sources)))))
+                                   sources-non-local))))
                  (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
                                                            (*terminal* . ,*terminal*)
                                                            (*enable-whisper* . nil)
@@ -342,7 +344,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
              (let ((preference (get-universal-time)))
                (with-quicklisp-home qlhome
                  (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
-                   (dolist (source sources-to-install)
+                   (dolist (source sources-non-local)
                      (let* ((dist-name (source-dist-name source))
                             (dist (find-dist dist-name)))
                        (unless dist
