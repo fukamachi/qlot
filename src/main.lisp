@@ -45,7 +45,6 @@
 
 #+sbcl
 (defun install-shell-command (destination &key quicklisp-home)
-  (check-type destination (or pathname string))
   (unless (typep destination '(or pathname string))
     (error "Requires a directory pathname but given ~S." destination))
   ;; Find a setup file
