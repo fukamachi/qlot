@@ -93,10 +93,14 @@
                              :error e))))
      ,@body))
 
+(defun read-qlfile-lock (file)
+  (with-handling-parse-error (file 1)   ;; Can't tell the right lineno
+    (uiop:with-safe-io-syntax ()
+      (uiop:read-file-forms file))))
+
 (defun parse-qlfile-lock (file &key (test #'identity))
   (loop with lineno = 1
-        for (project-name . args) in (with-handling-parse-error (file lineno)
-                                       (uiop:read-file-forms file))
+        for (project-name . args) in (read-qlfile-lock file)
         when (funcall test project-name)
         collect
         (let ((source (with-handling-parse-error (file lineno)
@@ -108,6 +112,7 @@
                       unless (member k '(:class :initargs))
                       append (list k v)))
           source)
+        ;; XXX: It could be wrong if the lock file is modified manually
         do (incf lineno (1+ (/ (length args) 2)))))
 
 (defun merging-lock-sources (sources lock-sources)
