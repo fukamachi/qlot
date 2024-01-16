@@ -150,11 +150,16 @@
                     do (refresh-progress-line manager line)))
             :name "qlot progress manager")))
     (unwind-protect
-        (pmapc
-         (lambda (job)
-           (let ((*progress-line*
-                   (add-line manager
-                             (funcall (or job-header-fn #'princ-to-string) job))))
-             (funcall worker-fn job)))
-         jobs)
+         (handler-bind (#+sbcl (sb-sys:interactive-interrupt
+                                 (lambda (c)
+                                   (declare (ignore c))
+                                   (setf lparallel.kernel::*lisp-exiting-p* t)
+                                   (lparallel:kill-tasks :default))))
+           (pmapc
+            (lambda (job)
+              (let ((*progress-line*
+                      (add-line manager
+                                (funcall (or job-header-fn #'princ-to-string) job))))
+                (funcall worker-fn job)))
+            jobs))
       (ignore-errors (bt2:destroy-thread progress-thread)))))
