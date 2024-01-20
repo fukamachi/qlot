@@ -783,10 +783,9 @@ OPTIONS:
           (uiop:quit -1))))))
 
 (defun main ()
-  (destructuring-bind (&optional $0 $1 &rest argv)
-      (command-line-arguments)
-    (declare (ignore $0))
+  (let ((argv (command-line-arguments)))
     (apply #'qlot-command
-           (if (equal $1 "--") ;; Ignore the first '--'
-               argv
-               (cons $1 argv)))))
+           (if (equal (first argv) "--") ;; Ignore the first '--'
+               (rest argv)
+               argv)))
+  (uiop:quit))

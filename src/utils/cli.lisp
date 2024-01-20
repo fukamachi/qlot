@@ -12,13 +12,15 @@
                (format stream "No such file or directory: ~A" program)))))
 
 (defun command-line-arguments ()
-  #+allegro (system:command-line-arguments)
-  #+sbcl sb-ext:*posix-argv*
+  #+allegro (rest (system:command-line-arguments))
+  #+sbcl (rest sb-ext:*posix-argv*)
   #+clisp ext:*args*
-  #+ecl (si:command-args)
   #+cmu ext:*command-line-words*
   #+ccl ccl:*command-line-argument-list*
-  #+lispworks system:*line-arguments-list*)
+  #+lispworks system:*line-arguments-list*
+  #+abcl ext:*command-line-argument-list*
+  #-(or allegro sbcl clisp cmu ccl lispworks abcl)
+  (uiop:command-line-arguments))
 
 #+(and unix sbcl) ;; from swank
 (progn

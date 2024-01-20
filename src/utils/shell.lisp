@@ -62,7 +62,7 @@
       #+allegro (car (system:command-line-arguments))
       #+clisp "clisp"
       #+cmu (car ext:*command-line-strings*)
-      #+ecl (car (si:command-args))
+      #+(or ecl clasp) (si:argv 0)
       #+abcl "java"))
 
 (defvar *eval-option*
@@ -74,6 +74,7 @@
     #+clisp "-x"
     #+cmu "-eval"
     #+ecl "-eval"
+    #+clasp "-e"
     #+abcl "--eval"))
 
 (defun str (form)
@@ -142,6 +143,7 @@
   #+clisp '("-norc" "--quiet" "--silent" "-on-error" "exit")
   #+cmu '("-noinit")
   #+ecl '("-norc")
+  #+clasp '("--noinform" "--norc" "--non-interactive")
   #+abcl '("--noinform" "--noinit"))
 
 #+ros.init
