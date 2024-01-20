@@ -23,6 +23,8 @@ if [ "$LISP" = "" ]; then
     lisp="ecl"
   elif [ "$(which clasp 2>/dev/null)" != "" ]; then
     lisp="clasp"
+  elif [ "$(which abcl 2>/dev/null)" != "" ]; then
+    lisp="abcl"
   else
     errmsg "A Lisp implementation is required to run Qlot."
     exit 1
@@ -56,6 +58,11 @@ case "$lisp" in
     lisp_cmd="clisp"
     lisp_init_options="-norc --quiet --silent -on-error exit"
     eval_option="-x"
+    ;;
+  abcl)
+    lisp_cmd="abcl"
+    lisp_init_options="--noinform --noinit --nosystem"
+    eval_option="--eval"
     ;;
   *)
     lisp_cmd="$lisp"
