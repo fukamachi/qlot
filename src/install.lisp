@@ -48,7 +48,6 @@
   (:import-from #:qlot/utils/project
                 #:*qlot-directory*
                 #:*default-qlfile*
-                #:find-project-root
                 #:ensure-qlfile-pathname
                 #:local-quicklisp-installed-p
                 #:check-local-quicklisp
@@ -391,7 +390,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :cache-directory cache-directory
                      :concurrency concurrency))
     (pathname
-     (install-qlfile (ensure-qlfile-pathname (find-project-root object))
+     (install-qlfile (ensure-qlfile-pathname object)
                      :install-deps install-deps
                      :cache-directory cache-directory
                      :concurrency concurrency))))
@@ -415,7 +414,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                     :cache-directory cache-directory
                     :concurrency concurrency))
     (pathname
-     (update-qlfile (ensure-qlfile-pathname (find-project-root object))
+     (update-qlfile (ensure-qlfile-pathname object)
                     :projects projects
                     :install-deps install-deps
                     :cache-directory cache-directory
