@@ -20,6 +20,7 @@
                 #:qlot-directory-invalid)
   (:export #:*qlot-directory*
            #:local-quicklisp-installed-p
+           #:find-project-root
            #:check-local-quicklisp
            #:local-quicklisp-home
            #:project-dependencies
@@ -63,6 +64,28 @@
     (when (and (uiop:directory-exists-p qlhome)
                (uiop:file-exists-p (merge-pathnames "setup.lisp" qlhome)))
       qlhome)))
+
+(defun find-project-root (&optional (pathname *default-pathname-defaults*))
+  (check-type pathname pathname)
+  (let ((pathname
+          (if (uiop:directory-pathname-p pathname)
+              (probe-file pathname)
+              (uiop:pathname-directory-pathname pathname))))
+    (cond
+      ((equal (user-homedir-pathname) pathname)
+       pathname)
+      ((or (find-if (lambda (dir)
+                      (uiop:directory-exists-p (merge-pathnames dir pathname)))
+                    '(".bzr" ".git" ".hg" ".qlot"))
+           (find-if (lambda (file)
+                      (uiop:file-exists-p (merge-pathnames file pathname)))
+                    '("qlfile")))
+       pathname)
+      (t
+       (let ((parent (uiop:pathname-parent-directory-pathname pathname)))
+         (if (equal parent pathname)
+             pathname
+             (find-project-root parent)))))))
 
 (defun check-local-quicklisp (project-root)
   (let ((qlhome (merge-pathnames *qlot-directory* project-root)))

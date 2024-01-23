@@ -383,17 +383,17 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                       :cache-directory cache-directory
                       :concurrency concurrency))
     (asdf:system
-      (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
-                      :quicklisp-home (asdf:system-relative-pathname
-                                       object *qlot-directory*)
-                      :install-deps install-deps
-                      :cache-directory cache-directory
-                      :concurrency concurrency))
+     (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
+                     :quicklisp-home (asdf:system-relative-pathname
+                                      object *qlot-directory*)
+                     :install-deps install-deps
+                     :cache-directory cache-directory
+                     :concurrency concurrency))
     (pathname
-      (install-qlfile (ensure-qlfile-pathname object)
-                      :install-deps install-deps
-                      :cache-directory cache-directory
-                      :concurrency concurrency))))
+     (install-qlfile (ensure-qlfile-pathname object)
+                     :install-deps install-deps
+                     :cache-directory cache-directory
+                     :concurrency concurrency))))
 
 (defun update-project (object &key projects
                                    (install-deps t)
@@ -407,15 +407,15 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                      :cache-directory cache-directory
                      :concurrency concurrency))
     (asdf:system
-      (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
-                     :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
-                     :projects projects
-                     :install-deps install-deps
-                     :cache-directory cache-directory
-                     :concurrency concurrency))
+     (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
+                    :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
+                    :projects projects
+                    :install-deps install-deps
+                    :cache-directory cache-directory
+                    :concurrency concurrency))
     (pathname
-      (update-qlfile (ensure-qlfile-pathname object)
-                     :projects projects
-                     :install-deps install-deps
-                     :cache-directory cache-directory
-                     :concurrency concurrency))))
+     (update-qlfile (ensure-qlfile-pathname object)
+                    :projects projects
+                    :install-deps install-deps
+                    :cache-directory cache-directory
+                    :concurrency concurrency))))
