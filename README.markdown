@@ -497,8 +497,7 @@ See the [SLIME manual](https://slime.common-lisp.dev/doc/html/Multiple-Lisps.htm
 See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up multiple Lisps.
 
 2. Relaunch the Emacs or load the config file.
-3. `M-x cd RET /path/to/project` to change the directory.
-4. Invoke `M-- M-x slime RET qlot RET`.
+3. Invoke `M-- M-x slime RET qlot RET`.
 
 ### Vim/Neovim
 
