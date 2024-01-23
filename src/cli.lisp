@@ -19,6 +19,7 @@
                 #:no-such-program)
   (:import-from #:qlot/utils/project
                 #:*default-qlfile*
+                #:find-project-root
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
@@ -425,7 +426,10 @@ NOTE:
       (warn-message "Run 'qlot exec --help' to see the usage.")
       (uiop:quit -1)))
 
-  (check-local-quicklisp *default-pathname-defaults*)
+  (let ((project-root (find-project-root)))
+    (check-local-quicklisp project-root)
+    (uiop:chdir project-root)
+    (setf *default-pathname-defaults* project-root))
 
   (ensure-package-loaded :qlot/check)
   (handler-case

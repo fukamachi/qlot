@@ -27,6 +27,7 @@
                 #:dump-source-registry-conf)
   (:import-from #:qlot/utils/project
                 #:check-local-quicklisp
+                #:find-project-root
                 #:*qlot-directory*
                 #:*default-qlfile*
                 #:ensure-qlfile-pathname
@@ -120,7 +121,7 @@
     (asdf:system
      (check-qlfile (asdf:system-relative-pathname object *default-qlfile*) :quiet quiet))
     (pathname
-     (check-qlfile (ensure-qlfile-pathname object) :quiet quiet))))
+     (check-qlfile (ensure-qlfile-pathname (find-project-root object)) :quiet quiet))))
 
 (defun available-update-project (object &key projects)
   (etypecase object
