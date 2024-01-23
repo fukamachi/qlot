@@ -82,7 +82,7 @@ if [ "$QLOT_SETUP_FILE" = "" ]; then
 fi
 
 exec $lisp_cmd $lisp_init_options \
-  "$eval_option" "(load \"$QLOT_SETUP_FILE\")" \
-  "$eval_option" "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
+  "$eval_option" "(let (*load-verbose*) (load \"$QLOT_SETUP_FILE\"))" \
+  "$eval_option" "(let (*load-verbose*) (asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\"))" \
   "$eval_option" '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \
   "$eval_option" '(qlot/cli:main)' -- "$@"
