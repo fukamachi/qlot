@@ -445,7 +445,7 @@ NOTE:
           (case-equal (pathname-name command)
             ("sbcl"
              (append-load-setup-to-sbcl-argv (rest argv)))
-            (("ccl" "ecl" "abcl")
+            (("ccl" "ecl" "abcl" "clasp")
              (append (list "--load" ".qlot/setup.lisp")
                      (rest argv)))
             ("clisp"
