@@ -761,9 +761,12 @@ OPTIONS:
                    ("--no-color" (setf *enable-color* nil))
                    (otherwise))
                  (error 'qlot/errors:command-not-found :command $1)))
-        #+sbcl (sb-sys:interactive-interrupt ()
-                 (clear-whisper)
-                 (uiop:quit -1 nil))
+        #+(or sbcl ecl clasp)
+        (#+sbcl sb-sys:interactive-interrupt
+         #+(or ecl clasp) ext:interactive-interrupt
+          ()
+          (clear-whisper)
+          (uiop:quit -1 nil))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))
           (print-usage)
