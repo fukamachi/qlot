@@ -137,29 +137,37 @@
       text)))
 
 (defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn)
+  (declare (ignorable concurrency))
   (let* ((manager (make-progress nil))
          (*mailbox* (make-queue))
          (bt2:*default-special-bindings* (cons `(*mailbox* . ,*mailbox*)
                                                bt2:*default-special-bindings*))
-         (*kernel* (make-kernel concurrency
-                                :bindings bt2:*default-special-bindings*))
          (progress-thread
            (bt2:make-thread
             (lambda ()
               (loop for line = (pop-queue *mailbox*)
                     do (refresh-progress-line manager line)))
             :name "qlot progress manager")))
-    (unwind-protect
-         (handler-bind (#+sbcl (sb-sys:interactive-interrupt
-                                 (lambda (c)
-                                   (declare (ignore c))
-                                   (setf lparallel.kernel::*lisp-exiting-p* t)
-                                   (lparallel:kill-tasks :default))))
-           (pmapc
-            (lambda (job)
-              (let ((*progress-line*
-                      (add-line manager
-                                (funcall (or job-header-fn #'princ-to-string) job))))
-                (funcall worker-fn job)))
-            jobs))
-      (ignore-errors (bt2:destroy-thread progress-thread)))))
+    #+(or ecl clasp)
+    (dolist (job jobs)
+      (let ((*progress-line*
+              (add-line manager
+                        (funcall (or job-header-fn #'princ-to-string) job))))
+        (funcall worker-fn job)))
+    #-(or ecl clasp)
+    (let ((*kernel* (make-kernel concurrency
+                                 :bindings bt2:*default-special-bindings*)))
+      (unwind-protect
+           (handler-bind (#+sbcl (sb-sys:interactive-interrupt
+                                   (lambda (c)
+                                     (declare (ignore c))
+                                     (setf lparallel.kernel::*lisp-exiting-p* t)
+                                     (lparallel:kill-tasks :default))))
+             (pmapc
+              (lambda (job)
+                (let ((*progress-line*
+                        (add-line manager
+                                  (funcall (or job-header-fn #'princ-to-string) job))))
+                  (funcall worker-fn job)))
+              jobs))
+        (ignore-errors (bt2:destroy-thread progress-thread))))))

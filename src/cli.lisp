@@ -452,7 +452,7 @@ NOTE:
           (case-equal (pathname-name command)
             ("sbcl"
              (append-load-setup-to-sbcl-argv (rest argv)))
-            (("ccl" "ecl" "abcl")
+            (("ccl" "ecl" "abcl" "clasp")
              (append (list "--load" ".qlot/setup.lisp")
                      (rest argv)))
             ("clisp"
@@ -769,9 +769,12 @@ OPTIONS:
                          ("--no-color" (setf *enable-color* nil))
                          (otherwise))
                        (error 'qlot/errors:command-not-found :command $1)))))
-        #+sbcl (sb-sys:interactive-interrupt ()
-                 (clear-whisper)
-                 (uiop:quit -1 nil))
+        #+(or sbcl ecl clasp)
+        (#+sbcl sb-sys:interactive-interrupt
+         #+(or ecl clasp) ext:interactive-interrupt
+          ()
+          (clear-whisper)
+          (uiop:quit -1 nil))
         (qlot/errors:command-not-found (e)
           (error-message (princ-to-string e))
           (print-usage)
@@ -791,10 +794,9 @@ OPTIONS:
           (uiop:quit -1))))))
 
 (defun main ()
-  (destructuring-bind (&optional $0 $1 &rest argv)
-      (command-line-arguments)
-    (declare (ignore $0))
+  (let ((argv (command-line-arguments)))
     (apply #'qlot-command
-           (if (equal $1 "--") ;; Ignore the first '--'
-               argv
-               (cons $1 argv)))))
+           (if (equal (first argv) "--") ;; Ignore the first '--'
+               (rest argv)
+               argv)))
+  (uiop:quit))

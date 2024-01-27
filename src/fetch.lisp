@@ -60,9 +60,8 @@
         append (list :quietly t)))
 
 (defun main ()
-  (destructuring-bind (&optional $0 $1 &rest argv)
+  (destructuring-bind (&optional $1 &rest argv)
       (command-line-arguments)
-    (declare (ignore $0))
     (let ((args (if (equal $1 "--")
                     argv
                     (cons $1 argv))))
@@ -71,4 +70,5 @@
       (destructuring-bind (url file &rest option-args)
           args
         (apply #'fetch-file url file
-               (parse-options option-args))))))
+               (parse-options option-args)))))
+  (uiop:quit))
