@@ -129,6 +129,7 @@
     (asdf:system
      (available-update-project (asdf:system-relative-pathname object *default-qlfile*)))
     (pathname
+     (check-local-quicklisp object)
      (let* ((qlfile (ensure-qlfile-pathname object))
             (sources (parse-qlfile qlfile))
             (sources

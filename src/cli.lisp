@@ -19,6 +19,7 @@
                 #:no-such-program)
   (:import-from #:qlot/utils/project
                 #:*default-qlfile*
+                #:find-project-root
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
@@ -203,6 +204,12 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
       (qlot/errors:ros-command-error "Directory '~A' does not exist." dir))
     (setf *default-pathname-defaults*
           (probe-file dir))))
+
+(defmacro with-project-root (() &body body)
+  (let ((project-root (gensym "PROJECT-ROOT")))
+    `(let ((,project-root (find-project-root)))
+       (uiop:with-current-directory (,project-root)
+         ,@body))))
 
 (defmacro do-options ((option argv) &rest clauses)
   (check-type argv symbol)
@@ -583,7 +590,7 @@ SYNOPSIS:
         (uiop:quit -1))
 
       (ensure-package-loaded '(:qlot/add :qlot/install))
-      (let ((qlfile (symbol-value (intern (string '#:*default-qlfile*) '#:qlot/install))))
+      (let ((qlfile *default-qlfile*))
         (when (uiop:file-exists-p qlfile)
           (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
                                              (uiop:temporary-directory))))
@@ -734,33 +741,34 @@ OPTIONS:
                          (message "Please attach the stack trace dumped to '~A'." error.log))
                        (uiop:quit -1))))
       (handler-case
-          (cond ((equal "install" $1)
-                 (qlot-command-install argv))
-                ((equal "update" $1)
-                 (qlot-command-update argv))
-                ((equal "init" $1)
-                 (qlot-command-init argv))
-                ((equal "exec" $1)
-                 (qlot-command-exec argv))
-                ((equal "add" $1)
-                 (qlot-command-add argv))
-                ((equal "remove" $1)
-                 (qlot-command-remove argv))
-                ((equal "check" $1)
-                 (qlot-command-check argv))
-                ((equal "outdated" $1)
-                 (qlot-command-outdated argv))
-                ((equal "bundle" $1)
-                 (qlot-command-bundle argv))
-                ((and $1 (starts-with "--" $1))
-                 (qlot-command-toplevel (cons $1 argv)))
-                ((null $1)
-                 (qlot-command-toplevel nil))
-                (t
-                 (do-options (option argv)
-                   ("--no-color" (setf *enable-color* nil))
-                   (otherwise))
-                 (error 'qlot/errors:command-not-found :command $1)))
+          (if (equal "init" $1)
+              (qlot-command-init argv)
+              (with-project-root ()
+                (cond ((equal "install" $1)
+                       (qlot-command-install argv))
+                      ((equal "update" $1)
+                       (qlot-command-update argv))
+                      ((equal "exec" $1)
+                       (qlot-command-exec argv))
+                      ((equal "add" $1)
+                       (qlot-command-add argv))
+                      ((equal "remove" $1)
+                       (qlot-command-remove argv))
+                      ((equal "check" $1)
+                       (qlot-command-check argv))
+                      ((equal "outdated" $1)
+                       (qlot-command-outdated argv))
+                      ((equal "bundle" $1)
+                       (qlot-command-bundle argv))
+                      ((and $1 (starts-with "--" $1))
+                       (qlot-command-toplevel (cons $1 argv)))
+                      ((null $1)
+                       (qlot-command-toplevel nil))
+                      (t
+                       (do-options (option argv)
+                         ("--no-color" (setf *enable-color* nil))
+                         (otherwise))
+                       (error 'qlot/errors:command-not-found :command $1)))))
         #+(or sbcl ecl clasp)
         (#+sbcl sb-sys:interactive-interrupt
          #+(or ecl clasp) ext:interactive-interrupt
