@@ -11,7 +11,8 @@
            #:with-directory
            #:directory-lisp-files
            #:lisp-file-system-name
-           #:lisp-file-dependencies))
+           #:lisp-file-dependencies
+           #:with-source-registry))
 (in-package #:qlot/utils/asdf)
 
 (defparameter *exclude-directories*
@@ -248,3 +249,14 @@
                                                     :test 'string=)))
                                       (asdf/package-inferred-system::package-dependencies defpackage-form)))
                    package-name)))))))
+
+(defun call-with-source-registry (source-registry fn)
+  (let ((outer-source-registry asdf:*source-registry-parameter*))
+    (unwind-protect
+         (progn
+           (asdf:initialize-source-registry source-registry)
+           (funcall fn))
+      (asdf:initialize-source-registry outer-source-registry))))
+
+(defmacro with-source-registry ((source-registry) &body body)
+  `(call-with-source-registry ,source-registry (lambda () ,@body)))
