@@ -7,6 +7,8 @@
                 #:project-dependencies-in-child-process)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
+  (:import-from #:qlot/utils/asdf
+                #:with-source-registry)
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/logger
@@ -44,8 +46,17 @@
           (with-package-functions #:ql-dist (name)
             (let ((dependency-names (mapcar #'name dependencies)))
               (with-package-functions #:ql (bundle-systems)
-                (bundle-systems dependency-names
-                                :to bundle-directory))))
+                (with-source-registry (`(:source-registry :ignore-inherited-configuration
+                                         (:tree ,project-root)
+                                         (:also-exclude ".qlot")))
+                  (handler-bind ((error
+                                   (lambda (e)
+                                     (when (eq (class-name (class-of e))
+                                               (uiop:intern* '#:system-not-found '#:ql-bundle))
+                                       (when (asdf:find-system (uiop:symbol-call '#:ql-bundle '#:system-not-found-system e) nil)
+                                         (invoke-restart (find-restart (uiop:intern* '#:omit '#:ql-bundle) e)))))))
+                    (bundle-systems dependency-names
+                                    :to bundle-directory))))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
 (defun bundle-project (object &key exclude)
