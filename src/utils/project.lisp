@@ -72,8 +72,6 @@
               (probe-file pathname)
               (uiop:pathname-directory-pathname pathname))))
     (cond
-      ((equal (user-homedir-pathname) pathname)
-       pathname)
       ((or (find-if (lambda (dir)
                       (uiop:directory-exists-p (merge-pathnames dir pathname)))
                     '(".bzr" ".git" ".hg" ".qlot"))
@@ -81,10 +79,12 @@
                       (uiop:file-exists-p (merge-pathnames file pathname)))
                     '("qlfile")))
        pathname)
+      ((equal (user-homedir-pathname) pathname)
+       nil)
       (t
        (let ((parent (uiop:pathname-parent-directory-pathname pathname)))
          (if (equal parent pathname)
-             pathname
+             nil
              (find-project-root parent)))))))
 
 (defun check-local-quicklisp (project-root)

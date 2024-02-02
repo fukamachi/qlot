@@ -99,7 +99,12 @@
                                    cache-directory
                                    concurrency)
   (unless (uiop:file-exists-p qlfile)
-    (error 'qlfile-not-found :path qlfile))
+    (restart-case
+        (error 'qlfile-not-found :path qlfile)
+      (create-qlfile ()
+        (with-open-file (out qlfile
+                             :if-does-not-exist :create
+                             :direction :output)))))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
@@ -375,25 +380,29 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
-(defun install-project (object &key (install-deps t) cache-directory concurrency)
-  (etypecase object
-    ((or symbol string)
-     (install-project (asdf:find-system object)
-                      :install-deps install-deps
-                      :cache-directory cache-directory
-                      :concurrency concurrency))
-    (asdf:system
-     (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
-                     :quicklisp-home (asdf:system-relative-pathname
-                                      object *qlot-directory*)
-                     :install-deps install-deps
-                     :cache-directory cache-directory
-                     :concurrency concurrency))
-    (pathname
-     (install-qlfile (ensure-qlfile-pathname object)
-                     :install-deps install-deps
-                     :cache-directory cache-directory
-                     :concurrency concurrency))))
+(defun install-project (object &key (install-deps t) cache-directory concurrency init)
+  (handler-bind ((qlfile-not-found
+                   (lambda (e)
+                     (when init
+                       (invoke-restart (find-restart 'create-qlfile e))))))
+    (etypecase object
+      ((or symbol string)
+       (install-project (asdf:find-system object)
+                        :install-deps install-deps
+                        :cache-directory cache-directory
+                        :concurrency concurrency))
+      (asdf:system
+       (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
+                       :quicklisp-home (asdf:system-relative-pathname
+                                        object *qlot-directory*)
+                       :install-deps install-deps
+                       :cache-directory cache-directory
+                       :concurrency concurrency))
+      (pathname
+       (install-qlfile (ensure-qlfile-pathname object)
+                       :install-deps install-deps
+                       :cache-directory cache-directory
+                       :concurrency concurrency)))))
 
 (defun update-project (object &key projects
                                    (install-deps t)
