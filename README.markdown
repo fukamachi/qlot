@@ -457,15 +457,10 @@ $ git clone https://github.com/lem-project/micros .qlot/local-projects/micros
 2. Add the following function to `~/.lem/init.lisp`.
 
 ```common-lisp
-(defun prompt-for-project-directory ()
-  (let ((default-project-root (lem-core/commands/project:find-root (buffer-directory))))
-    (prompt-for-directory (format nil "Project directory (~A): " default-project-root)
-                          :default default-project-root)))
-
-(define-command slime-qlot-exec (directory) ((prompt-for-project-directory))
+(define-command slime-qlot-exec () ()
   (let ((command (first (lem-lisp-mode/implementation::list-roswell-with-qlot-commands))))
     (when command
-      (lem-lisp-mode:run-slime command :directory directory))))
+      (lem-lisp-mode:run-slime command))))
 ```
 
 3. Relaunch the Lem, or reload the init file with `M-x lisp-load-file RET ~/.lem/init.lisp`.
