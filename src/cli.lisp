@@ -256,7 +256,8 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 (defun qlot-command-install (argv)
   (let ((install-deps t)
         (cache nil)
-        concurrency)
+        concurrency
+        init)
     (do-options (option argv)
       ("--no-deps"
        (setf install-deps nil))
@@ -268,6 +269,8 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
                       jobs)
          (qlot/errors:ros-command-error "Invalid option value for --jobs: ~A" jobs))
        (setf concurrency (parse-integer jobs)))
+      (("--init")
+       (setf init t))
       ("--debug"
        (qlot-option-debug))
       ("--help"
@@ -284,6 +287,8 @@ OPTIONS:
         Keep intermediate files for fast reinstallation.
     --jobs [concurrency]
         The number of threads to install simultaneously. (Default: 4)
+    --init
+        Create an empty \"qlfile\" if it doesn't exist.
     --debug
         A flag to enable debug logging.
 ")
@@ -301,7 +306,8 @@ OPTIONS:
                                             (uiop:ensure-absolute-pathname
                                              (uiop:ensure-directory-pathname cache)
                                              *default-pathname-defaults*))
-                      :concurrency concurrency)))
+                      :concurrency concurrency
+                      :init init)))
 
 (defun qlot-command-update (argv)
   (let ((install-deps t)
