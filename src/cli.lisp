@@ -2,6 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/logger
                 #:message
+                #:debug-log
                 #:*logger-message-stream*
                 #:*terminal*
                 #:clear-whisper)
@@ -208,6 +209,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 (defmacro with-project-root (() &body body)
   (let ((project-root (gensym "PROJECT-ROOT")))
     `(let ((,project-root (find-project-root)))
+       (debug-log "Project root: ~A" ,project-root)
        (uiop:with-current-directory (,project-root)
          ,@body))))
 
