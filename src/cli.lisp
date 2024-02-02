@@ -208,7 +208,8 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 
 (defmacro with-project-root (() &body body)
   (let ((project-root (gensym "PROJECT-ROOT")))
-    `(let ((,project-root (find-project-root)))
+    `(let ((,project-root (or (find-project-root)
+                              *default-pathname-defaults*)))
        (debug-log "Project root: ~A" ,project-root)
        (uiop:with-current-directory (,project-root)
          ,@body))))
