@@ -40,6 +40,8 @@
   (:import-from #:qlot/utils/qlot
                 #:dump-source-registry-conf
                 #:dump-qlfile-lock)
+  (:import-from #:qlot/config
+                #:dump-qlot-config)
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:with-autoload-on-missing
@@ -373,6 +375,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                          :if-does-not-exist :create
                          :if-exists :supersede)
       (dump-source-registry-conf out sources))
+    (with-open-file (out (merge-pathnames #P"config.lisp" qlhome)
+                         :direction :output
+                         :if-does-not-exist :create
+                         :if-exists :supersede)
+      (dump-qlot-config out))
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
                                      :type "lock"
                                      :defaults qlfile)
