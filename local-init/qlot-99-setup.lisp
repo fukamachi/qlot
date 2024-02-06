@@ -9,13 +9,18 @@
            (and (uiop:file-exists-p source-registry)
                 (uiop:read-file-form source-registry)))
          (project-root
-           (uiop:pathname-parent-directory-pathname ql:*quicklisp-home*)))
+           (uiop:pathname-parent-directory-pathname ql:*quicklisp-home*))
+         (config-file (ql-setup:qmerge "config.lisp"))
+         (qlot-home
+           (and (uiop:file-exists-p config-file)
+                (getf (uiop:read-file-form config-file) :qlot-home))))
     (asdf:initialize-source-registry
      (if local-source-registry-form
          (append local-source-registry-form
                  `((:tree ,project-root)))
          `(:source-registry :ignore-inherited-configuration
-           (:tree ,project-root)
-           (:also-exclude ".qlot"))))))
+           (:also-exclude ".qlot")
+           (:directory ,qlot-home)
+           (:tree ,project-root))))))
 
 (setup-source-registry)

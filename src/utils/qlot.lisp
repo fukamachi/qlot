@@ -21,6 +21,7 @@
             `(:source-registry
               :ignore-inherited-configuration
               (:also-exclude ".qlot")
+              (:directory ,(asdf:system-source-directory :qlot))
               ,@(loop for source in sources
                       when (typep source 'source-local)
                       collect (progn
