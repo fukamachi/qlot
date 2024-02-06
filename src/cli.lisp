@@ -24,8 +24,8 @@
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
-                #:ensure-list
                 #:ensure-cons
+                #:ensure-package-loaded
                 #:starts-with
                 #:generate-random-string)
   (:export #:qlot-command
@@ -41,16 +41,6 @@
   (princ (apply #'color-text :yellow control args)
          *error-output*)
   (fresh-line *error-output*))
-
-(defun ensure-package-loaded (package-names)
-  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning))
-    (let ((package-names (ensure-list package-names))
-          (*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (dolist (package-name package-names)
-        (check-type package-name keyword)
-        (unless (find-package package-name)
-          (asdf:load-system package-name))))))
 
 (defun extend-source-registry (current-value dir-to-add)
   "According to ASDF documentation:
