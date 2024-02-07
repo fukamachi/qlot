@@ -8,7 +8,8 @@
            #:shell-command-error-output
            #:run-lisp
            #:launch-lisp
-           #:*qlot-source-directory*))
+           #:*qlot-source-directory*
+           #:with-env-vars))
 (in-package #:qlot/utils/shell)
 
 (defparameter *qlot-source-directory*
@@ -186,3 +187,24 @@
                                        (ros:opt "argv0"))
                         (command-options forms args)
                         :output output))
+
+(defun call-with-env-var (name value fn)
+  (let ((current-value (uiop:getenv name)))
+    (unwind-protect
+         (progn
+           (setf (uiop:getenv name) value)
+           (funcall fn))
+      (setf (uiop:getenv name) (or current-value "")))))
+
+(defun call-with-env-vars (bindings fn)
+  (funcall
+   (reduce (lambda (fn binding)
+             (destructuring-bind (name value) binding
+               (lambda () (call-with-env-var name value fn))))
+           bindings
+           :initial-value fn)))
+
+(defmacro with-env-vars (bindings &body body)
+  `(call-with-env-vars (list ,@(loop for (name value) in bindings
+                                     collect `(list ,name ,value)))
+                       (lambda () ,@body)))

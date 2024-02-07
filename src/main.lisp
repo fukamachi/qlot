@@ -7,6 +7,8 @@
                 #:*qlot-source-directory*)
   (:import-from #:qlot/utils
                 #:ensure-package-loaded)
+  (:import-from #:qlot/utils/shell
+                #:with-env-vars)
   (:import-from #:qlot/config
                 #:load-qlot-config)
   #+sbcl
@@ -34,12 +36,12 @@
                     (merge-pathnames setup-file qlot-home)))))
         (cond
           (setup-file
-           (setf (uiop:getenv "QLOT_SETUP_FILE") (uiop:native-namestring setup-file))
-           (uiop:run-program `(,(uiop:native-namestring
-                                 (merge-pathnames #P"scripts/run.sh" qlot-home))
-                               ,@(mapcar #'princ-to-string args))
-                             :output :interactive
-                             :error-output :interactive))
+           (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file)))
+             (uiop:run-program `(,(uiop:native-namestring
+                                   (merge-pathnames #P"scripts/run.sh" qlot-home))
+                                 ,@(mapcar #'princ-to-string args))
+                               :output :interactive
+                               :error-output :interactive)))
           (t
            (ensure-package-loaded :qlot/cli)
            (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args)))))))
