@@ -28,6 +28,6 @@
 
 (defun load-qlot-config ()
   (when (find :quicklisp *features*)
-    (let ((config-file (uiop:symbol-call '#:ql-setup '#:qmerge #P"config.lisp")))
+    (let ((config-file (uiop:symbol-call '#:ql-setup '#:qmerge #P"qlot.conf")))
       (and (uiop:file-exists-p config-file)
            (uiop:read-file-form config-file)))))

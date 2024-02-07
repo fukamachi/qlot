@@ -375,7 +375,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                          :if-does-not-exist :create
                          :if-exists :supersede)
       (dump-source-registry-conf out sources))
-    (with-open-file (out (merge-pathnames #P"config.lisp" qlhome)
+    (with-open-file (out (merge-pathnames #P"qlot.conf" qlhome)
                          :direction :output
                          :if-does-not-exist :create
                          :if-exists :supersede)

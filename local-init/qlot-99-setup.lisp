@@ -10,7 +10,7 @@
                 (uiop:read-file-form source-registry)))
          (project-root
            (uiop:pathname-parent-directory-pathname ql:*quicklisp-home*))
-         (config-file (ql-setup:qmerge "config.lisp"))
+         (config-file (ql-setup:qmerge "qlot.conf"))
          (qlot-home
            (and (uiop:file-exists-p config-file)
                 (getf (uiop:read-file-form config-file) :qlot-home))))
