@@ -28,9 +28,8 @@
 (in-package #:qlot/distify/github)
 
 (defun github-credentials ()
-  (let ((github-token (uiop:getenv "GITHUB_TOKEN")))
-    (when (and (stringp github-token)
-               (not (string= github-token "")))
+  (let ((github-token (uiop:getenvp "GITHUB_TOKEN")))
+    (when github-token
       (cons "x-access-token" github-token))))
 
 (defun retrieve-from-github (repos &optional action)

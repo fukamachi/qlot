@@ -71,7 +71,7 @@
           (probe-file file)))
 
 (defun add-to-fetch-scheme-functions ()
-  (let* ((preference (uiop:getenv "QLOT_FETCH"))
+  (let* ((preference (uiop:getenvp "QLOT_FETCH"))
          (fn (cond
                ((and (null preference)
                      *fetch-script*

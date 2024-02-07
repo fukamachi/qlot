@@ -170,7 +170,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
-  (unless (uiop:getenv "QUICKLISP_HOME")
+  (unless (uiop:getenvp "QUICKLISP_HOME")
     (setf (uiop:getenv "QUICKLISP_HOME")
           (uiop:native-namestring
             (or (uiop:directory-exists-p ".qlot/")
@@ -185,7 +185,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
   ;; Overwrite CL_SOURCE_REGISTRY to the current directory
   (setf (uiop:getenv "CL_SOURCE_REGISTRY")
         (extend-source-registry
-         (uiop:getenv "CL_SOURCE_REGISTRY")
+         (uiop:getenvp "CL_SOURCE_REGISTRY")
          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
