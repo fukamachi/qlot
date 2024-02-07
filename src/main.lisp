@@ -26,6 +26,8 @@
            #:*logger-debug-stream*))
 (in-package #:qlot)
 
+(defvar *project-root* nil)
+
 (defun run-qlot (&rest args)
   (let ((config (load-qlot-config)))
     (destructuring-bind (&key qlot-home setup-file) config
@@ -37,14 +39,17 @@
         (cond
           (setup-file
            (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file)))
-             (uiop:run-program `(,(uiop:native-namestring
-                                   (merge-pathnames #P"scripts/run.sh" qlot-home))
-                                 ,@(mapcar #'princ-to-string args))
-                               :output :interactive
-                               :error-output :interactive)))
+             (uiop:with-current-directory (*project-root*)
+               (uiop:run-program `(,(uiop:native-namestring
+                                     (merge-pathnames #P"scripts/run.sh" qlot-home))
+                                   ,@(mapcar #'princ-to-string args))
+                                 :output :interactive
+                                 :error-output :interactive))))
           (t
            (ensure-package-loaded :qlot/cli)
-           (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args)))))))
+           (let ((*default-pathname-defaults* (or *project-root*
+                                                  *default-pathname-defaults*)))
+             (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args))))))))
   (values))
 
 #-sbcl
