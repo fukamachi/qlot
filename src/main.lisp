@@ -6,7 +6,8 @@
   (:import-from #:qlot/utils/shell
                 #:*qlot-source-directory*)
   (:import-from #:qlot/utils
-                #:ensure-package-loaded)
+                #:ensure-package-loaded
+                #:ensure-list)
   (:import-from #:qlot/utils/shell
                 #:with-env-vars)
   (:import-from #:qlot/config
@@ -17,13 +18,7 @@
            #:init
            #:install
            #:update
-           #:with-local-quicklisp
-           #:quickload
-           #:bundle
-           #:*proxy*
-           #:*debug*
-           #:*logger-message-stream*
-           #:*logger-debug-stream*))
+           #:bundle))
 (in-package #:qlot)
 
 (defvar *project-root* nil)
@@ -51,6 +46,50 @@
                                                   *default-pathname-defaults*)))
              (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args))))))))
   (values))
+
+(defun init (&key dist)
+  (apply #'run-qlot "init"
+         (if dist
+             (list "--dist" dist)
+             nil)))
+
+(defun install (&key no-deps cache jobs init)
+  (check-type jobs (or null (integer 1)))
+  (apply #'run-qlot "install"
+         (append
+          (and no-deps '("--no-deps"))
+          (and cache `("--cache" ,(uiop:native-namestring cache)))
+          (and jobs `("--jobs" ,jobs))
+          (and init '("--init")))))
+
+(defun project-name-p (value)
+  (stringp value))
+
+(defun project-name-list-p (value)
+  (and (consp value)
+       (every #'project-name-p value)))
+
+(deftype project-name () 'string)
+(deftype project-name-list () '(satisfies project-name-list-p))
+
+(defun update (projects &key no-deps cache jobs)
+  (check-type projects (or project-name project-name-list))
+  (check-type jobs (or null (integer 1)))
+  (apply #'run-qlot "update"
+         (append
+          (ensure-list projects)
+          (and no-deps '("--no-deps"))
+          (and cache `("--cache" ,(uiop:native-namestring cache)))
+          (and jobs `("--jobs" ,jobs)))))
+
+(defun bundle (&key exclude)
+  (check-type exclude (or null project-name project-name-list))
+  (let ((exclude (ensure-list exclude)))
+    (apply #'run-qlot "bundle"
+           (loop for project in exclude
+                 append (list "--exclude" project)))))
+
+;; TODO: add, remove, check, outdated
 
 #-sbcl
 (defun install-shell-command (destination &key quicklisp-home)
