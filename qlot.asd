@@ -5,8 +5,9 @@
   :license "MIT"
   :description "A project-local library installer"
   :pathname "src"
-  :depends-on ("qlot/main"
-               #+ros.installing "qlot/cli")
+  :depends-on #.`("qlot/main"
+                  ,@(and (find :ros.installing *features*)
+                         '("qlot/cli" "qlot/add" "qlot/bundle" "qlot/check" "qlot/install" "qlot/fetch")))
   :output-files (image-op (o c)
                   (output-files o :qlot/command))
   :in-order-to ((test-op (test-op "qlot/tests"))
