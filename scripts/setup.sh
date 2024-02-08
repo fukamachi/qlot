@@ -40,10 +40,10 @@ if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
     --load "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" \
     --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
-    --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (mapc (function asdf:load-system) (list :qlot :qlot/cli :qlot/add :qlot/bundle :qlot/check :qlot/install :qlot/fetch)))'
+    --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (mapc (function asdf:load-system) (list :qlot :qlot/cli :qlot/fetch)))'
 else
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
     --load "$QLOT_SOURCE_DIR/.qlot/setup.lisp" \
     --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
-    --eval '(ql:quickload (list :qlot :qlot/cli :qlot/add :qlot/bundle :qlot/check :qlot/install :qlot/fetch))'
+    --eval '(ql:quickload (list :qlot :qlot/cli :qlot/fetch))'
 fi
