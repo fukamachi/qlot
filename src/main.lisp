@@ -11,7 +11,8 @@
   (:import-from #:qlot/utils/shell
                 #:with-env-vars)
   (:import-from #:qlot/config
-                #:load-qlot-config)
+                #:load-qlot-config
+                #:make-config)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-shell-command
@@ -23,28 +24,37 @@
 
 (defvar *project-root* nil)
 
-(defun run-qlot (&rest args)
-  (let ((config (load-qlot-config)))
+(defun run-qlot-in-child-process (&rest args)
+  (let ((config (or (load-qlot-config)
+                    (make-config))))
     (destructuring-bind (&key qlot-home setup-file) config
-      (let* ((qlot-home (or qlot-home *qlot-source-directory*))
-             (setup-file
-              (and setup-file
-                   (uiop:file-exists-p
-                    (merge-pathnames setup-file qlot-home)))))
-        (cond
-          (setup-file
-           (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file)))
-             (uiop:with-current-directory (*project-root*)
-               (uiop:run-program `(,(uiop:native-namestring
-                                     (merge-pathnames #P"scripts/run.sh" qlot-home))
-                                   ,@(mapcar #'princ-to-string args))
-                                 :output :interactive
-                                 :error-output :interactive))))
-          (t
-           (ensure-package-loaded :qlot/cli)
-           (let ((*default-pathname-defaults* (or *project-root*
-                                                  *default-pathname-defaults*)))
-             (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args))))))))
+      (assert (and qlot-home setup-file))
+      (let ((setup-file (merge-pathnames setup-file qlot-home)))
+        (unless (uiop:file-exists-p setup-file)
+          (error "Failed to run Qlot"))
+        (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file))
+                        ("QLOT_NO_TERMINAL" "1"))
+          ;; TODO: Guess *project-root* from ql:*quicklisp-home* if it's nil and :qlot.project is on
+          (uiop:with-current-directory (*project-root*)
+            (uiop:run-program `(,(uiop:native-namestring
+                                  (merge-pathnames #P"scripts/run.sh" qlot-home))
+                                ,@(mapcar #'princ-to-string args))
+                              :output :interactive
+                              :error-output :interactive)))))))
+
+(defun run-qlot-in-main-process (&rest args)
+  (ensure-package-loaded :qlot/cli)
+  (let ((*default-pathname-defaults* (or *project-root*
+                                         *default-pathname-defaults*)))
+    (with-env-vars (("QLOT_NO_TERMINAL" "1"))
+      (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args)))))
+
+(defun run-qlot (&rest args)
+  (apply
+   (if (find :qlot.project *features*)
+       #'run-qlot-in-child-process
+       #'run-qlot-in-main-process)
+   args)
   (values))
 
 (defun init (&key dist)

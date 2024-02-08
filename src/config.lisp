@@ -3,7 +3,8 @@
   (:import-from #:qlot/utils/shell
                 #:*qlot-source-directory*)
   (:export #:dump-qlot-config
-           #:load-qlot-config))
+           #:load-qlot-config
+           #:make-config))
 (in-package #:qlot/config)
 
 (defun setup-file-path ()
@@ -11,7 +12,7 @@
     ((find :quicklisp *features*)
      (uiop:symbol-call '#:ql-setup '#:qmerge #P"setup.lisp"))
     ((uiop:file-exists-p (merge-pathnames #P".bundle-libs/bundle.lisp" *qlot-source-directory*)))
-    (t (error "Qlot isn't setup yet"))))
+    (t (error "Qlot isn't setup yet, and no Quicklisp found to setup"))))
 
 (defun make-config ()
   (let ((qlot-home *qlot-source-directory*))
