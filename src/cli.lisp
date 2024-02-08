@@ -564,15 +564,21 @@ OPTIONS:
 
 SYNOPSIS:
     qlot remove [name...]
+
+OPTIONS:
+    --no-install
+        Don't invoke an installation after removal
 ")
            (uiop:quit -1)))
 
-    (let (names)
+    (let (names no-install)
       ;; Parse options
       (block nil
         (do-options (option argv)
           ("--help"
            (print-remove-usage))
+          ("--no-install"
+           (setf no-install t))
           (otherwise
            (when (equal "--" option)
              (setf names
@@ -600,13 +606,14 @@ SYNOPSIS:
                 (message "Nothing to remove in '~A'." qlfile)
                 (return-from qlot-command-remove))
 
-              (handler-bind ((error
-                               (lambda (e)
-                                 (declare (ignore e))
-                                 (uiop:copy-file qlfile.bak qlfile))))
-                (uiop:symbol-call '#:qlot/install '#:install-project
-                                  *default-pathname-defaults*
-                                  :install-deps nil)))))))))
+              (unless no-install
+                (handler-bind ((error
+                                 (lambda (e)
+                                   (declare (ignore e))
+                                   (uiop:copy-file qlfile.bak qlfile))))
+                  (uiop:symbol-call '#:qlot/install '#:install-project
+                                    *default-pathname-defaults*
+                                    :install-deps nil))))))))))
 
 (defun qlot-command-check (argv)
   (flet ((print-check-usage ()
