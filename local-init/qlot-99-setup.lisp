@@ -23,4 +23,5 @@
            (:directory ,qlot-home)
            (:tree ,project-root))))))
 
+(pushnew :qlot.project *features*)
 (setup-source-registry)
