@@ -12,7 +12,7 @@
       (declare (ignore dependencies))
       (push system-name (gethash system-file system-hash)))
     (ok (null (set-difference (gethash (asdf:system-source-file :qlot) system-hash)
-                              '("qlot" "qlot/command" "qlot/tests")
+                              '("qlot" "qlot/subcommands" "qlot/command" "qlot/tests")
                               :test 'equal)))
     (ok (null (set-difference (gethash (asdf:system-source-file :qlot-tests) system-hash)
                               '("qlot-tests")
