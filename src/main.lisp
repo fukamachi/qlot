@@ -22,7 +22,9 @@
            #:update
            #:bundle
            #:add
-           #:remove))
+           #:remove
+           #:check
+           #:outdated))
 (in-package #:qlot)
 
 (defvar *project-root* nil)
@@ -122,13 +124,19 @@
           args)))
 
 (defun remove (name-or-names &key no-install)
-  (check-type name-or-names (or null project-name project-name-list))
+  (check-type name-or-names (or project-name project-name-list))
   (let ((names (ensure-list name-or-names)))
     (apply #'run-qlot "remove"
            (append names
                    (and no-install '("--no-install"))))))
 
-;; TODO: check, outdated
+(defun check ()
+  (run-qlot "check"))
+
+(defun outdated (&optional name-or-names)
+  (check-type name-or-names (or null project-name project-name-list))
+  (let ((names (ensure-list name-or-names)))
+    (apply #'run-qlot "outdated" names)))
 
 #-sbcl
 (defun install-shell-command (destination &key quicklisp-home)
