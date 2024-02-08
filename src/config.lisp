@@ -15,10 +15,9 @@
     (t (error "Qlot isn't setup yet, and no Quicklisp found to setup"))))
 
 (defun make-config ()
-  (let ((qlot-home *qlot-source-directory*))
-    `(:qlot-home ,(uiop:native-namestring qlot-home)
-      :setup-file ,(uiop:native-namestring
-                    (uiop:enough-pathname (setup-file-path) qlot-home)))))
+  `(:qlot-source-directory ,(uiop:native-namestring *qlot-source-directory*)
+    :setup-file ,(uiop:native-namestring
+                  (uiop:enough-pathname (setup-file-path) *qlot-source-directory*))))
 
 (defun dump-qlot-config (&optional (stream *standard-output*))
   (let ((config (make-config)))
