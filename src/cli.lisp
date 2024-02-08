@@ -510,7 +510,7 @@ OPTIONS:
             ("--debug"
              (qlot-option-debug))
             ("--no-install"
-             )
+             (setf no-install t))
             (otherwise
              (when (and (starts-with "--" option)
                         (not (equal "--" option)))
