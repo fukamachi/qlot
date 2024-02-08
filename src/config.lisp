@@ -12,13 +12,15 @@
     ((find :quicklisp *features*)
      (uiop:symbol-call '#:ql-setup '#:qmerge #P"setup.lisp"))
     ((uiop:file-exists-p (merge-pathnames #P".bundle-libs/bundle.lisp" *qlot-source-directory*)))
-    (t (error "Qlot isn't setup yet, and no Quicklisp found to setup"))))
+    (t nil)))
 
 (defun make-config ()
-  `(:qlot-source-directory ,(uiop:native-namestring *qlot-source-directory*)
-    :qlot-version ,(asdf:component-version (asdf:find-system '#:qlot))
-    :setup-file ,(uiop:native-namestring
-                  (uiop:enough-pathname (setup-file-path) *qlot-source-directory*))))
+  (let ((setup-file (setup-file-path)))
+    `(:qlot-source-directory ,(uiop:native-namestring *qlot-source-directory*)
+      :qlot-version ,(asdf:component-version (asdf:find-system '#:qlot))
+      ,@(and setup-file
+             `(:setup-file ,(uiop:native-namestring
+                             (uiop:enough-pathname setup-file *qlot-source-directory*)))))))
 
 (defun dump-qlot-config (&optional (stream *standard-output*))
   (let ((config (make-config)))
