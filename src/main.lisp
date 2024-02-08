@@ -1,6 +1,7 @@
 (defpackage #:qlot
   (:nicknames #:qlot/main)
   (:use #:cl)
+  (:shadow #:remove)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/utils/shell
@@ -19,7 +20,9 @@
            #:init
            #:install
            #:update
-           #:bundle))
+           #:bundle
+           #:add
+           #:remove))
 (in-package #:qlot)
 
 (defvar *project-root* nil)
@@ -101,7 +104,31 @@
            (loop for project in exclude
                  append (list "--exclude" project)))))
 
-;; TODO: add, remove, check, outdated
+(defun add (name &rest args &key from no-install &allow-other-keys)
+  (check-type name string)
+  (unless from
+    (setf from (if (find #\/ name :test 'char=)
+                   "github"
+                   "ql")))
+  (setf args
+        (loop for (k v) on args by #'cddr
+              unless (member k '(:no-install :from))
+              append (list k v)))
+  (apply #'run-qlot "add"
+         (append
+          (and no-install '("--no-install"))
+          '("--")
+          (list from name)
+          args)))
+
+(defun remove (name-or-names &key no-install)
+  (check-type name-or-names (or null project-name project-name-list))
+  (let ((names (ensure-list name-or-names)))
+    (apply #'run-qlot "remove"
+           (append names
+                   (and no-install '("--no-install"))))))
+
+;; TODO: check, outdated
 
 #-sbcl
 (defun install-shell-command (destination &key quicklisp-home)
