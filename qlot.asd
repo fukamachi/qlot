@@ -8,14 +8,18 @@
   :depends-on ("qlot/main"
                (:feature :ros.installing "qlot/cli")
                (:feature :ros.installing "qlot/fetch")
-               (:feature (:not :qlot.project) "qlot/add")
-               (:feature (:not :qlot.project) "qlot/bundle")
-               (:feature (:not :qlot.project) "qlot/check")
-               (:feature (:not :qlot.project) "qlot/install"))
+               (:feature (:not :qlot.project) "qlot/subcommands"))
   :output-files (image-op (o c)
                   (output-files o :qlot/command))
   :in-order-to ((test-op (test-op "qlot/tests"))
                 (build-op (program-op "qlot/command"))))
+
+(defsystem "qlot/subcommands"
+  :pathname "src"
+  :depends-on ("qlot/add"
+               "qlot/bundle"
+               "qlot/check"
+               "qlot/install"))
 
 (defsystem "qlot/command"
   :depends-on ("qlot/cli"
