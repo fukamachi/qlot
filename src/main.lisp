@@ -25,17 +25,19 @@
 (defvar *project-root* nil)
 
 (defun run-qlot-in-child-process (&rest args)
-  (let ((config (or (load-qlot-config (symbol-value (uiop:intern* '#:ql '#:*quicklisp-home*)))
-                    (make-config))))
-    (destructuring-bind (&key qlot-source-directory setup-file) config
+  (let* ((quicklisp-home (symbol-value (uiop:intern* '#:*quicklisp-home* '#:ql)))
+         (config (or (load-qlot-config quicklisp-home)
+                     (make-config))))
+    (destructuring-bind (&key qlot-source-directory setup-file &allow-other-keys)
+        config
       (assert (and qlot-source-directory setup-file))
       (let ((setup-file (merge-pathnames setup-file qlot-source-directory)))
         (unless (uiop:file-exists-p setup-file)
           (error "Failed to run Qlot"))
         (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file))
                         ("QLOT_NO_TERMINAL" "1"))
-          ;; TODO: Guess *project-root* from ql:*quicklisp-home* if it's nil and :qlot.project is on
-          (uiop:with-current-directory (*project-root*)
+          (uiop:with-current-directory ((or *project-root*
+                                            (uiop:pathname-parent-directory-pathname quicklisp-home)))
             (uiop:run-program `(,(uiop:native-namestring
                                   (merge-pathnames #P"scripts/run.sh" qlot-source-directory))
                                 ,@(mapcar #'princ-to-string args))
