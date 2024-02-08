@@ -25,7 +25,7 @@
 (defvar *project-root* nil)
 
 (defun run-qlot-in-child-process (&rest args)
-  (let ((config (or (load-qlot-config)
+  (let ((config (or (load-qlot-config (symbol-value (uiop:intern* '#:ql '#:*quicklisp-home*)))
                     (make-config))))
     (destructuring-bind (&key qlot-source-directory setup-file) config
       (assert (and qlot-source-directory setup-file))

@@ -16,6 +16,7 @@
 
 (defun make-config ()
   `(:qlot-source-directory ,(uiop:native-namestring *qlot-source-directory*)
+    :qlot-version ,(asdf:component-version (asdf:find-system '#:qlot))
     :setup-file ,(uiop:native-namestring
                   (uiop:enough-pathname (setup-file-path) *qlot-source-directory*))))
 
@@ -26,8 +27,7 @@
               "~&(~{~S ~S~^~% ~})~%"
               config))))
 
-(defun load-qlot-config ()
-  (when (find :quicklisp *features*)
-    (let ((config-file (uiop:symbol-call '#:ql-setup '#:qmerge #P"qlot.conf")))
-      (and (uiop:file-exists-p config-file)
-           (uiop:read-file-form config-file)))))
+(defun load-qlot-config (directory)
+  (let ((config-file (merge-pathnames #P"qlot.conf" directory)))
+    (and (uiop:file-exists-p config-file)
+         (uiop:read-file-form config-file))))

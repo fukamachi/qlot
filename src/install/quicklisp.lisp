@@ -2,18 +2,25 @@
   (:use #:cl)
   (:import-from #:qlot/logger
                 #:message)
+  (:import-from #:qlot/config
+                #:dump-qlot-config
+                #:load-qlot-config)
   (:import-from #:qlot/utils/file
                 #:copy-directory)
   (:export #:install-quicklisp
-           #:install-local-init-files))
+           #:install-local-init-files
+           #:install-qlot-config-file))
 (in-package #:qlot/install/quicklisp)
 
 (defun version-match-p (path)
-  (let ((version-file (merge-pathnames #P"qlot-version.txt" path)))
-    (and (uiop:file-exists-p version-file)
+  (let ((qlot-version (or (getf (load-qlot-config path) :qlot-version)
+                          (let ((version-file (merge-pathnames "qlot-version.txt" path)))
+                            (and (uiop:file-exists-p version-file)
+                                 (string-trim '(#\Newline #\Return #\Space)
+                                              (uiop:read-file-string version-file)))))))
+    (and qlot-version
          (equal (asdf:component-version (asdf:find-system :qlot))
-                (string-trim '(#\Newline #\Return #\Space)
-                             (uiop:read-file-string version-file))))))
+                qlot-version))))
 
 (defun copy-local-init-files (path)
   (let ((local-init-dir (merge-pathnames #P"local-init/" path)))
@@ -29,18 +36,14 @@
       (uiop:delete-directory-tree local-init-dir
                                   :if-does-not-exist :ignore
                                   :validate t)
-      (copy-local-init-files path)
-      (write-version-txt path))))
+      (copy-local-init-files path))))
 
-(defun write-version-txt (path)
-  (let ((file (merge-pathnames #P"qlot-version.txt" path)))
-    (with-open-file (out file
-                         :direction :output
-                         :if-exists :supersede
-                         :if-does-not-exist :create)
-      (write-string
-       (asdf:component-version (asdf:find-system :qlot))
-       out))))
+(defun install-qlot-config-file (path)
+  (with-open-file (out (merge-pathnames "qlot.conf" path)
+                       :direction :output
+                       :if-does-not-exist :create
+                       :if-exists :supersede)
+    (dump-qlot-config out)))
 
 (defun install-quicklisp-from-subdir (path)
   (ensure-directories-exist path)
@@ -56,7 +59,6 @@
                 (list "local-projects/"
                       "dists/"
                       "tmp/")))
-  (write-version-txt path)
   t)
 
 (defun install-quicklisp (path)
@@ -64,4 +66,5 @@
   (assert (uiop:file-exists-p (asdf:system-relative-pathname :qlot #P"quicklisp-client/setup.lisp")))
   (install-quicklisp-from-subdir path)
   (copy-local-init-files path)
+  (install-qlot-config-file path)
   t)

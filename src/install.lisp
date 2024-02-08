@@ -2,7 +2,8 @@
   (:use #:cl)
   (:import-from #:qlot/install/quicklisp
                 #:install-quicklisp
-                #:install-local-init-files)
+                #:install-local-init-files
+                #:install-qlot-config-file)
   (:import-from #:qlot/source
                 #:prepare-source
                 #:source-dist
@@ -117,7 +118,8 @@
       ((not (local-quicklisp-installed-p project-root))
        (install-quicklisp quicklisp-home))
       (t
-       (install-local-init-files quicklisp-home)))
+       (install-local-init-files quicklisp-home)
+       (install-qlot-config-file quicklisp-home)))
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
@@ -375,11 +377,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                          :if-does-not-exist :create
                          :if-exists :supersede)
       (dump-source-registry-conf out sources))
-    (with-open-file (out (merge-pathnames #P"qlot.conf" qlhome)
-                         :direction :output
-                         :if-does-not-exist :create
-                         :if-exists :supersede)
-      (dump-qlot-config out))
     (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
                                      :type "lock"
                                      :defaults qlfile)
