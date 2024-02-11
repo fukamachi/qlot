@@ -7,6 +7,7 @@
   (:import-from #:bordeaux-threads)
   (:import-from #:lparallel
                 #:pmapc
+                #:task-handler-bind
                 #:*kernel*
                 #:make-kernel)
   (:import-from #:lparallel.queue
@@ -136,7 +137,7 @@
       (push-queue *progress-line* *mailbox*)
       text)))
 
-(defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn)
+(defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn failed-fn)
   (declare (ignorable concurrency))
   (let* ((manager (make-progress nil))
          (*mailbox* (make-queue))
@@ -161,13 +162,18 @@
            (handler-bind (#+sbcl (sb-sys:interactive-interrupt
                                    (lambda (c)
                                      (declare (ignore c))
-                                     (setf lparallel.kernel::*lisp-exiting-p* t)
-                                     (lparallel:kill-tasks :default))))
-             (pmapc
-              (lambda (job)
-                (let ((*progress-line*
-                        (add-line manager
-                                  (funcall (or job-header-fn #'princ-to-string) job))))
-                  (funcall worker-fn job)))
-              jobs))
+                                     (lparallel:end-kernel))))
+             (task-handler-bind ((error #'lparallel:invoke-transfer-error))
+               (pmapc
+                (lambda (job)
+                  (let ((*progress-line*
+                          (add-line manager
+                                    (funcall (or job-header-fn #'princ-to-string) job))))
+                    (handler-bind ((error
+                                     (lambda (e)
+                                       (declare (ignore e))
+                                       (when failed-fn
+                                         (funcall failed-fn)))))
+                      (funcall worker-fn job))))
+                jobs)))
         (ignore-errors (bt2:destroy-thread progress-thread))))))

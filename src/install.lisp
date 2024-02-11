@@ -349,7 +349,10 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (bt2:with-lock-held (lock)
                   (let ((i (incf current-count)))
                     (progress-indicator i max-count
-                                        :label (source-project-name source))))))
+                                        :label (source-project-name source)))))
+              :failed-fn
+              (lambda ()
+                (progress :aborted "Failed to install")))
              (let ((preference (get-universal-time)))
                (with-quicklisp-home qlhome
                  (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))

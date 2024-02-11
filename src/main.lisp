@@ -24,12 +24,13 @@
            #:add
            #:remove
            #:check
-           #:outdated))
+           #:outdated
+           #:*project-root*))
 (in-package #:qlot)
 
 (defvar *project-root* nil)
 
-(defun run-qlot-in-child-process (&rest args)
+(defun run-qlot-in-child-process (command args)
   (let* ((quicklisp-home (symbol-value (uiop:intern* '#:*quicklisp-home* '#:ql)))
          (config (or (load-qlot-config quicklisp-home)
                      (make-config))))
@@ -45,39 +46,42 @@
                                             (uiop:pathname-parent-directory-pathname quicklisp-home)))
             (uiop:run-program `(,(uiop:native-namestring
                                   (merge-pathnames #P"scripts/run.sh" qlot-source-directory))
+                                ,command
                                 ,@(mapcar #'princ-to-string args))
                               :output :interactive
                               :error-output :interactive)))))))
 
-(defun run-qlot-in-main-process (&rest args)
+(defun run-qlot-in-main-process (command args)
   (ensure-package-loaded :qlot/cli)
   (let ((*default-pathname-defaults* (or *project-root*
                                          *default-pathname-defaults*)))
     (with-env-vars (("QLOT_NO_TERMINAL" "1"))
-      (apply #'uiop:symbol-call '#:qlot/cli '#:qlot-command (mapcar #'princ-to-string args)))))
+      (apply #'uiop:symbol-call '#:qlot/cli '#:%qlot-command command (mapcar #'princ-to-string args)))))
 
-(defun run-qlot (&rest args)
-  (apply
+(defun run-qlot (command args)
+  (check-type command string)
+  (funcall
    (if (find :qlot.project *features*)
        #'run-qlot-in-child-process
        #'run-qlot-in-main-process)
+   command
    args)
   (values))
 
 (defun init (&key dist)
-  (apply #'run-qlot "init"
-         (if dist
-             (list "--dist" dist)
-             nil)))
+  (run-qlot "init"
+            (if dist
+                (list "--dist" dist)
+                nil)))
 
 (defun install (&key no-deps cache jobs init)
   (check-type jobs (or null (integer 1)))
-  (apply #'run-qlot "install"
-         (append
-          (and no-deps '("--no-deps"))
-          (and cache `("--cache" ,(uiop:native-namestring cache)))
-          (and jobs `("--jobs" ,jobs))
-          (and init '("--init")))))
+  (run-qlot "install"
+            (append
+             (and no-deps '("--no-deps"))
+             (and cache `("--cache" ,(uiop:native-namestring cache)))
+             (and jobs `("--jobs" ,jobs))
+             (and init '("--init")))))
 
 (defun project-name-p (value)
   (stringp value))
@@ -92,19 +96,19 @@
 (defun update (projects &key no-deps cache jobs)
   (check-type projects (or project-name project-name-list))
   (check-type jobs (or null (integer 1)))
-  (apply #'run-qlot "update"
-         (append
-          (ensure-list projects)
-          (and no-deps '("--no-deps"))
-          (and cache `("--cache" ,(uiop:native-namestring cache)))
-          (and jobs `("--jobs" ,jobs)))))
+  (run-qlot "update"
+            (append
+             (ensure-list projects)
+             (and no-deps '("--no-deps"))
+             (and cache `("--cache" ,(uiop:native-namestring cache)))
+             (and jobs `("--jobs" ,jobs)))))
 
 (defun bundle (&key exclude)
   (check-type exclude (or null project-name project-name-list))
   (let ((exclude (ensure-list exclude)))
-    (apply #'run-qlot "bundle"
-           (loop for project in exclude
-                 append (list "--exclude" project)))))
+    (run-qlot "bundle"
+              (loop for project in exclude
+                    append (list "--exclude" project)))))
 
 (defun add (name &rest args &key from no-install &allow-other-keys)
   (check-type name string)
@@ -116,27 +120,27 @@
         (loop for (k v) on args by #'cddr
               unless (member k '(:no-install :from))
               append (list k v)))
-  (apply #'run-qlot "add"
-         (append
-          (and no-install '("--no-install"))
-          '("--")
-          (list from name)
-          args)))
+  (run-qlot "add"
+            (append
+             (and no-install '("--no-install"))
+             '("--")
+             (list from name)
+             args)))
 
 (defun remove (name-or-names &key no-install)
   (check-type name-or-names (or project-name project-name-list))
   (let ((names (ensure-list name-or-names)))
-    (apply #'run-qlot "remove"
-           (append names
-                   (and no-install '("--no-install"))))))
+    (run-qlot "remove"
+              (append names
+                      (and no-install '("--no-install"))))))
 
 (defun check ()
-  (run-qlot "check"))
+  (run-qlot "check" nil))
 
 (defun outdated (&optional name-or-names)
   (check-type name-or-names (or null project-name project-name-list))
   (let ((names (ensure-list name-or-names)))
-    (apply #'run-qlot "outdated" names)))
+    (run-qlot "outdated" names)))
 
 #-sbcl
 (defun install-shell-command (destination &key quicklisp-home)
