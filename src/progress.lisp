@@ -23,13 +23,12 @@
            #:run-in-parallel))
 (in-package #:qlot/progress)
 
-(defgeneric print-progress (object stream))
+(defgeneric print-progress (object body stream))
 
 (defstruct (progress-line
-             (:constructor make-line (header &optional body)))
+             (:constructor make-line (header)))
   (type :in-progress :type (or null (member :in-progress :done :aborted)))
-  (header "" :type string)
-  (body "" :type string))
+  (header "" :type string))
 
 (defun progress-symbol (type)
   (ecase type
@@ -44,11 +43,11 @@
                  (string (code-char 10799))))
     ('nil nil)))
 
-(defmethod print-progress ((object progress-line) stream)
+(defmethod print-progress ((object progress-line) body stream)
   (format stream "~@[~A ~]~A  ~A~%"
           (progress-symbol (progress-line-type object))
           (progress-line-header object)
-          (color-text :gray (progress-line-body object))))
+          (color-text :gray body)))
 
 (defstruct (progress-manager (:constructor %make-progress-manager))
   (lines nil :type list)
@@ -68,10 +67,10 @@
   `(bt2:with-lock-held ((progress-manager-lock ,manager))
      ,@body))
 
-(defmethod print-progress ((manager progress-manager) stream)
+(defmethod print-progress ((manager progress-manager) body stream)
   (with-manager-lock (manager)
     (loop for line in (progress-manager-lines manager)
-          do (print-progress line stream)))
+          do (print-progress line body stream)))
   (values))
 
 (defvar *progress-output* nil)
@@ -94,9 +93,10 @@
          (format *progress-output* "~C[u" #\Esc))
        (force-output *progress-output*))))
 
-(defun refresh-progress-line (manager line)
+(defun refresh-progress-line (manager line body)
   (check-type manager progress-manager)
   (check-type line progress-line)
+  (check-type body string)
   (assert (find line (progress-manager-lines manager) :test 'eq))
   (with-manager-lock (manager)
     (let* ((lines (progress-manager-lines manager))
@@ -106,14 +106,14 @@
         (when pos
           (move-up (- len pos))
           (clear-line))
-        (print-progress line (progress-manager-stream manager)))))
+        (print-progress line body (progress-manager-stream manager)))))
   (values))
 
 (defun add-line (manager header &key (initial-body ""))
   (check-type manager progress-manager)
-  (let ((new-line (make-line header initial-body)))
+  (let ((new-line (make-line header)))
     (with-manager-lock (manager)
-      (print-progress new-line (progress-manager-stream manager))
+      (print-progress new-line initial-body (progress-manager-stream manager))
       (if (progress-manager-lines manager)
           (setf (cdr (last (progress-manager-lines manager)))
                 (list new-line))
@@ -133,8 +133,7 @@
     (when type
       (setf (progress-line-type *progress-line*) type))
     (let ((text (apply #'format nil control args)))
-      (setf (progress-line-body *progress-line*) text)
-      (push-queue *progress-line* *mailbox*)
+      (push-queue (cons *progress-line* text) *mailbox*)
       text)))
 
 (defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn failed-fn)
@@ -146,8 +145,8 @@
          (progress-thread
            (bt2:make-thread
             (lambda ()
-              (loop for line = (pop-queue *mailbox*)
-                    do (refresh-progress-line manager line)))
+              (loop for (line . body) = (pop-queue *mailbox*)
+                    do (refresh-progress-line manager line body)))
             :name "qlot progress manager")))
     #+(or ecl clasp)
     (dolist (job jobs)
