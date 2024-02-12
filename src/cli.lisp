@@ -9,6 +9,7 @@
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
+                #:outdated-projects
                 #:qlot-directory-not-found
                 #:qlot-directory-invalid)
   (:import-from #:qlot/color
@@ -634,14 +635,7 @@ SYNOPSIS:
        (uiop:quit -1))))
 
   (ensure-package-loaded :qlot/check)
-  (handler-case
-      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*)
-    ((or
-      missing-projects
-      unnecessary-projects) (e)
-      (message (color-text :red (princ-to-string e)))
-      (message (color-text :yellow "Make it up-to-date with `qlot install`."))
-      (uiop:quit 1))))
+  (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*))
 
 (defun qlot-command-outdated (argv)
   (flet ((print-outdated-usage ()
@@ -663,11 +657,8 @@ SYNOPSIS:
            (push option projects))))
 
       (ensure-package-loaded :qlot/check)
-      (let ((outdated-projects
-              (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
-                                :projects projects)))
-        (when outdated-projects
-          (uiop:quit 1))))))
+      (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
+                        :projects projects))))
 
 (defun qlot-command-bundle (argv)
   (flet ((print-bundle-usage ()
@@ -798,6 +789,13 @@ OPTIONS:
           (error-message (princ-to-string e))
           (warn-message "Run 'qlot install' to set up the project-local Quicklisp.")
           (uiop:quit -1))
+        ((or qlot/errors:missing-projects
+             qlot/errors:unnecessary-projects) (e)
+          (message (color-text :red (princ-to-string e)))
+          (message (color-text :yellow "Make it up-to-date with `qlot install`."))
+          (uiop:quit 1))
+        (qlot/errors:outdated-projects ()
+          (uiop:quit 1))
         (qlot/errors:qlot-error (e)
           (error-message "qlot: ~A" e)
           (uiop:quit -1))))))

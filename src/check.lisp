@@ -150,7 +150,7 @@
          (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
        (with-quicklisp-home quicklisp-home
          (with-tmp-directory (tmp-dir)
-           (dolist (source sources (reverse new-update-projects))
+           (dolist (source sources)
              (with-package-functions #:ql-dist (find-dist version available-update)
                (let ((dist (find-dist (source-dist-name source))))
                  (if dist
@@ -168,4 +168,7 @@
                                         (source-version source)))
                              (clear-whisper))))
                      (message "~S is not installed yet. Skipped."
-                              (source-project-name source))))))))))))
+                              (source-project-name source))))))
+           (when new-update-projects
+             (error 'outdated-projects
+                    :projects (reverse new-update-projects)))))))))
