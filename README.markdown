@@ -30,6 +30,8 @@
 
 ## Usage
 
+### Shell
+
 ```
 $ cd /path/to/myapp
 
@@ -50,6 +52,29 @@ $ qlot update mito
 
 # Run a REPL with a project-local Quicklisp
 $ qlot exec sbcl
+```
+
+### REPL (experimental)
+
+```common-lisp
+;; Move to the project root
+;; (not necessary if the REPL is invoked by 'qlot exec')
+(setf qlot:*project-root* #P"/path/to/project/")
+
+;; Initialize the project to start using Qlot.
+(qlot:init #P"/path/to/project/")
+
+;; Install libraries project-locally.
+(qlot:install)
+
+;; Add the upstream version of a library
+(qlot:add :mito :upstream t)
+
+;; Add a library from GitHub
+(qlot:add "fukamachi/anypool")
+
+;; Update specific libraries
+(qlot:update :mito)
 ```
 
 ## What Qlot is trying to solve
