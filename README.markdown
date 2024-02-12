@@ -30,6 +30,8 @@
 
 ## Usage
 
+### Shell
+
 ```
 $ cd /path/to/myapp
 
@@ -50,6 +52,29 @@ $ qlot update mito
 
 # Run a REPL with a project-local Quicklisp
 $ qlot exec sbcl
+```
+
+### REPL (experimental)
+
+```common-lisp
+;; Move to the project root
+;; (not necessary if the REPL is invoked by 'qlot exec')
+(setf qlot:*project-root* #P"/path/to/project/")
+
+;; Initialize the project to start using Qlot.
+(qlot:init #P"/path/to/project/")
+
+;; Install libraries project-locally.
+(qlot:install)
+
+;; Add the upstream version of a library
+(qlot:add :mito :upstream t)
+
+;; Add a library from GitHub
+(qlot:add "fukamachi/anypool")
+
+;; Update specific libraries
+(qlot:update :mito)
 ```
 
 ## What Qlot is trying to solve
@@ -117,19 +142,11 @@ Run `ros update qlot` to update Qlot.
 
 If [Quicklisp](https://www.quicklisp.org/) is set up on your home directory, Qlot can be installed by `ql:quickload`.
 
-```shell
-$ sbcl --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
+```common-lisp
+(ql:quickload :qlot)
 ```
 
-To install a shell command "qlot", run the following additionally:
-
-```shell
-# Install to ~/.local/bin/qlot
-$ sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command #P"~/.local/bin/")' --quit
-
-# Install to /usr/local/bin/qlot
-$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
-```
+Use functions exported by `qlot` package for using Qlot.
 
 To update Qlot, run `(ql:update-all-dists)` in the REPL.
 

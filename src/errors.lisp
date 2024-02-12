@@ -8,6 +8,7 @@
            #:qlfile-parse-failed
            #:missing-projects
            #:unnecessary-projects
+           #:outdated-projects
            #:qlfile-not-found
            #:qlfile-lock-not-found
            #:qlot-directory-not-found
@@ -70,6 +71,13 @@
   (:report (lambda (condition stream)
              (with-slots (projects) condition
                (format stream "The following libraries need to be removed:~%~{ * ~A~^~%~}"
+                       projects)))))
+
+(define-condition outdated-projects (qlot-error)
+  ((projects :initarg :projects))
+  (:report (lambda (condition stream)
+             (with-slots (projects) condition
+               (format stream "New updates found for the following libraries:~%~{ * ~A~^~%~}"
                        projects)))))
 
 (define-condition file-not-found (qlot-error)

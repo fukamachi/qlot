@@ -1,42 +1,165 @@
 (defpackage #:qlot
   (:nicknames #:qlot/main)
   (:use #:cl)
-  (:import-from #:qlot/add)
-  (:import-from #:qlot/bundle
-                #:bundle-project)
-  (:import-from #:qlot/check)
-  (:import-from #:qlot/init
-                #:init-project)
-  (:import-from #:qlot/install
-                #:install-project
-                #:update-project
-                #:*qlot-directory*)
+  (:shadow #:remove)
   (:import-from #:qlot/logger
-                #:message
-                #:*debug*
-                #:*logger-message-stream*
-                #:*logger-debug-stream*)
-  (:import-from #:qlot/proxy
-                #:*proxy*)
-  (:import-from #:qlot/utils
-                #:pathname-in-directory-p
-                #:merge-hash-tables)
+                #:message)
   (:import-from #:qlot/utils/shell
                 #:*qlot-source-directory*)
+  (:import-from #:qlot/utils
+                #:ensure-package-loaded
+                #:ensure-list)
+  (:import-from #:qlot/utils/shell
+                #:with-env-vars)
+  (:import-from #:qlot/config
+                #:load-qlot-config
+                #:make-config)
   #+sbcl
   (:import-from #:sb-posix)
   (:export #:install-shell-command
            #:init
            #:install
            #:update
-           #:with-local-quicklisp
-           #:quickload
            #:bundle
-           #:*proxy*
-           #:*debug*
-           #:*logger-message-stream*
-           #:*logger-debug-stream*))
+           #:add
+           #:remove
+           #:check
+           #:outdated
+           #:*project-root*))
 (in-package #:qlot)
+
+(defvar *project-root* nil)
+
+(defun convert-arg (arg)
+  (typecase arg
+    (keyword (format nil ":~(~A~)" arg))
+    (symbol (string-downcase arg))
+    (otherwise (princ-to-string arg))))
+
+(defun run-qlot-in-child-process (command args)
+  (let* ((quicklisp-home (symbol-value (uiop:intern* '#:*quicklisp-home* '#:ql)))
+         (config (or (load-qlot-config quicklisp-home)
+                     (make-config))))
+    (destructuring-bind (&key qlot-source-directory setup-file &allow-other-keys)
+        config
+      (assert (and qlot-source-directory setup-file))
+      (let ((setup-file (merge-pathnames setup-file qlot-source-directory)))
+        (unless (uiop:file-exists-p setup-file)
+          (error "Failed to run Qlot"))
+        (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file))
+                        ("QLOT_NO_TERMINAL" "1"))
+          (uiop:with-current-directory ((or (and *project-root*
+                                                 (uiop:ensure-directory-pathname *project-root*))
+                                            (uiop:pathname-parent-directory-pathname quicklisp-home)))
+            (uiop:run-program `(,(uiop:native-namestring
+                                  (merge-pathnames #P"scripts/run.sh" qlot-source-directory))
+                                ,command
+                                ,@(mapcar #'convert-arg args))
+                              :output :interactive
+                              :error-output :interactive)))))))
+
+(defun run-qlot-in-main-process (command args)
+  (ensure-package-loaded :qlot/cli)
+  (let ((*default-pathname-defaults* (or (and *project-root*
+                                              (uiop:ensure-directory-pathname *project-root*))
+                                         *default-pathname-defaults*)))
+    (with-env-vars (("QLOT_NO_TERMINAL" "1"))
+      (apply #'uiop:symbol-call '#:qlot/cli '#:%qlot-command command
+             (mapcar #'convert-arg args)))))
+
+(defun run-qlot (command args)
+  (check-type command string)
+  (funcall
+   (if (find :qlot.project *features*)
+       #'run-qlot-in-child-process
+       #'run-qlot-in-main-process)
+   command
+   args)
+  (values))
+
+(defun init (project-root &key dist)
+  (let ((project-root (uiop:ensure-directory-pathname project-root)))
+    (ensure-directories-exist project-root)
+    (let ((*project-root* project-root))
+      (run-qlot "init"
+                (if dist
+                    (list "--dist" dist)
+                    nil)))
+    (prog1 project-root
+      (unless *project-root*
+        (setf *project-root* project-root)))))
+
+(defun install (&key no-deps cache jobs init)
+  (check-type jobs (or null (integer 1)))
+  (run-qlot "install"
+            (append
+             (and no-deps '("--no-deps"))
+             (and cache `("--cache" ,(uiop:native-namestring cache)))
+             (and jobs `("--jobs" ,jobs))
+             (and init '("--init")))))
+
+(defun project-name-p (value)
+  (stringp value))
+
+(defun project-name-list-p (value)
+  (and (consp value)
+       (every #'project-name-p value)))
+
+(deftype project-name () '(or string keyword symbol))
+(deftype project-name-list () '(satisfies project-name-list-p))
+
+(defun update (projects &key no-deps cache jobs)
+  (check-type projects (or project-name project-name-list))
+  (check-type jobs (or null (integer 1)))
+  (run-qlot "update"
+            (append
+             (mapcar #'string-downcase (ensure-list projects))
+             (and no-deps '("--no-deps"))
+             (and cache `("--cache" ,(uiop:native-namestring cache)))
+             (and jobs `("--jobs" ,jobs)))))
+
+(defun bundle (&key exclude)
+  (check-type exclude (or null project-name project-name-list))
+  (let ((exclude (mapcar #'string-downcase (ensure-list exclude))))
+    (run-qlot "bundle"
+              (loop for project in exclude
+                    append (list "--exclude" project)))))
+
+(defun add (name &rest args &key from no-install &allow-other-keys)
+  (check-type name project-name)
+  (let ((name (string-downcase name)))
+    (unless from
+      (setf from (if (find #\/ name :test 'char=)
+                     "github"
+                     "ql")))
+    (setf args
+          (loop for (k v) on args by #'cddr
+                unless (member k '(:no-install :from))
+                append (cond
+                         ((typep v 'boolean)
+                          (and v (list k)))
+                         (t (list k v)))))
+    (run-qlot "add"
+              (append
+               (and no-install '("--no-install"))
+               '("--")
+               (list from name)
+               args))))
+
+(defun remove (name-or-names &key no-install)
+  (check-type name-or-names (or project-name project-name-list))
+  (let ((names (mapcar #'string-downcase (ensure-list name-or-names))))
+    (run-qlot "remove"
+              (append names
+                      (and no-install '("--no-install"))))))
+
+(defun check ()
+  (run-qlot "check" nil))
+
+(defun outdated (&optional name-or-names)
+  (check-type name-or-names (or null project-name project-name-list))
+  (let ((names (mapcar #'string-downcase (ensure-list name-or-names))))
+    (run-qlot "outdated" names)))
 
 #-sbcl
 (defun install-shell-command (destination &key quicklisp-home)
@@ -81,94 +204,3 @@ exec ~Ascripts/run.sh \"$@\"~%"
       #+sbcl (sb-posix:chmod qlot-path #o755)
       (message "Successfully installed!")))
   (values))
-
-(defun init (object)
-  (init-project object))
-
-(defun install (object)
-  (install-project object))
-
-(defun update (object)
-  (update-project object))
-
-(defun call-in-local-quicklisp (fn qlhome &key (central-registry '()))
-  (unless (uiop:directory-exists-p qlhome)
-    (error "Directory ~S does not exist." qlhome))
-
-  (unless (uiop:file-exists-p (merge-pathnames #P"setup.lisp" qlhome))
-    (error "~S is not a quicklisp directory." qlhome))
-
-  (unless (find :ql *features*)
-    (load (merge-pathnames #P"setup.lisp" qlhome)))
-
-  (progv (list (intern (string '#:*quicklisp-home*) '#:ql)
-               (intern (string '#:*local-project-directories*) '#:ql))
-      (list qlhome
-            (list (merge-pathnames #P"local-projects/" qlhome)))
-
-    (let* ((asdf:*central-registry* central-registry)
-           (asdf::*source-registry* (make-hash-table :test 'equal))
-           (asdf::*default-source-registries*
-             '(asdf::environment-source-registry
-                asdf::system-source-registry
-                asdf::system-source-registry-directory))
-           (original-defined-systems #+asdf3.3 asdf::*registered-systems*
-                                     #-asdf3.3 asdf::*defined-systems*)
-           (#+asdf3.3 asdf::*registered-systems*
-            #-asdf3.3 asdf::*defined-systems* (make-hash-table :test 'equal)))
-
-      ;; Set systems already loaded to prevent reloading the same library in the local Quicklisp.
-      (maphash (lambda (name system)
-                 (let* ((system-object #+asdf3.3 system #-asdf3.3 (cdr system))
-                        (system-path (asdf:system-source-directory system-object)))
-                   (when (or (null system-path)
-                             (pathname-in-directory-p system-path qlhome)
-                             (typep system-object 'asdf:require-system))
-                     (setf (gethash name #+asdf3.3 asdf::*registered-systems*
-                                    #-asdf3.3 asdf::*defined-systems*) system))))
-               original-defined-systems)
-
-      (asdf:initialize-source-registry)
-
-      (multiple-value-prog1 (funcall fn)
-        ;; Make all systems that were actually loaded from the local quicklisp
-        ;; visible through ASDF outside of the local environment.
-        (merge-hash-tables #+asdf3.3 asdf::*registered-systems*
-                           #-asdf3.3 asdf::*defined-systems* original-defined-systems)))))
-
-(defun object-to-qlhome (object)
-  (etypecase object
-    ((or keyword string asdf:system)
-     (asdf:system-relative-pathname object *qlot-directory*))
-    (pathname
-      (merge-pathnames *qlot-directory* (uiop:pathname-directory-pathname object)))))
-
-(defmacro with-local-quicklisp ((object &key central-registry) &body body)
-  (let ((g-object (gensym "OBJECT"))
-        (g-qlhome (gensym "QLHOME"))
-        (asd-specified-p (gensym "ASD-SPECIFIED-P")))
-    `(let* ((,g-object ,object)
-            (,g-qlhome (object-to-qlhome ,g-object))
-            (,asd-specified-p (and (pathnamep ,g-object)
-                                   (uiop:file-pathname-p ,g-object)
-                                   (equal (pathname-type ,g-object) "asd"))))
-       (call-in-local-quicklisp
-         (lambda ()
-           (when ,asd-specified-p
-             (asdf:load-asd ,g-object))
-           ,@body)
-         ,g-qlhome
-         :central-registry (append ,central-registry
-                                   (list (asdf:system-source-directory :qlot)))))))
-
-(defun quickload (systems &rest args &key verbose prompt explain &allow-other-keys)
-  (declare (ignore verbose prompt explain))
-  (let ((systems (if (consp systems)
-                     systems
-                     (list systems))))
-    (dolist (system systems systems)
-      (with-local-quicklisp (system)
-        (apply #'uiop:symbol-call '#:ql '#:quickload system args)))))
-
-(defun bundle (object)
-  (bundle-project object))

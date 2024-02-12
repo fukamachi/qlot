@@ -14,8 +14,15 @@
      (if local-source-registry-form
          (append local-source-registry-form
                  `((:tree ,project-root)))
-         `(:source-registry :ignore-inherited-configuration
-           (:tree ,project-root)
-           (:also-exclude ".qlot"))))))
+         (let* ((config-file (ql-setup:qmerge "qlot.conf"))
+                (qlot-source-directory
+                  (and (uiop:file-exists-p config-file)
+                       (getf (uiop:read-file-form config-file) :qlot-source-directory))))
+           `(:source-registry :ignore-inherited-configuration
+             (:also-exclude ".qlot")
+             ,@(and qlot-source-directory
+                    `((:directory ,qlot-source-directory)))
+             (:tree ,project-root)))))))
 
+(pushnew :qlot.project *features*)
 (setup-source-registry)

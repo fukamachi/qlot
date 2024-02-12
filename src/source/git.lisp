@@ -30,7 +30,7 @@
 
 (defun source-git-remote-access-url (source)
   (or
-    (when (uiop:getenv "GITHUB_TOKEN")
+    (when (uiop:getenvp "GITHUB_TOKEN")
       (let ((url (source-git-remote-url source)))
         (when (starts-with "https://github.com/" url)
           (format nil "https://x-access-token:~A@github.com/~A"

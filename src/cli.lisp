@@ -9,6 +9,7 @@
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
+                #:outdated-projects
                 #:qlot-directory-not-found
                 #:qlot-directory-invalid)
   (:import-from #:qlot/color
@@ -24,8 +25,8 @@
                 #:check-local-quicklisp)
   (:import-from #:qlot/utils
                 #:split-with
-                #:ensure-list
                 #:ensure-cons
+                #:ensure-package-loaded
                 #:starts-with
                 #:generate-random-string)
   (:export #:qlot-command
@@ -41,16 +42,6 @@
   (princ (apply #'color-text :yellow control args)
          *error-output*)
   (fresh-line *error-output*))
-
-(defun ensure-package-loaded (package-names)
-  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning))
-    (let ((package-names (ensure-list package-names))
-          (*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
-      (dolist (package-name package-names)
-        (check-type package-name keyword)
-        (unless (find-package package-name)
-          (asdf:load-system package-name))))))
 
 (defun extend-source-registry (current-value dir-to-add)
   "According to ASDF documentation:
@@ -180,7 +171,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
 
 (defun use-local-quicklisp ()
   ;; Set QUICKLISP_HOME ./.qlot/
-  (unless (uiop:getenv "QUICKLISP_HOME")
+  (unless (uiop:getenvp "QUICKLISP_HOME")
     (setf (uiop:getenv "QUICKLISP_HOME")
           (uiop:native-namestring
             (or (uiop:directory-exists-p ".qlot/")
@@ -195,7 +186,7 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
   ;; Overwrite CL_SOURCE_REGISTRY to the current directory
   (setf (uiop:getenv "CL_SOURCE_REGISTRY")
         (extend-source-registry
-         (uiop:getenv "CL_SOURCE_REGISTRY")
+         (uiop:getenvp "CL_SOURCE_REGISTRY")
          ;; Allow to find Qlot even in the subcommand with recursive 'qlot exec'.
          (uiop:native-namestring (asdf:system-source-directory :qlot)))))
 
@@ -520,7 +511,7 @@ OPTIONS:
             ("--debug"
              (qlot-option-debug))
             ("--no-install"
-             )
+             (setf no-install t))
             (otherwise
              (when (and (starts-with "--" option)
                         (not (equal "--" option)))
@@ -574,15 +565,21 @@ OPTIONS:
 
 SYNOPSIS:
     qlot remove [name...]
+
+OPTIONS:
+    --no-install
+        Don't invoke an installation after removal
 ")
            (uiop:quit -1)))
 
-    (let (names)
+    (let (names no-install)
       ;; Parse options
       (block nil
         (do-options (option argv)
           ("--help"
            (print-remove-usage))
+          ("--no-install"
+           (setf no-install t))
           (otherwise
            (when (equal "--" option)
              (setf names
@@ -610,13 +607,14 @@ SYNOPSIS:
                 (message "Nothing to remove in '~A'." qlfile)
                 (return-from qlot-command-remove))
 
-              (handler-bind ((error
-                               (lambda (e)
-                                 (declare (ignore e))
-                                 (uiop:copy-file qlfile.bak qlfile))))
-                (uiop:symbol-call '#:qlot/install '#:install-project
-                                  *default-pathname-defaults*
-                                  :install-deps nil)))))))))
+              (unless no-install
+                (handler-bind ((error
+                                 (lambda (e)
+                                   (declare (ignore e))
+                                   (uiop:copy-file qlfile.bak qlfile))))
+                  (uiop:symbol-call '#:qlot/install '#:install-project
+                                    *default-pathname-defaults*
+                                    :install-deps nil))))))))))
 
 (defun qlot-command-check (argv)
   (flet ((print-check-usage ()
@@ -637,14 +635,7 @@ SYNOPSIS:
        (uiop:quit -1))))
 
   (ensure-package-loaded :qlot/check)
-  (handler-case
-      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*)
-    ((or
-      missing-projects
-      unnecessary-projects) (e)
-      (message (color-text :red (princ-to-string e)))
-      (message (color-text :yellow "Make it up-to-date with `qlot install`."))
-      (uiop:quit 1))))
+  (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*))
 
 (defun qlot-command-outdated (argv)
   (flet ((print-outdated-usage ()
@@ -666,11 +657,8 @@ SYNOPSIS:
            (push option projects))))
 
       (ensure-package-loaded :qlot/check)
-      (let ((outdated-projects
-              (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
-                                :projects projects)))
-        (when outdated-projects
-          (uiop:quit 1))))))
+      (uiop:symbol-call '#:qlot/check '#:available-update-project *default-pathname-defaults*
+                        :projects projects))))
 
 (defun qlot-command-bundle (argv)
   (flet ((print-bundle-usage ()
@@ -723,6 +711,36 @@ OPTIONS:
   (print-usage)
   (uiop:quit -1))
 
+(defun %qlot-command (command &rest argv)
+  (if (equal "init" command)
+      (qlot-command-init argv)
+      (with-project-root ()
+        (cond ((equal "install" command)
+               (qlot-command-install argv))
+              ((equal "update" command)
+               (qlot-command-update argv))
+              ((equal "exec" command)
+               (qlot-command-exec argv))
+              ((equal "add" command)
+               (qlot-command-add argv))
+              ((equal "remove" command)
+               (qlot-command-remove argv))
+              ((equal "check" command)
+               (qlot-command-check argv))
+              ((equal "outdated" command)
+               (qlot-command-outdated argv))
+              ((equal "bundle" command)
+               (qlot-command-bundle argv))
+              ((and command (starts-with "--" command))
+               (qlot-command-toplevel (cons command argv)))
+              ((null command)
+               (qlot-command-toplevel nil))
+              (t
+               (do-options (option argv)
+                 ("--no-color" (setf *enable-color* nil))
+                 (otherwise))
+               (error 'qlot/errors:command-not-found :command command))))))
+
 (defun qlot-command (&optional $1 &rest argv)
   (let* ((no-terminal-env (uiop:getenvp "QLOT_NO_TERMINAL"))
          (*terminal* (or (not no-terminal-env)
@@ -750,34 +768,7 @@ OPTIONS:
                          (message "Please attach the stack trace dumped to '~A'." error.log))
                        (uiop:quit -1))))
       (handler-case
-          (if (equal "init" $1)
-              (qlot-command-init argv)
-              (with-project-root ()
-                (cond ((equal "install" $1)
-                       (qlot-command-install argv))
-                      ((equal "update" $1)
-                       (qlot-command-update argv))
-                      ((equal "exec" $1)
-                       (qlot-command-exec argv))
-                      ((equal "add" $1)
-                       (qlot-command-add argv))
-                      ((equal "remove" $1)
-                       (qlot-command-remove argv))
-                      ((equal "check" $1)
-                       (qlot-command-check argv))
-                      ((equal "outdated" $1)
-                       (qlot-command-outdated argv))
-                      ((equal "bundle" $1)
-                       (qlot-command-bundle argv))
-                      ((and $1 (starts-with "--" $1))
-                       (qlot-command-toplevel (cons $1 argv)))
-                      ((null $1)
-                       (qlot-command-toplevel nil))
-                      (t
-                       (do-options (option argv)
-                         ("--no-color" (setf *enable-color* nil))
-                         (otherwise))
-                       (error 'qlot/errors:command-not-found :command $1)))))
+          (apply #'%qlot-command $1 argv)
         #+(or sbcl ecl clasp)
         (#+sbcl sb-sys:interactive-interrupt
          #+(or ecl clasp) ext:interactive-interrupt
@@ -798,6 +789,13 @@ OPTIONS:
           (error-message (princ-to-string e))
           (warn-message "Run 'qlot install' to set up the project-local Quicklisp.")
           (uiop:quit -1))
+        ((or qlot/errors:missing-projects
+             qlot/errors:unnecessary-projects) (e)
+          (message (color-text :red (princ-to-string e)))
+          (message (color-text :yellow "Make it up-to-date with `qlot install`."))
+          (uiop:quit 1))
+        (qlot/errors:outdated-projects ()
+          (uiop:quit 1))
         (qlot/errors:qlot-error (e)
           (error-message "qlot: ~A" e)
           (uiop:quit -1))))))

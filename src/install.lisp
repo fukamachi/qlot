@@ -2,7 +2,8 @@
   (:use #:cl)
   (:import-from #:qlot/install/quicklisp
                 #:install-quicklisp
-                #:install-local-init-files)
+                #:install-local-init-files
+                #:install-qlot-config-file)
   (:import-from #:qlot/source
                 #:prepare-source
                 #:source-dist
@@ -40,6 +41,8 @@
   (:import-from #:qlot/utils/qlot
                 #:dump-source-registry-conf
                 #:dump-qlfile-lock)
+  (:import-from #:qlot/config
+                #:dump-qlot-config)
   (:import-from #:qlot/utils/asdf
                 #:with-directory
                 #:with-autoload-on-missing
@@ -115,7 +118,8 @@
       ((not (local-quicklisp-installed-p project-root))
        (install-quicklisp quicklisp-home))
       (t
-       (install-local-init-files quicklisp-home)))
+       (install-local-init-files quicklisp-home)
+       (install-qlot-config-file quicklisp-home)))
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
@@ -345,7 +349,10 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                 (bt2:with-lock-held (lock)
                   (let ((i (incf current-count)))
                     (progress-indicator i max-count
-                                        :label (source-project-name source))))))
+                                        :label (source-project-name source)))))
+              :failed-fn
+              (lambda ()
+                (progress :aborted "Failed to install")))
              (let ((preference (get-universal-time)))
                (with-quicklisp-home qlhome
                  (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))

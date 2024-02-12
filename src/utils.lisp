@@ -15,7 +15,8 @@
            #:octets-stream-to-string
            #:https-of
            #:ensure-list
-           #:ensure-cons))
+           #:ensure-cons
+           #:ensure-package-loaded))
 (in-package #:qlot/utils)
 
 (defun make-keyword (text)
@@ -130,3 +131,13 @@ with the same key."
   (if (consp object)
       object
       (list object)))
+
+(defun ensure-package-loaded (package-names)
+  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning))
+    (let ((package-names (ensure-list package-names))
+          (*standard-output* (make-broadcast-stream))
+          (*trace-output* (make-broadcast-stream)))
+      (dolist (package-name package-names)
+        (check-type package-name keyword)
+        (unless (find-package package-name)
+          (asdf:load-system package-name))))))
