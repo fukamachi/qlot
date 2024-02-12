@@ -142,19 +142,11 @@ Run `ros update qlot` to update Qlot.
 
 If [Quicklisp](https://www.quicklisp.org/) is set up on your home directory, Qlot can be installed by `ql:quickload`.
 
-```shell
-$ sbcl --eval '(ql:quickload (list :qlot :qlot/distify))' --quit
+```common-lisp
+(ql:quickload :qlot)
 ```
 
-To install a shell command "qlot", run the following additionally:
-
-```shell
-# Install to ~/.local/bin/qlot
-$ sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command #P"~/.local/bin/")' --quit
-
-# Install to /usr/local/bin/qlot
-$ sudo sbcl --eval '(ql:quickload :qlot)' --eval '(qlot:install-shell-command "/usr/local/bin/")' --quit
-```
+Use functions exported by `qlot` package for using Qlot.
 
 To update Qlot, run `(ql:update-all-dists)` in the REPL.
 
