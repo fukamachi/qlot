@@ -68,11 +68,17 @@
    args)
   (values))
 
-(defun init (&key dist)
-  (run-qlot "init"
-            (if dist
-                (list "--dist" dist)
-                nil)))
+(defun init (project-root &key dist)
+  (let ((project-root (uiop:ensure-directory-pathname project-root)))
+    (ensure-directories-exist project-root)
+    (let ((*project-root* project-root))
+      (run-qlot "init"
+                (if dist
+                    (list "--dist" dist)
+                    nil)))
+    (prog1 project-root
+      (unless *project-root*
+        (setf *project-root* project-root)))))
 
 (defun install (&key no-deps cache jobs init)
   (check-type jobs (or null (integer 1)))
