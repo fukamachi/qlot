@@ -30,6 +30,12 @@
 
 (defvar *project-root* nil)
 
+(defun convert-arg (arg)
+  (typecase arg
+    (keyword (format nil ":~(~A~)" arg))
+    (symbol (string-downcase arg))
+    (otherwise (princ-to-string arg))))
+
 (defun run-qlot-in-child-process (command args)
   (let* ((quicklisp-home (symbol-value (uiop:intern* '#:*quicklisp-home* '#:ql)))
          (config (or (load-qlot-config quicklisp-home)
@@ -48,7 +54,7 @@
             (uiop:run-program `(,(uiop:native-namestring
                                   (merge-pathnames #P"scripts/run.sh" qlot-source-directory))
                                 ,command
-                                ,@(mapcar #'princ-to-string args))
+                                ,@(mapcar #'convert-arg args))
                               :output :interactive
                               :error-output :interactive)))))))
 
@@ -58,7 +64,8 @@
                                               (uiop:ensure-directory-pathname *project-root*))
                                          *default-pathname-defaults*)))
     (with-env-vars (("QLOT_NO_TERMINAL" "1"))
-      (apply #'uiop:symbol-call '#:qlot/cli '#:%qlot-command command (mapcar #'princ-to-string args)))))
+      (apply #'uiop:symbol-call '#:qlot/cli '#:%qlot-command command
+             (mapcar #'convert-arg args)))))
 
 (defun run-qlot (command args)
   (check-type command string)
@@ -98,7 +105,7 @@
   (and (consp value)
        (every #'project-name-p value)))
 
-(deftype project-name () 'string)
+(deftype project-name () '(or string keyword symbol))
 (deftype project-name-list () '(satisfies project-name-list-p))
 
 (defun update (projects &key no-deps cache jobs)
@@ -106,38 +113,42 @@
   (check-type jobs (or null (integer 1)))
   (run-qlot "update"
             (append
-             (ensure-list projects)
+             (mapcar #'string-downcase (ensure-list projects))
              (and no-deps '("--no-deps"))
              (and cache `("--cache" ,(uiop:native-namestring cache)))
              (and jobs `("--jobs" ,jobs)))))
 
 (defun bundle (&key exclude)
   (check-type exclude (or null project-name project-name-list))
-  (let ((exclude (ensure-list exclude)))
+  (let ((exclude (mapcar #'string-downcase (ensure-list exclude))))
     (run-qlot "bundle"
               (loop for project in exclude
                     append (list "--exclude" project)))))
 
 (defun add (name &rest args &key from no-install &allow-other-keys)
-  (check-type name string)
-  (unless from
-    (setf from (if (find #\/ name :test 'char=)
-                   "github"
-                   "ql")))
-  (setf args
-        (loop for (k v) on args by #'cddr
-              unless (member k '(:no-install :from))
-              append (list k v)))
-  (run-qlot "add"
-            (append
-             (and no-install '("--no-install"))
-             '("--")
-             (list from name)
-             args)))
+  (check-type name project-name)
+  (let ((name (string-downcase name)))
+    (unless from
+      (setf from (if (find #\/ name :test 'char=)
+                     "github"
+                     "ql")))
+    (setf args
+          (loop for (k v) on args by #'cddr
+                unless (member k '(:no-install :from))
+                append (cond
+                         ((typep v 'boolean)
+                          (and v (list k)))
+                         (t (list k v)))))
+    (run-qlot "add"
+              (append
+               (and no-install '("--no-install"))
+               '("--")
+               (list from name)
+               args))))
 
 (defun remove (name-or-names &key no-install)
   (check-type name-or-names (or project-name project-name-list))
-  (let ((names (ensure-list name-or-names)))
+  (let ((names (mapcar #'string-downcase (ensure-list name-or-names))))
     (run-qlot "remove"
               (append names
                       (and no-install '("--no-install"))))))
@@ -147,7 +158,7 @@
 
 (defun outdated (&optional name-or-names)
   (check-type name-or-names (or null project-name project-name-list))
-  (let ((names (ensure-list name-or-names)))
+  (let ((names (mapcar #'string-downcase (ensure-list name-or-names))))
     (run-qlot "outdated" names)))
 
 #-sbcl
