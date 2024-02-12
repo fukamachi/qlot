@@ -42,7 +42,8 @@
           (error "Failed to run Qlot"))
         (with-env-vars (("QLOT_SETUP_FILE" (uiop:native-namestring setup-file))
                         ("QLOT_NO_TERMINAL" "1"))
-          (uiop:with-current-directory ((or *project-root*
+          (uiop:with-current-directory ((or (and *project-root*
+                                                 (uiop:ensure-directory-pathname *project-root*))
                                             (uiop:pathname-parent-directory-pathname quicklisp-home)))
             (uiop:run-program `(,(uiop:native-namestring
                                   (merge-pathnames #P"scripts/run.sh" qlot-source-directory))
@@ -53,7 +54,8 @@
 
 (defun run-qlot-in-main-process (command args)
   (ensure-package-loaded :qlot/cli)
-  (let ((*default-pathname-defaults* (or *project-root*
+  (let ((*default-pathname-defaults* (or (and *project-root*
+                                              (uiop:ensure-directory-pathname *project-root*))
                                          *default-pathname-defaults*)))
     (with-env-vars (("QLOT_NO_TERMINAL" "1"))
       (apply #'uiop:symbol-call '#:qlot/cli '#:%qlot-command command (mapcar #'princ-to-string args)))))
