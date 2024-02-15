@@ -20,6 +20,8 @@
                        (getf (uiop:read-file-form config-file) :qlot-source-directory))))
            `(:source-registry :ignore-inherited-configuration
              (:also-exclude ".qlot")
+             (:also-exclude ".bundle-libs")
+             (:also-exclude ".direnv")
              ,@(and qlot-source-directory
                     `((:directory ,qlot-source-directory)))
              (:tree ,project-root)))))))
