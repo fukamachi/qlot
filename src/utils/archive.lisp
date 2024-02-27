@@ -18,6 +18,7 @@
                                  :direction :output
                                  :element-type '(unsigned-byte 8))
         (deflate:inflate-gzip-stream in tar-stream)
+        (finish-output tar-stream)
         (archive:with-open-archive (archive tar-file)
           (prog1
               (merge-pathnames
