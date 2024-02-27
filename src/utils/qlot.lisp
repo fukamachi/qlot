@@ -14,7 +14,7 @@
 (in-package #:qlot/utils/qlot)
 
 (defvar *source-registry-exclusions*
-  '(".qlot" ".bundle-libs" ".direnv"))
+  '(".qlot" ".bundle-libs"))
 
 (defun dump-source-registry-conf (stream sources)
   (let ((*print-pretty* nil)

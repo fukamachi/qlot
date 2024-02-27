@@ -2,18 +2,19 @@
   (:use #:cl))
 (in-package #:qlot/local-init/setup)
 
+(defvar *project-root*
+  (uiop:pathname-parent-directory-pathname ql:*quicklisp-home*))
+
+(pushnew :qlot.project *features*)
+
 (defun setup-source-registry ()
   #+ros.init (setf roswell:*local-project-directories* nil)
   (let* ((source-registry (ql-setup:qmerge "source-registry.conf"))
          (local-source-registry-form
            (and (uiop:file-exists-p source-registry)
-                (uiop:read-file-form source-registry)))
-         (project-root
-           (uiop:pathname-parent-directory-pathname ql:*quicklisp-home*)))
+                (uiop:read-file-form source-registry))))
     (asdf:initialize-source-registry
-     (if local-source-registry-form
-         (append local-source-registry-form
-                 `((:tree ,project-root)))
+     (or local-source-registry-form
          (let* ((config-file (ql-setup:qmerge "qlot.conf"))
                 (qlot-source-directory
                   (and (uiop:file-exists-p config-file)
@@ -21,10 +22,63 @@
            `(:source-registry :ignore-inherited-configuration
              (:also-exclude ".qlot")
              (:also-exclude ".bundle-libs")
-             (:also-exclude ".direnv")
              ,@(and qlot-source-directory
-                    `((:directory ,qlot-source-directory)))
-             (:tree ,project-root)))))))
+                    `((:directory ,qlot-source-directory)))))))))
 
-(pushnew :qlot.project *features*)
+(defvar *project-system-cache*
+  (make-hash-table :test 'equal))
+
+(defstruct system-cache
+  system-files
+  (created-at (get-universal-time)))
+
+(defun cache-stale-p (dir cache)
+  (< (system-cache-created-at cache)
+     (ql-impl-util:directory-write-date dir)))
+
+(defun cache-key (dir)
+  (uiop:native-namestring (uiop:ensure-absolute-pathname dir)))
+
+(defun find-cache (directory)
+  (let* ((key (cache-key directory))
+         (cache (gethash key *project-system-cache*)))
+    (and cache
+         (not (cache-stale-p directory cache))
+         cache)))
+
+(defun put-cache (directory system-files)
+  (setf (gethash (cache-key directory) *project-system-cache*)
+        (make-system-cache :system-files system-files)))
+
+(defun project-system-searcher (system-name)
+  (block nil
+    (uiop:collect-sub*directories
+     *project-root*
+     (lambda (dir)
+       (let ((dirname (car (last (pathname-directory dir)))))
+         (and (stringp dirname)
+              (not (equal dirname ""))
+              (not (char= (aref dirname 0) #\.)))))
+     t
+     (lambda (dir)
+       (let* ((cache (find-cache dir))
+              (system-files
+                (if cache
+                    (system-cache-system-files cache)
+                    (let ((asd-files
+                            (uiop:directory-files dir "*.asd")))
+                      (put-cache dir asd-files)
+                      asd-files)))
+              (system-file
+                (find system-name system-files
+                      :key #'pathname-name
+                      :test 'equal)))
+         (when system-file
+           (return system-file)))))))
+
+(defun add-system-definition-search-function ()
+  (pushnew 'project-system-searcher
+           asdf:*system-definition-search-functions*))
+
 (setup-source-registry)
+(add-system-definition-search-function)
