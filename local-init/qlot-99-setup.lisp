@@ -44,7 +44,7 @@
          (cache (gethash key *project-system-cache*)))
     (and cache
          (not (cache-stale-p directory cache))
-         cache)))
+         (system-cache-system-files cache))))
 
 (defun put-cache (directory system-files)
   (setf (gethash (cache-key directory) *project-system-cache*)
@@ -58,13 +58,13 @@
        (let ((dirname (car (last (pathname-directory dir)))))
          (and (stringp dirname)
               (not (equal dirname ""))
-              (not (char= (aref dirname 0) #\.)))))
+              (not (char= (aref dirname 0) #\.))
+              (not (find dirname asdf/source-registry:*default-source-registry-exclusions*
+                         :test 'equal)))))
      t
      (lambda (dir)
-       (let* ((cache (find-cache dir))
-              (system-files
-                (if cache
-                    (system-cache-system-files cache)
+       (let* ((system-files
+                (or (find-cache dir)
                     (let ((asd-files
                             (uiop:directory-files dir "*.asd")))
                       (put-cache dir asd-files)
