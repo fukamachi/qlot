@@ -13,6 +13,9 @@
            #:dump-qlfile-lock))
 (in-package #:qlot/utils/qlot)
 
+(defvar *source-registry-exclusions*
+  '(".qlot" ".bundle-libs"))
+
 (defun dump-source-registry-conf (stream sources)
   (let ((*print-pretty* nil)
         (*print-case* :downcase))
@@ -20,7 +23,8 @@
             "~&(~{~S~^~% ~})~%"
             `(:source-registry
               :ignore-inherited-configuration
-              (:also-exclude ".qlot")
+              ,@(loop for exclude in *source-registry-exclusions*
+                      collect `(:also-exclude ,exclude))
               (:directory ,(asdf:system-source-directory :qlot))
               ,@(loop for source in sources
                       when (typep source 'source-local)
