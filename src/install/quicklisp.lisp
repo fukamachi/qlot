@@ -3,24 +3,13 @@
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/config
-                #:dump-qlot-config
-                #:load-qlot-config)
+                #:dump-qlot-config)
   (:import-from #:qlot/utils/file
                 #:copy-directory)
   (:export #:install-quicklisp
            #:install-local-init-files
            #:install-qlot-config-file))
 (in-package #:qlot/install/quicklisp)
-
-(defun version-match-p (path)
-  (let ((qlot-version (or (getf (load-qlot-config path) :qlot-version)
-                          (let ((version-file (merge-pathnames "qlot-version.txt" path)))
-                            (and (uiop:file-exists-p version-file)
-                                 (string-trim '(#\Newline #\Return #\Space)
-                                              (uiop:read-file-string version-file)))))))
-    (and qlot-version
-         (equal (asdf:component-version (asdf:find-system :qlot))
-                qlot-version))))
 
 (defun copy-local-init-files (path)
   (let ((local-init-dir (merge-pathnames #P"local-init/" path)))
@@ -31,12 +20,10 @@
 
 (defun install-local-init-files (path)
   (let ((local-init-dir (merge-pathnames #P"local-init/" path)))
-    (unless (and (uiop:directory-exists-p local-init-dir)
-                 (version-match-p path))
-      (uiop:delete-directory-tree local-init-dir
-                                  :if-does-not-exist :ignore
-                                  :validate t)
-      (copy-local-init-files path))))
+    (when (uiop:directory-exists-p local-init-dir)
+      (mapc #'delete-file
+            (uiop:directory-files local-init-dir "qlot-*.lisp")))
+    (copy-local-init-files path)))
 
 (defun install-qlot-config-file (path)
   (with-open-file (out (merge-pathnames "qlot.conf" path)
