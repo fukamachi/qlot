@@ -3,7 +3,9 @@
   (:import-from #:qlot/parser
                 #:parse-qlfile-line)
   (:import-from #:qlot/source
-                #:source-project-name)
+                #:source-project-name
+                #:source-identifier
+                #:source=)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
@@ -24,7 +26,6 @@
                                                :line new-line
                                                :error e))))
                        (parse-qlfile-line new-line)))
-         (new-project-name (source-project-name new-source))
          (lines (uiop:read-file-lines qlfile)))
     (uiop:with-output-file (out qlfile :if-exists :supersede :if-does-not-exist :create)
       (let ((replaced nil))
@@ -32,11 +33,11 @@
               for source = (ignore-errors (parse-qlfile-line line))
               do (format out "~A~%"
                          (if (and source
-                                  (equal new-project-name (source-project-name source)))
+                                  (source= new-source source))
                              (progn
                                (setf replaced t)
                                (message "Update '~A' to '~A' in '~A'."
-                                        new-project-name
+                                        (source-identifier new-source)
                                         new-line
                                         qlfile)
                                new-line)

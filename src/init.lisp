@@ -1,5 +1,7 @@
 (defpackage #:qlot/init
   (:use #:cl)
+  (:import-from #:qlot/add
+                #:add-project)
   (:import-from #:qlot/utils/project
                 #:*default-qlfile*)
   (:import-from #:qlot/utils
@@ -20,7 +22,7 @@
      (unless (or (starts-with "http://" dist)
                  (starts-with "https://" dist))
        (error 'qlot-simple-error
-              :format-control "Unknown dist: ~A"
+              :format-control "Invalid dist URL: ~A"
               :format-arguments (list dist)))
      dist)))
 
@@ -38,13 +40,13 @@
               :format-arguments (list object)))
      (let ((qlfile (merge-pathnames *default-qlfile* object)))
        ;; Create 'qlfile'
-       (unless (uiop:file-exists-p (merge-pathnames *default-qlfile* object))
+       (unless (uiop:file-exists-p qlfile)
          (message "Creating ~A" qlfile)
          (with-open-file (out qlfile
                               :if-does-not-exist :create
-                              :direction :output)
-           (when dist
-             (format out "dist ~A~%" (dist-url dist)))))
+                              :direction :output)))
+       (when dist
+         (add-project `("dist" ,(dist-url dist)) qlfile))
        ;; Add .qlot/ to .gitignore (if .git/ directory exists)
        (let ((git-dir (merge-pathnames #P".git/" object)))
          (when (uiop:directory-exists-p git-dir)
