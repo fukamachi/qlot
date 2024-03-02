@@ -133,10 +133,16 @@ with the same key."
       (list object)))
 
 (defun ensure-package-loaded (package-names)
-  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning))
+  (handler-bind (#+sbcl (sb-kernel:redefinition-warning #'muffle-warning)
+                 #+sbcl (sb-int:package-at-variance-error
+                          (lambda (c)
+                            (let ((restart (find-restart 'sb-impl::drop-them c)))
+                              (when restart
+                                (invoke-restart restart))))))
     (let ((package-names (ensure-list package-names))
           (*standard-output* (make-broadcast-stream))
-          (*trace-output* (make-broadcast-stream)))
+          (*trace-output* (make-broadcast-stream))
+          #+sbcl (sb-ext:*on-package-variance* '(:error t)))
       (dolist (package-name package-names)
         (check-type package-name keyword)
         (unless (find-package package-name)
