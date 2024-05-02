@@ -33,7 +33,8 @@
               for source = (ignore-errors (parse-qlfile-line line))
               do (format out "~A~%"
                          (if (and source
-                                  (source= new-source source))
+                                  (equal (source-project-name new-source)
+                                         (source-project-name source)))
                              (progn
                                (setf replaced t)
                                (message "Update '~A' to '~A' in '~A'."
