@@ -5,7 +5,8 @@
   (:import-from #:qlot/source
                 #:source-project-name
                 #:source-identifier
-                #:source=)
+                #:source=
+                #:prepare-source)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
@@ -29,12 +30,15 @@
          (lines (uiop:read-file-lines qlfile)))
     (uiop:with-output-file (out qlfile :if-exists :supersede :if-does-not-exist :create)
       (let ((replaced nil))
+        (prepare-source new-source)
         (loop for line in lines
               for source = (ignore-errors (parse-qlfile-line line))
               do (format out "~A~%"
                          (if (and source
-                                  (equal (source-project-name new-source)
-                                         (source-project-name source)))
+                                  (progn
+                                    (prepare-source source)
+                                    (equal (source-project-name new-source)
+                                           (source-project-name source))))
                              (progn
                                (setf replaced t)
                                (message "Update '~A' to '~A' in '~A'."
@@ -58,8 +62,10 @@
           (loop for line in lines
                 for source = (ignore-errors (parse-qlfile-line line))
                 if (and source
-                        (find (source-project-name source) targets
-                              :test 'equal))
+                        (progn
+                          (prepare-source source)
+                          (find (source-project-name source) targets
+                                :test 'equal)))
                 collect
                    (progn
                      (message "Remove '~A'." (source-project-name source))
