@@ -11,7 +11,7 @@
 * [What Qlot is trying to solve](#what-qlot-is-trying-to-solve)
 * [Requirements](#requirements)
 * [Installation](#installation)
-  * [Automatic installer](#automatic-installer)
+  * [Automatic installer](#automatic-installer-recommended)
   * [via Roswell](#via-roswell)
   * [via Quicklisp](#via-quicklisp)
   * [Manual installation](#manual-installation)
