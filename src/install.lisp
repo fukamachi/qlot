@@ -23,6 +23,7 @@
   (:import-from #:qlot/distify
                 #:distify)
   (:import-from #:qlot/logger
+                #:*debug*
                 #:*enable-whisper*
                 #:*terminal*
                 #:message
@@ -293,6 +294,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                    sources-non-local))))
                  (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
                                                            (*terminal* . ,*terminal*)
+                                                           (*debug* . ,*debug*)
                                                            (*enable-whisper* . nil)
                                                            (,(uiop:intern* '#:*fetch-scheme-functions* '#:ql-http) . ',(symbol-value (uiop:intern* '#:*fetch-scheme-functions* '#:ql-http))))
                                                          bt2:*default-special-bindings*))

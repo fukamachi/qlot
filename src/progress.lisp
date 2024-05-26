@@ -1,7 +1,8 @@
 (defpackage #:qlot/progress
   (:use #:cl)
   (:import-from #:qlot/logger
-                #:*terminal*)
+                #:*terminal*
+                #:*debug*)
   (:import-from #:qlot/color
                 #:color-text)
   (:import-from #:bordeaux-threads)
@@ -170,7 +171,8 @@
                                     (funcall (or job-header-fn #'princ-to-string) job))))
                     (handler-bind ((error
                                      (lambda (e)
-                                       (declare (ignore e))
+                                       (when *debug*
+                                         (uiop:print-condition-backtrace e))
                                        (when failed-fn
                                          (funcall failed-fn)))))
                       (funcall worker-fn job))))

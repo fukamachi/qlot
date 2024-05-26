@@ -112,7 +112,7 @@ with the same key."
   (let ((buffer (make-array 1024 :element-type '(unsigned-byte 8))))
     (with-output-to-string (s)
       (loop for read-bytes = (read-sequence buffer stream)
-            do (write-string (map 'string #'code-char buffer) s)
+            do (write-string (map 'string #'code-char (subseq buffer 0 read-bytes)) s)
             while (= read-bytes 1024)))))
 
 (defun https-of (url)
