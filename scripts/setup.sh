@@ -2,14 +2,14 @@
 
 set -eux
 
-QLOT_SOURCE_DIR=$(dirname -- "${0%/*}")
+QLOT_SOURCE_DIR=$(realpath "$(dirname -- "${0%/*}")")
 
 ansi() {
   [ $# -gt 0 ] || return
   printf "\033[%sm" "$@"
 }
 [ -t 1 ] || ansi() { :; }
-errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" $1 "$(ansi 0)"; }
+errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 if [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros +Q -L sbcl-bin run --"
 elif [ "$(which sbcl 2>/dev/null)" != "" ]; then

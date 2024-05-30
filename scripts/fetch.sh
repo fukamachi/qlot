@@ -9,7 +9,7 @@ ansi() {
   printf "\033[%sm" "$@"
 }
 [ -t 1 ] || ansi() { :; }
-errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" $1 "$(ansi 0)"; }
+errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 
 if [ "$(which ros 2>/dev/null)" != "" ]; then
   lisp="ros +Q -L sbcl-bin run --"
