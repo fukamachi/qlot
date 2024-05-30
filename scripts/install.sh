@@ -41,5 +41,5 @@ fi
 
 mkdir -p "$REGISTRY_DIR"
 if [ ! -f "$REGISTRY_DIR/qlot.asd" ]; then
-  ln -s "$QLOT_SOURCE_DIR/qlot.asd" "$REGISTRY_DIR/qlot.asd"
+  ln -sf "$QLOT_SOURCE_DIR/qlot.asd" "$REGISTRY_DIR/qlot.asd"
 fi
