@@ -2,7 +2,7 @@
 
 set -eu
 
-QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 && pwd -P)
+QLOT_SOURCE_DIR=$(dirname -- "${0%/*}")
 
 ansi() {
   [ $# -gt 0 ] || return
