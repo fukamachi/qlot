@@ -2,7 +2,7 @@
 
 set -eux
 
-QLOT_SOURCE_DIR=$(cd "$(dirname "$0")/../" 2>&1 >/dev/null && pwd -P)
+QLOT_SOURCE_DIR=$(realpath "$(dirname -- "${0%/*}")")
 
 ansi() {
   [ $# -gt 0 ] || return
@@ -41,5 +41,5 @@ fi
 
 mkdir -p "$REGISTRY_DIR"
 if [ ! -f "$REGISTRY_DIR/qlot.asd" ]; then
-  ln -s "$QLOT_SOURCE_DIR/qlot.asd" "$REGISTRY_DIR/qlot.asd"
+  ln -sf "$QLOT_SOURCE_DIR/qlot.asd" "$REGISTRY_DIR/qlot.asd"
 fi
