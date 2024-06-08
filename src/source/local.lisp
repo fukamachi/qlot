@@ -57,3 +57,9 @@
           (loop for (k v) on (rest source-params) by #'cddr
                 unless (eq k :version)
                 append (list k v)))))
+
+(defmethod source= ((source1 source-local) (source2 source-local))
+  (and (string= (source-project-name source1)
+                (source-project-name source2))
+       (equal (source-local-path source1)
+              (source-local-path source2))))
