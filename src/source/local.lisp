@@ -23,7 +23,15 @@
     (string
      (if (starts-with "~/" path)
          `(:home ,(uiop:ensure-directory-pathname (subseq path 2)))
-         (uiop:ensure-directory-pathname path)))
+         (let ((path (uiop:ensure-directory-pathname path)))
+           (if (uiop:absolute-pathname-p path)
+               path
+               (let ((pathspec (pathname-directory path)))
+                 (when (equal (second pathspec) ".")
+                   (setf (rest pathspec) (nthcdr 2 pathspec)))
+                 (setf (rest pathspec)
+                       (cons :up (rest pathspec)))
+                 `(:here ,(make-pathname :directory pathspec)))))))
     (pathname path)))
 
 (defun source-local-registry-directive (source)
