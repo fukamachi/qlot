@@ -26,12 +26,12 @@
          (let ((path (uiop:ensure-directory-pathname path)))
            (if (uiop:absolute-pathname-p path)
                path
-               `(:here
-                 ,(make-pathname
-                   :directory
-                   (uiop:merge-pathname-directory-components
-                    (pathname-directory path)
-                    '(:relative :up))))))))
+               (let ((pathspec (pathname-directory path)))
+                 (when (equal (second pathspec) ".")
+                   (setf (rest pathspec) (nthcdr 2 pathspec)))
+                 (setf (rest pathspec)
+                       (cons :up (rest pathspec)))
+                 `(:here ,(make-pathname :directory pathspec)))))))
     (pathname path)))
 
 (defun source-local-registry-directive (source)
