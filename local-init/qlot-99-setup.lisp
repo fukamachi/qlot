@@ -51,34 +51,37 @@
         (make-system-cache :system-files system-files)))
 
 (defun project-system-searcher (system-name)
-  (block nil
-    (uiop:collect-sub*directories
-     *project-root*
-     (lambda (dir)
-       (let ((dirname (car (last (pathname-directory dir)))))
-         (and (stringp dirname)
-              (not (equal dirname ""))
-              (not (char= (aref dirname 0) #\.))
-              (not (find dirname asdf/source-registry:*default-source-registry-exclusions*
-                         :test 'equal)))))
-     t
-     (lambda (dir)
-       (let* ((system-files
-                (or (find-cache dir)
-                    (let ((asd-files
-                            (uiop:directory-files dir "*.asd")))
-                      (put-cache dir asd-files)
-                      asd-files)))
-              (system-file
-                (find system-name system-files
-                      :key #'pathname-name
-                      :test 'equal)))
-         (when system-file
-           (return system-file)))))))
+  (when (and (not (asdf:registered-system system-name))
+             (equal (asdf:primary-system-name system-name) system-name))
+    (block nil
+      (uiop:collect-sub*directories
+       *project-root*
+       (lambda (dir)
+         (let ((dirname (car (last (pathname-directory dir)))))
+           (and (stringp dirname)
+                (not (equal dirname ""))
+                (not (char= (aref dirname 0) #\.))
+                (not (find dirname asdf/source-registry:*default-source-registry-exclusions*
+                           :test 'equal)))))
+       t
+       (lambda (dir)
+         (let* ((system-files
+                  (or (find-cache dir)
+                      (let ((asd-files
+                              (uiop:directory-files dir "*.asd")))
+                        (put-cache dir asd-files)
+                        asd-files)))
+                (system-file
+                  (find system-name system-files
+                        :key #'pathname-name
+                        :test 'equal)))
+           (when system-file
+             (return system-file))))))))
 
 (defun add-system-definition-search-function ()
-  (pushnew 'project-system-searcher
-           asdf:*system-definition-search-functions*))
+  (setf asdf:*system-definition-search-functions*
+        (append asdf:*system-definition-search-functions*
+                (list 'project-system-searcher))))
 
 (setup-source-registry)
 (add-system-definition-search-function)
