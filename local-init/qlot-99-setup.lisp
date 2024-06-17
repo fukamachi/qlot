@@ -51,7 +51,7 @@
         (make-system-cache :system-files system-files)))
 
 (defun project-system-searcher (system-name)
-  (when (and (not (asdf:registered-system system-name))
+  (when (and (not (asdf::registered-system system-name))
              (equal (asdf:primary-system-name system-name) system-name))
     (block nil
       (uiop:collect-sub*directories

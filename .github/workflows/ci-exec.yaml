@@ -1,0 +1,29 @@
+name: CI for qlot exec
+
+on: [push]
+
+jobs:
+  test:
+    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin, abcl-bin, ecl, clasp-bin, ccl-bin]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Roswell
+        env:
+          LISP: ${{ matrix.lisp }}
+          ROSWELL_INSTALL_DIR: /usr
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Compile local-inits
+        run: |
+          for file in $(find ./local-init -name "*.lisp"); do
+            ros -e "(or (compile-file #P\"$file\") (uiop:quit -1))"
+          done
