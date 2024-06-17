@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        lisp: [sbcl-bin, abcl-bin, ecl]
+        lisp: [sbcl-bin, abcl-bin, ecl, clasp-bin, ccl-bin]
         os: [ubuntu-latest]
       fail-fast: false
 
