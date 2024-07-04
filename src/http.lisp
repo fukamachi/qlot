@@ -3,6 +3,8 @@
   (:shadow #:get)
   (:import-from #:qlot/proxy
                 #:*proxy*)
+  (:import-from #:qlot/logger
+                #:*debug*)
   (:import-from #:dexador)
   #-windows
   (:import-from #:cl+ssl)
@@ -23,6 +25,7 @@
            :if-exists :supersede
            :keep-alive nil
            :proxy *proxy*
+           :verbose *debug*
            (and basic-auth
                 (list :basic-auth basic-auth)))))
 
@@ -32,4 +35,5 @@
     (apply #'dex:get url
            :keep-alive nil
            :proxy *proxy*
+           :verbose *debug*
            args)))
