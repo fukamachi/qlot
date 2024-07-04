@@ -50,22 +50,28 @@
   (gethash "default_branch" (retrieve-from-github repos)))
 
 (defun retrieve-source-git-ref-from-github (source)
-  (labels ((find-ref (results name)
-             (let ((result (find-if (lambda (result)
-                                      (string= (gethash "name" result) name))
-                                    results)))
-               (and result
-                    (gethash "sha" (gethash "commit" result)))))
-           (get-ref (action name)
-             (find-ref (retrieve-from-github (source-github-repos source) action)
-                       name)))
+  (labels ((get-tag-ref (name)
+             (reduce #'gethash
+                     '("sha" "object")
+                     :initial-value
+                     (retrieve-from-github (source-github-repos source)
+                                           (format nil "/git/refs/tags/~A" name))
+                     :from-end t))
+           (get-branch-ref (name)
+             (reduce #'gethash
+                     '("sha" "commit")
+                     :initial-value
+                     (retrieve-from-github (source-github-repos source)
+                                           (format nil "/branches/~A" name))
+                     :from-end t)))
     (cond
       ((source-github-ref source))
       ((source-github-branch source)
-       (get-ref "/branches" (source-github-branch source)))
+       (get-branch-ref (source-github-branch source)))
       ((source-github-tag source)
-       (get-ref "/tags" (source-github-tag source)))
-      (t (get-ref "/branches" (retrieve-default-branch (source-github-repos source)))))))
+       (get-tag-ref (source-github-tag source)))
+      (t
+       (get-branch-ref (retrieve-default-branch (source-github-repos source)))))))
 
 (defun load-source-github-version (source)
   (unless (ignore-errors (source-github-ref source))
