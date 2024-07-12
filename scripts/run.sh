@@ -3,7 +3,6 @@
 set -e
 
 QLOT_SOURCE_DIR=$(dirname -- "${0%/*}")
-LISP=${LISP:-}
 
 ansi() {
   [ $# -gt 0 ] || return
@@ -15,6 +14,7 @@ if ! [ -t 1 ]; then
 fi
 errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 
+# shellcheck disable=SC2153
 if [ "$LISP" = "" ]; then
   if [ "$(which ros 2>/dev/null)" != "" ]; then
     lisp="ros"
@@ -82,7 +82,8 @@ if [ "$QLOT_SETUP_FILE" = "" ]; then
   fi
 fi
 
-exec $lisp_cmd "$lisp_init_options" \
+# shellcheck disable=SC2086
+exec $lisp_cmd $lisp_init_options \
   "$eval_option" "(let (*load-verbose*) (load \"$QLOT_SETUP_FILE\"))" \
   "$eval_option" "(let (*load-verbose*) (asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\"))" \
   "$eval_option" '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \
