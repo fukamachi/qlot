@@ -1,6 +1,9 @@
 name: CI for qlot exec
 
-on: [push]
+on:
+  push:
+    paths:
+      - 'local-init/**'
 
 jobs:
   test:
