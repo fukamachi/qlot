@@ -45,5 +45,8 @@ jobs:
           git clone https://github.com/lem-project/lem
           cd lem
           qlot install
+          [ -f ".qlot/setup.lisp" ]
       - name: Run qlot-uninstaller.sh
-        run: scripts/qlot-uninstaller.sh
+        run: |
+          scripts/qlot-uninstaller.sh
+          [ $(which qlot) ]
