@@ -1,0 +1,16 @@
+name: CI for scripts
+
+on:
+  push:
+    paths:
+      - 'scripts/**'
+
+jobs:
+  test:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable scripts/*
