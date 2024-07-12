@@ -2,7 +2,7 @@
 
 set -eu
 
-if [ `id -u` -eq 0 ]; then
+if [ "$(id -u)" -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
   QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
@@ -24,7 +24,7 @@ ansi() {
 rm "$QLOT_BIN_DIR"/qlot
 rm -r "$QLOT_HOME"
 
-if [ `id -u` -eq 0 ]; then
+if [ "$(id -u)" -eq 0 ]; then
   REGISTRY_DIR=/usr/local/share/common-lisp/systems
 else
   REGISTRY_DIR="${XDG_DATA_HOME:-~/.local/share}/common-lisp/systems"
