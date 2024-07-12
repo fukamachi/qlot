@@ -5,7 +5,7 @@ set -eu
 VERSION=${VERSION:-heads/master}
 QLOT_ARCHIVE=${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
 
-if [ `id -u` -eq 0 ]; then
+if [ "$(id -u)" -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
   QLOT_BIN_DIR=${QLOT_BIN_DIR:-"$QLOT_BASE/bin"}
@@ -43,7 +43,7 @@ check_requirement() {
   if [ $# -eq 1 ]; then
     errmsg "$1 is required to install Qlot"
   else
-    printf -v all_cmds '%s, ' "$@"
+    all_cmds=$(printf '%s, ' "$@")
     errmsg "One of ${all_cmds%, } is required to install Qlot"
   fi
   exit 1
@@ -82,7 +82,7 @@ mkdir -p "$QLOT_TMP_DIR"
 if [ -f "$QLOT_TMP_DIR/qlot.tar.gz" ]; then
   echo "Already have an archive: $QLOT_TMP_DIR/qlot.tar.gz"
 else
-  echo -n "Downloading an archive from '$QLOT_ARCHIVE'..."
+  printf "Downloading an archive from '%s'..." "$QLOT_ARCHIVE"
   if [ "$(which curl 2>/dev/null)" != "" ]; then
     curl -sL "$QLOT_ARCHIVE" -o "$QLOT_TMP_DIR/qlot.tar.gz"
   else
@@ -93,7 +93,7 @@ fi
 tar zxf "$QLOT_TMP_DIR/qlot.tar.gz" -C "$QLOT_TMP_DIR"
 
 if [ -d "$QLOT_SOURCE_DIR/" ]; then
-  rm -rf "$QLOT_SOURCE_DIR/"
+  rm -rf "${QLOT_SOURCE_DIR:?}/"
 fi
 mv "$(find "$QLOT_TMP_DIR" -maxdepth 1 -mindepth 1 -type d -name "qlot*")" "$QLOT_SOURCE_DIR"
 
@@ -107,27 +107,27 @@ cd "$QLOT_SOURCE_DIR"
 mkdir -p "$QLOT_LOGS_DIR"
 install_log_path="$QLOT_LOGS_DIR/install-$(date '+%s').log"
 echo "Setting it up. This may take a while..."
-scripts/setup.sh > "$install_log_path" 2>&1
+setup_success=$(scripts/setup.sh > "$install_log_path" 2>&1)
 
-if [ $? -ne 0 ]; then
+if [ "$setup_success" -ne 0 ]; then
   errmsg "Setup process is failed. See '$install_log_path' for the detailed logs."
   errmsg "If it can be a bug, please report an issue at https://github.com/fukamachi/qlot/issues."
-  exit $?
+  exit "$setup_success"
 fi
 
-QLOT_BIN_DIR="$QLOT_BIN_DIR" scripts/install.sh >> "$install_log_path" 2>&1
+install_success=$(QLOT_BIN_DIR="$QLOT_BIN_DIR" scripts/install.sh >> "$install_log_path" 2>&1)
 
-if [ $? -ne 0 ]; then
+if [ "$install_success" -ne 0 ]; then
   errmsg "Install process is failed. See '$install_log_path' for the detailed logs."
   errmsg "If it can be a bug, please report an issue at https://github.com/fukamachi/qlot/issues."
-  exit $?
+  exit "$install_success"
 fi
 
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
 echo ''
 
-if [ `id -u` -ne 0 ]; then
+if [ "$(id -u)" -ne 0 ]; then
   echo "The executable script is located at '$QLOT_BIN_DIR/qlot'."
   echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
   echo ''

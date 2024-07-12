@@ -3,6 +3,7 @@
 set -e
 
 QLOT_SOURCE_DIR=$(dirname -- "${0%/*}")
+LISP=${LISP:-}
 
 ansi() {
   [ $# -gt 0 ] || return
@@ -81,7 +82,7 @@ if [ "$QLOT_SETUP_FILE" = "" ]; then
   fi
 fi
 
-exec $lisp_cmd $lisp_init_options \
+exec $lisp_cmd "$lisp_init_options" \
   "$eval_option" "(let (*load-verbose*) (load \"$QLOT_SETUP_FILE\"))" \
   "$eval_option" "(let (*load-verbose*) (asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\"))" \
   "$eval_option" '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/cli))' \
