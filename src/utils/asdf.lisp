@@ -1,7 +1,8 @@
 (defpackage #:qlot/utils/asdf
   (:use #:cl)
   (:import-from #:qlot/utils
-                #:starts-with)
+                #:starts-with
+                #:with-package-functions)
   (:import-from #:qlot/logger
                 #:*debug*)
   (:export #:with-autoload-on-missing
@@ -18,6 +19,16 @@
 (defparameter *exclude-directories*
   (append (list "quicklisp" ".qlot" "bundle-libs")
           asdf::*default-source-registry-exclusions*))
+
+(defmacro with-muffle-streams (&body body)
+  (let ((main (gensym "MAIN")))
+    `(flet ((,main () ,@body))
+       (if *debug*
+           (,main)
+           (let ((*standard-output* (make-broadcast-stream))
+                 (*error-output* (make-broadcast-stream))
+                 (*trace-output* (make-broadcast-stream)))
+             (,main))))))
 
 (defun sbcl-contrib-p (name)
   (let ((name (princ-to-string name)))
@@ -133,7 +144,25 @@
                           (string pkg))))
                (when pkg
                  (setf (gethash pkg *package-system*)
-                       system-name))))))))))
+                       system-name)))))))
+      (t
+       (tagbody retry
+         (handler-case
+             (with-muffle-streams
+               (eval form))
+           (asdf:missing-dependency-of-version (c)
+             (error c))
+           ;; TODO: Avoid infinite-loop
+           (asdf:missing-dependency (c)
+             (with-package-functions #:ql-dist (ensure-installed find-system)
+               (let* ((system-name (asdf::missing-requires c))
+                      (system (find-system system-name)))
+                 (unless system
+                   (error c))
+                 (with-muffle-streams
+                   (ensure-installed system)
+                   (asdf:load-system system-name :verbose nil))))
+             (go retry))))))))
 
 (defun read-asd-file (file)
   (uiop:with-input-file (in file)
@@ -189,9 +218,7 @@
       (flet ((primary-system-prefix-p (package-name)
                (check-type package-name string)
                (starts-with (format nil "~A/" primary-system-name) package-name)))
-        (let ((defpackage-form (let ((*error-output* (if *debug*
-                                                         *error-output*
-                                                         (make-broadcast-stream))))
+        (let ((defpackage-form (with-muffle-streams
                                  (asdf/package-inferred-system::file-defpackage-form file))))
           (when defpackage-form
             (let* ((package-names (mapcar #'string-downcase
