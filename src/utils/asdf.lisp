@@ -150,7 +150,8 @@
   (uiop:with-input-file (in file)
     (let ((*load-pathname* file)
           (*load-truename* file)
-          (*load-asd-file* file))
+          (*load-asd-file* file)
+          (tried-so-far (make-hash-table :test 'equalp)))
       (uiop:with-safe-io-syntax (:package :asdf-user)
         (let ((*read-eval* t))
           (loop with eof = '#:eof
@@ -164,17 +165,19 @@
                                (eval form))
                          (asdf:missing-dependency-of-version (c)
                            (error c))
-                         ;; TODO: Avoid infinite-loop
                          (asdf:missing-dependency (c)
                            (with-package-functions #:ql-dist (ensure-installed find-system)
-                             (let* ((system-name (asdf::missing-requires c))
-                                    (system (find-system system-name)))
-                               (unless system
-                                 (warn "no system!! ~A" system-name)
-                                 (error c))
-                               (with-muffle-streams
+                             (let ((parent (asdf::missing-required-by c))
+                                   (missing (asdf::missing-requires c)))
+                               (if (gethash missing tried-so-far)
+                                   (error "Dependency looping -- already tried to load ~A" missing)
+                                   (setf (gethash missing tried-so-far) missing))
+                               (let ((system (find-system missing)))
+                                 (unless system
+                                   (error c))
+                                 (with-muffle-streams
                                    (ensure-installed system)
-                                 (asdf:load-system system-name :verbose nil))))
+                                   (asdf:load-system missing :verbose nil)))))
                            (go retry)))))))))))
 
 (defun system-class-name (system-name)
