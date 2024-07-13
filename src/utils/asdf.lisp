@@ -144,27 +144,9 @@
                           (string pkg))))
                (when pkg
                  (setf (gethash pkg *package-system*)
-                       system-name))))))))
-    (tagbody retry
-      (handler-case
-          (with-muffle-streams
-              (eval form))
-        (asdf:missing-dependency-of-version (c)
-          (error c))
-        ;; TODO: Avoid infinite-loop
-        (asdf:missing-dependency (c)
-          (with-package-functions #:ql-dist (ensure-installed find-system)
-            (let* ((system-name (asdf::missing-requires c))
-                   (system (find-system system-name)))
-              (unless system
-                (warn "no system!! ~A" system-name)
-                (error c))
-              (with-muffle-streams
-                  (ensure-installed system)
-                (asdf:load-system system-name :verbose nil))))
-          (go retry))))))
+                       system-name))))))))))
 
-(defun read-asd-file (file)
+(defun read-asd-file (file &key eval-form)
   (uiop:with-input-file (in file)
     (let ((*load-pathname* file)
           (*load-truename* file)
@@ -174,7 +156,26 @@
           (loop with eof = '#:eof
                 for form = (read-preserving-whitespace in nil eof)
                 until (eq form eof)
-                do (read-asd-form form)))))))
+                do (read-asd-form form)
+                   (when eval-form
+                     (tagbody retry
+                       (handler-case
+                           (with-muffle-streams
+                               (eval form))
+                         (asdf:missing-dependency-of-version (c)
+                           (error c))
+                         ;; TODO: Avoid infinite-loop
+                         (asdf:missing-dependency (c)
+                           (with-package-functions #:ql-dist (ensure-installed find-system)
+                             (let* ((system-name (asdf::missing-requires c))
+                                    (system (find-system system-name)))
+                               (unless system
+                                 (warn "no system!! ~A" system-name)
+                                 (error c))
+                               (with-muffle-streams
+                                   (ensure-installed system)
+                                 (asdf:load-system system-name :verbose nil))))
+                           (go retry)))))))))))
 
 (defun system-class-name (system-name)
   (gethash system-name *system-class-name*))
@@ -182,14 +183,15 @@
 (defun system-pathname (system-name)
   (gethash system-name *system-pathname*))
 
-(defmacro with-directory ((system-file system-name dependencies) directory &body body)
+(defmacro with-directory ((system-file system-name dependencies &key eval-form) directory &body body)
   (let ((value (gensym "VALUE"))
         (dir-system-files (gensym "DIR-SYSTEM-FILES")))
     `(with-traversal-context
        (let ((,dir-system-files (directory-system-files ,directory)))
          (dolist (,system-file ,dir-system-files)
            (handler-bind ((style-warning #'muffle-warning))
-             (read-asd-file ,system-file)))
+             (read-asd-file ,system-file
+                            :eval-form ,eval-form)))
          (dolist (,system-file ,dir-system-files)
            (declare (ignorable ,system-file))
            (let ((,value (gethash ,system-file *registry*)))

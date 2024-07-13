@@ -115,7 +115,9 @@
                         (not (some (lambda (fn)
                                      (funcall fn system-name))
                                    exclude-functions))))))
-      (with-directory (system-file system-name dependencies) project-root
+      (with-directory (system-file system-name dependencies
+                                   :eval-form t)
+          project-root
         (pushnew system-name project-system-names :test 'equal)
         (when (or (null test)
                   (funcall test system-name))
