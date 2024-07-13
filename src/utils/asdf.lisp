@@ -1,7 +1,8 @@
 (defpackage #:qlot/utils/asdf
   (:use #:cl)
   (:import-from #:qlot/utils
-                #:starts-with)
+                #:starts-with
+                #:with-package-functions)
   (:import-from #:qlot/logger
                 #:*debug*)
   (:export #:with-autoload-on-missing
@@ -18,6 +19,16 @@
 (defparameter *exclude-directories*
   (append (list "quicklisp" ".qlot" "bundle-libs")
           asdf::*default-source-registry-exclusions*))
+
+(defmacro with-muffle-streams (&body body)
+  (let ((main (gensym "MAIN")))
+    `(flet ((,main () ,@body))
+       (if *debug*
+           (,main)
+           (let ((*standard-output* (make-broadcast-stream))
+                 (*error-output* (make-broadcast-stream))
+                 (*trace-output* (make-broadcast-stream)))
+             (,main))))))
 
 (defun sbcl-contrib-p (name)
   (let ((name (princ-to-string name)))
@@ -135,17 +146,39 @@
                  (setf (gethash pkg *package-system*)
                        system-name))))))))))
 
-(defun read-asd-file (file)
+(defun read-asd-file (file &key eval-form)
   (uiop:with-input-file (in file)
     (let ((*load-pathname* file)
           (*load-truename* file)
-          (*load-asd-file* file))
+          (*load-asd-file* file)
+          (tried-so-far (make-hash-table :test 'equalp)))
       (uiop:with-safe-io-syntax (:package :asdf-user)
         (let ((*read-eval* t))
           (loop with eof = '#:eof
                 for form = (read-preserving-whitespace in nil eof)
                 until (eq form eof)
-                do (read-asd-form form)))))))
+                do (read-asd-form form)
+                   (when eval-form
+                     (tagbody retry
+                       (handler-case
+                           (with-muffle-streams
+                               (eval form))
+                         (asdf:missing-dependency-of-version (c)
+                           (error c))
+                         (asdf:missing-dependency (c)
+                           (with-package-functions #:ql-dist (ensure-installed find-system)
+                             (let ((parent (asdf::missing-required-by c))
+                                   (missing (asdf::missing-requires c)))
+                               (if (gethash missing tried-so-far)
+                                   (error "Dependency looping -- already tried to load ~A" missing)
+                                   (setf (gethash missing tried-so-far) missing))
+                               (let ((system (find-system missing)))
+                                 (unless system
+                                   (error c))
+                                 (with-muffle-streams
+                                   (ensure-installed system)
+                                   (asdf:load-system missing :verbose nil)))))
+                           (go retry)))))))))))
 
 (defun system-class-name (system-name)
   (gethash system-name *system-class-name*))
@@ -153,14 +186,15 @@
 (defun system-pathname (system-name)
   (gethash system-name *system-pathname*))
 
-(defmacro with-directory ((system-file system-name dependencies) directory &body body)
+(defmacro with-directory ((system-file system-name dependencies &key eval-form) directory &body body)
   (let ((value (gensym "VALUE"))
         (dir-system-files (gensym "DIR-SYSTEM-FILES")))
     `(with-traversal-context
        (let ((,dir-system-files (directory-system-files ,directory)))
          (dolist (,system-file ,dir-system-files)
            (handler-bind ((style-warning #'muffle-warning))
-             (read-asd-file ,system-file)))
+             (read-asd-file ,system-file
+                            :eval-form ,eval-form)))
          (dolist (,system-file ,dir-system-files)
            (declare (ignorable ,system-file))
            (let ((,value (gethash ,system-file *registry*)))
@@ -189,9 +223,7 @@
       (flet ((primary-system-prefix-p (package-name)
                (check-type package-name string)
                (starts-with (format nil "~A/" primary-system-name) package-name)))
-        (let ((defpackage-form (let ((*error-output* (if *debug*
-                                                         *error-output*
-                                                         (make-broadcast-stream))))
+        (let ((defpackage-form (with-muffle-streams
                                  (asdf/package-inferred-system::file-defpackage-form file))))
           (when defpackage-form
             (let* ((package-names (mapcar #'string-downcase
