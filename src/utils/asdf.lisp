@@ -144,25 +144,25 @@
                           (string pkg))))
                (when pkg
                  (setf (gethash pkg *package-system*)
-                       system-name)))))))
-      (t
-       (tagbody retry
-         (handler-case
-             (with-muffle-streams
-               (eval form))
-           (asdf:missing-dependency-of-version (c)
-             (error c))
-           ;; TODO: Avoid infinite-loop
-           (asdf:missing-dependency (c)
-             (with-package-functions #:ql-dist (ensure-installed find-system)
-               (let* ((system-name (asdf::missing-requires c))
-                      (system (find-system system-name)))
-                 (unless system
-                   (error c))
-                 (with-muffle-streams
-                   (ensure-installed system)
-                   (asdf:load-system system-name :verbose nil))))
-             (go retry))))))))
+                       system-name))))))))
+    (tagbody retry
+      (handler-case
+          (with-muffle-streams
+              (eval form))
+        (asdf:missing-dependency-of-version (c)
+          (error c))
+        ;; TODO: Avoid infinite-loop
+        (asdf:missing-dependency (c)
+          (with-package-functions #:ql-dist (ensure-installed find-system)
+            (let* ((system-name (asdf::missing-requires c))
+                   (system (find-system system-name)))
+              (unless system
+                (warn "no system!! ~A" system-name)
+                (error c))
+              (with-muffle-streams
+                  (ensure-installed system)
+                (asdf:load-system system-name :verbose nil))))
+          (go retry))))))
 
 (defun read-asd-file (file)
   (uiop:with-input-file (in file)
