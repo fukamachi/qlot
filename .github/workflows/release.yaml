@@ -20,6 +20,14 @@ jobs:
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
       - name: Install Ultralisp
         run: ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
+      - name: Install Rove
+        run: ros install rove
+      - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PATH="~/.roswell/bin:$PATH"
+          rove qlot.asd
       - name: Setup Qlot
         run: scripts/setup.sh
       - name: Bundle dependencies
