@@ -6,7 +6,7 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  release:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +30,30 @@ jobs:
           rove qlot.asd
       - name: Setup Qlot
         run: scripts/setup.sh
+      - name: Output Ultralisp version
+        id: ultralisp_version
+        run: |
+          ros -e '(format t "~A~%" (ql-dist:version (ql-dist:dist "quicklisp")))' >> $GITHUB_OUTPUT
+    outputs:
+      ultralisp_version: ${{ steps.ultralisp_version.outputs.ultralisp_version }}
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Roswell
+        env:
+          LISP: sbcl-bin
+          ROSWELL_INSTALL_DIR: /usr
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Install Ultralisp
+        run: ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/ultralisp/${{ needs.test.outputs.ultralisp_version }}/distinfo.txt" :prompt nil)'
+      - name: Setup Qlot
+        run: scripts/setup.sh
       - name: Bundle dependencies
         run: scripts/run.sh bundle --exclude qlot-tests --exclude "qlot-tests/*"
       - name: Create a bundled tarball
@@ -44,3 +68,39 @@ jobs:
           files: |
             /tmp/qlot-${{ github.ref_name }}.tar.gz
             /tmp/qlot-installer-${{ github.ref_name }}.sh
+
+  publish_image:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          image: tonistiigi/binfmt:qemu-v8.1.5
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+            fukamachi/qlot
+          tags: |
+            type=ref,event=tag
+      - name: Build and publish
+        uses: docker/build-push-action@v2
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: ULTRALISP_VERSION=${{ needs.test.outputs.ultralisp_version }}

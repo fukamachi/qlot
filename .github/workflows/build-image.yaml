@@ -1,6 +1,8 @@
 name: Build Docker image
 
-on: [push]
+on:
+  push:
+    branches: ['**']
 
 jobs:
   build:
@@ -30,7 +32,6 @@ jobs:
             fukamachi/qlot
           tags: |
             type=ref,event=branch
-            type=ref,event=tag
       - name: Build and publish
         uses: docker/build-push-action@v2
         with:
