@@ -11,6 +11,7 @@ RUN set -x; \
   rm -rf /var/lib/apt/lists/*
 
 RUN set -x; \
+  ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)' && \
   ros -S /root/.roswell/local-projects/fukamachi/qlot install qlot && \
   ros -e '(ql:quickload (list :qlot :qlot/cli :qlot/distify))'
 
