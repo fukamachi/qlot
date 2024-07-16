@@ -1,4 +1,5 @@
 FROM fukamachi/sbcl
+ARG ULTRALISP_VERSION
 
 WORKDIR /app
 
@@ -11,7 +12,11 @@ RUN set -x; \
   rm -rf /var/lib/apt/lists/*
 
 RUN set -x; \
-  ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)' && \
+  if [ "$ULTRALISP_VERSION" = "" ]; then \
+    ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'; \
+  else \
+    ros -e "(ql-dist:install-dist \"http://dist.ultralisp.org/ultralisp/$ULTRALISP_VERSION/distinfo.txt\" :prompt nil)"; \
+  fi; \
   ros -S /root/.roswell/local-projects/fukamachi/qlot install qlot && \
   ros -e '(ql:quickload (list :qlot :qlot/cli :qlot/distify))'
 
