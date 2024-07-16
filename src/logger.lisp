@@ -10,6 +10,7 @@
            #:whisper
            #:clear-whisper
            #:message
+           #:warn-message
            #:debug-log))
 (in-package #:qlot/logger)
 
@@ -54,6 +55,14 @@
         (text (apply #'format nil format-control format-arguments)))
     (clear-whisper)
     (write-string text out)
+    (write-char #\Newline out))
+  (values))
+
+(defun warn-message (format-control &rest format-arguments)
+  (let ((out *logger-message-stream*)
+        (text (apply #'format nil format-control format-arguments)))
+    (clear-whisper)
+    (write-string (color-text :yellow text) out)
     (write-char #\Newline out))
   (values))
 

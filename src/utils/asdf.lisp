@@ -4,7 +4,8 @@
                 #:starts-with
                 #:with-package-functions)
   (:import-from #:qlot/logger
-                #:*debug*)
+                #:*debug*
+                #:warn-message)
   (:export #:with-autoload-on-missing
            #:directory-system-files
            #:system-class-name
@@ -167,8 +168,7 @@
                            (error c))
                          (asdf:missing-dependency (c)
                            (with-package-functions #:ql-dist (ensure-installed find-system)
-                             (let ((parent (asdf::missing-required-by c))
-                                   (missing (asdf::missing-requires c)))
+                             (let ((missing (asdf::missing-requires c)))
                                (if (gethash missing tried-so-far)
                                    (error "Dependency looping -- already tried to load ~A" missing)
                                    (setf (gethash missing tried-so-far) missing))
@@ -192,12 +192,19 @@
     `(with-traversal-context
        (let ((,dir-system-files (directory-system-files ,directory)))
          (dolist (,system-file ,dir-system-files)
-           (handler-bind ((style-warning #'muffle-warning))
-             (read-asd-file ,system-file
-                            :eval-form ,eval-form)))
+           (handler-case
+               (handler-bind ((style-warning #'muffle-warning))
+                 (read-asd-file ,system-file
+                                :eval-form ,eval-form))
+             (error (c)
+               (warn-message "Failed to calculate dependencies for '~A' due to an error while loading it."
+                             (file-namestring ,system-file))
+               (when *debug*
+                 (warn-message "    ~A~%" c)))))
          (dolist (,system-file ,dir-system-files)
            (declare (ignorable ,system-file))
-           (let ((,value (gethash ,system-file *registry*)))
+           (let ((,value (or (gethash ,system-file *registry*)
+                             (list (list (pathname-name ,system-file))))))
              (dolist (,value ,value)
                (destructuring-bind (,system-name &rest ,dependencies) ,value
                  (declare (ignorable ,system-name ,dependencies))
