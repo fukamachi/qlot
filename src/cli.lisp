@@ -764,7 +764,7 @@ OPTIONS:
                                  error.log)))
                          (fresh-line)
                          (error-message "Unexpected error: ~A" c)
-                         (message "This can be a bug of Qlot.~%Report it at https://github.com/fukamachi/qlot/issues/new/choose.")
+                         (message "This could be a bug in Qlot.~%Report it at https://github.com/fukamachi/qlot/issues/new/choose.")
                          (message "Please attach the stack trace dumped to '~A'." error.log))
                        (uiop:quit -1))))
       (handler-case
