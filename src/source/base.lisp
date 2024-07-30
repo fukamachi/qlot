@@ -3,7 +3,8 @@
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/errors
-                #:unknown-source)
+                #:unknown-source
+                #:invalid-project-name)
   (:export #:source
            #:source-project-name
            #:source-version
@@ -39,6 +40,25 @@
   (prog1 (call-next-method)
     (remf initargs :project-name)
     (setf (slot-value source 'initargs) initargs)))
+
+(defmethod initialize-instance :after ((source source) &rest initargs)
+  (declare (ignore initargs))
+  (let ((project-name (source-project-name source)))
+    (check-type project-name (or string null))
+    (when project-name
+      (let ((forbidden-chars
+              (loop for char in
+                       #-(or mswindows win32)
+                       '(#\/)
+                       #+(or mswindows win32)
+                       '(#\< #\> #\: #\" #\\ #\/ #\| #\? #\*)
+                    when (find char project-name :test #'char=)
+                    collect char)))
+        (when forbidden-chars
+          (error 'invalid-project-name
+                 :name project-name
+                 :reason (format nil "Project names must not contain ~{'~A'~#[~;, and ~:;, ~]~}"
+                                 forbidden-chars)))))))
 
 (defgeneric make-source (source &rest args)
   (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")

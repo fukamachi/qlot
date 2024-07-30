@@ -27,7 +27,8 @@
         (make-instance 'source-ultralisp
                        :project-name project-name
                        :%version version))
-    (error ()
+    (error (e)
       (error 'invalid-definition
              :source :ultralisp
+             :reason e
              :usage "ultralisp <project name> [<version>]"))))

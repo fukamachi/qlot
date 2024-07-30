@@ -56,9 +56,10 @@
                  :tag tag
                  (and project-name
                       (list :project-name project-name))))
-      (error ()
+      (error (e)
         (error 'invalid-definition
                :source :github
+               :reason e
                :usage "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]")))))
 
 (defmethod prepare-source ((source source-github))

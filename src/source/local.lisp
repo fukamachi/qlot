@@ -46,9 +46,10 @@
         (make-instance 'source-local
                        :project-name project-name
                        :path path))
-    (error ()
+    (error (e)
       (error 'invalid-definition
              :source :local
+             :reason e
              :usage "local <project name> <directory path>"))))
 
 (defmethod initialize-instance :after ((source source-local) &rest initargs)

@@ -17,7 +17,8 @@
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed
                 #:unknown-source
-                #:invalid-definition))
+                #:invalid-definition
+                #:invalid-project-name))
 (in-package #:qlot-tests/parser)
 
 (defun test-qlfile (name)
@@ -50,6 +51,11 @@
         (parse-qlfile-line "source")
         'unknown-source)
       "invalid source")
+
+  (ok (signals
+       (parse-qlfile-line "git yaclml/test https://github.com/sharplispers/yaclml.git")
+       'invalid-project-name)
+      "Project name can't contain a slash")
 
   (ok (equal (parse-qlfile-line "# This is a comment.") nil)
       "# comment")

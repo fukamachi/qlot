@@ -44,9 +44,10 @@
                  :%version version
                  (and project-name
                       (list :project-name project-name)))))
-    (error ()
+    (error (e)
       (error 'invalid-definition
              :source :dist
+             :reason e
              :usage "dist <distribution URL> [<version>]"))))
 
 (defmethod prepare-source ((source source-dist))

@@ -25,9 +25,10 @@
                        :project-name project-name
                        :url url
                        :archive-md5 archive-md5))
-    (error ()
+    (error (e)
       (error 'invalid-definition
              :source :http
+             :reason e
              :usage "http <project name> <tarball URL> [<archive MD5>]"))))
 
 (defmethod defrost-source :after ((source source-http))

@@ -47,9 +47,10 @@
                :project-name project-name
                :remote-url remote-url
                args))
-    (error ()
+    (error (e)
       (error 'invalid-definition
              :source :git
+             :reason e
              :usage "git <project name> <remote URL> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]"))))
 
 (defmethod defrost-source :after ((source source-git))
