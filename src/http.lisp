@@ -6,7 +6,7 @@
   (:import-from #:qlot/logger
                 #:*debug*)
   (:import-from #:dexador)
-  #-windows
+  #-(or mswindows win32)
   (:import-from #:cl+ssl)
   (:export #:fetch
            #:get))
@@ -15,7 +15,7 @@
 (defmacro with-retry (() &body body)
   `(let ((retry-request (dex:retry-request 2 :interval 3)))
      (handler-bind ((dex:http-request-failed retry-request)
-                    #-windows
+                    #-(or mswindows win32)
                     (cl+ssl::ssl-error retry-request))
        ,@body)))
 
