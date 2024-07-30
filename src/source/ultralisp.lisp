@@ -6,8 +6,6 @@
                 #:source-ql)
   (:import-from #:qlot/source/dist
                 #:source-distribution)
-  (:import-from #:qlot/errors
-                #:invalid-definition)
   (:export #:source-ultralisp))
 (in-package #:qlot/source/ultralisp)
 
@@ -17,18 +15,15 @@
 (defmethod source-distribution ((source source-ultralisp))
   "http://dist.ultralisp.org/ultralisp.txt")
 
-(defmethod make-source ((source (eql :ultralisp)) &rest initargs)
-  (handler-case
-      (destructuring-bind (project-name &optional (version :latest))
-          initargs
-        (check-type project-name string)
-        (check-type version (or string (eql :latest)))
+(defmethod usage-of-source ((source (eql :ultralisp)))
+  "ultralisp <project name> [<version>]")
 
-        (make-instance 'source-ultralisp
-                       :project-name project-name
-                       :%version version))
-    (error (e)
-      (error 'invalid-definition
-             :source :ultralisp
-             :reason e
-             :usage "ultralisp <project name> [<version>]"))))
+(defmethod make-source ((source (eql :ultralisp)) &rest initargs)
+  (destructuring-bind (project-name &optional (version :latest))
+      initargs
+    (check-type project-name string)
+    (check-type version (or string (eql :latest)))
+
+    (make-instance 'source-ultralisp
+                   :project-name project-name
+                   :%version version)))

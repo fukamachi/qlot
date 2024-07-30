@@ -35,11 +35,12 @@
 
 (define-condition invalid-definition (qlot-syntax-error)
   ((source :initarg :source)
-   (usage :initarg :usage)
+   (usage :initarg :usage
+          :initform nil)
    (reason :initarg :reason
            :initform nil))
   (:report (lambda (condition stream)
-             (format stream "Invalid definition of '~(~A~)'.~@[~%Reason: ~A~]~%[usage] ~A"
+             (format stream "Invalid definition of '~(~A~)'.~@[~%Reason: ~A~]~%~@[[usage] ~A~]"
                      (slot-value condition 'source)
                      (slot-value condition 'reason)
                      (slot-value condition 'usage)))))

@@ -9,8 +9,6 @@
   (:import-from #:qlot/utils
                 #:https-of
                 #:starts-with)
-  (:import-from #:qlot/errors
-                #:invalid-definition)
   (:export #:source-dist
            #:source-dist-project
            #:source-distribution
@@ -30,25 +28,22 @@
 (defmethod source-distribution ((source source-dist-project))
   (error "Must be implemented in subclasses"))
 
+(defmethod usage-of-source ((source (eql :dist)))
+  "dist <distribution URL> [<version>]")
+
 (defmethod make-source ((source (eql :dist)) &rest initargs)
-  (handler-case
-      (let (project-name)
-        ;; project-name isn't necessary anymore
-        (unless (or (starts-with "http://" (first initargs))
-                    (starts-with "https://" (first initargs)))
-          (setf project-name (pop initargs)))
-        (destructuring-bind (distribution &optional (version :latest))
-            initargs
-          (apply #'make-instance 'source-dist
-                 :distribution (https-of distribution)
-                 :%version version
-                 (and project-name
-                      (list :project-name project-name)))))
-    (error (e)
-      (error 'invalid-definition
-             :source :dist
-             :reason e
-             :usage "dist <distribution URL> [<version>]"))))
+  (let (project-name)
+    ;; project-name isn't necessary anymore
+    (unless (or (starts-with "http://" (first initargs))
+                (starts-with "https://" (first initargs)))
+      (setf project-name (pop initargs)))
+    (destructuring-bind (distribution &optional (version :latest))
+        initargs
+      (apply #'make-instance 'source-dist
+             :distribution (https-of distribution)
+             :%version version
+             (and project-name
+                  (list :project-name project-name))))))
 
 (defmethod prepare-source ((source source-dist))
   (unless (source-project-name source)

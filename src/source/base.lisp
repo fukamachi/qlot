@@ -4,12 +4,15 @@
                 #:with-package-functions)
   (:import-from #:qlot/errors
                 #:unknown-source
-                #:invalid-project-name)
+                #:invalid-project-name
+                #:qlot-syntax-error
+                #:invalid-definition)
   (:export #:source
            #:source-project-name
            #:source-version
            #:source-initargs
            #:source-defrost-args
+           #:usage-of-source
            #:make-source
            #:prepare-source
            #:source-frozen-slots
@@ -60,11 +63,24 @@
                  :reason (format nil "Project names must not contain ~{'~A'~#[~;, and ~:;, ~]~}"
                                  forbidden-chars)))))))
 
+(defgeneric usage-of-source (source)
+  (:method (source) nil))
+
 (defgeneric make-source (source &rest args)
   (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")
   (:method (source &rest args)
     (declare (ignore args))
-    (error 'unknown-source :name source)))
+    (error 'unknown-source :name source))
+  (:method :around (source &rest args)
+    (declare (ignore args))
+    (handler-bind ((error
+                     (lambda (e)
+                       (unless (typep e 'qlot-syntax-error)
+                         (error 'invalid-definition
+                                :source source
+                                :reason e
+                                :usage (usage-of-source source))))))
+      (call-next-method))))
 
 (defgeneric prepare-source (source)
   (:method (source)

@@ -3,8 +3,6 @@
         #:qlot/source/base)
   (:import-from #:qlot/source/base
                 #:initargs)
-  (:import-from #:qlot/errors
-                #:invalid-definition)
   (:import-from #:qlot/utils
                 #:starts-with)
   (:export #:source-local
@@ -38,19 +36,16 @@
   (check-type source source-local)
   (convert-local-path (source-local-path source)))
 
+(defmethod usage-of-source ((source (eql :local)))
+  "local <project name> <directory path>")
+
 (defmethod make-source ((source (eql :local)) &rest initargs)
-  (handler-case
-      (destructuring-bind (project-name path) initargs
-        (check-type project-name string)
-        (check-type path (or string pathname))
-        (make-instance 'source-local
-                       :project-name project-name
-                       :path path))
-    (error (e)
-      (error 'invalid-definition
-             :source :local
-             :reason e
-             :usage "local <project name> <directory path>"))))
+  (destructuring-bind (project-name path) initargs
+    (check-type project-name string)
+    (check-type path (or string pathname))
+    (make-instance 'source-local
+                   :project-name project-name
+                   :path path)))
 
 (defmethod initialize-instance :after ((source source-local) &rest initargs)
   (declare (ignore initargs))
