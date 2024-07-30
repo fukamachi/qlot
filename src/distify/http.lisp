@@ -18,6 +18,8 @@
                 #:parse-distinfo-file)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
+  (:import-from #:qlot/utils
+                #:split-with)
   (:import-from #:qlot/http)
   (:import-from #:ironclad
                 #:byte-array-to-hex-string
@@ -27,13 +29,15 @@
 
 (defun source-metadata-destination (source destination)
   (uiop:ensure-absolute-pathname
-    (merge-pathnames
-      (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
-      destination)))
+   (merge-pathnames
+    (make-pathname :directory
+                   `(:relative ,@(append (split-with #\/ (source-project-name source))
+                                         (list (source-version source)))))
+    destination)))
 
 (defun distify-http (source destination &key distinfo-only)
   (let ((distinfo.txt (merge-pathnames
-                       (make-pathname :name (source-project-name source)
+                       (make-pathname :defaults (source-project-name source)
                                       :type "txt")
                        destination)))
 

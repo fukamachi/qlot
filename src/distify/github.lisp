@@ -20,6 +20,8 @@
                 #:extract-tarball)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory)
+  (:import-from #:qlot/utils
+                #:split-with)
   (:import-from #:qlot/http)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
@@ -89,9 +91,11 @@
 
   (let ((*default-pathname-defaults*
           (uiop:ensure-absolute-pathname
-            (merge-pathnames
-              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
-              destination))))
+           (merge-pathnames
+            (make-pathname :directory
+                           `(:relative ,@(append (split-with #\/ (source-project-name source))
+                                                 (list (source-version source)))))
+            destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
     (progress "Writing the distinfo to ~S." destination)

@@ -16,7 +16,8 @@
                 #:write-source-distinfo)
   (:import-from #:qlot/utils
                 #:take
-                #:https-of)
+                #:https-of
+                #:split-with)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
   (:import-from #:qlot/http)
@@ -71,9 +72,11 @@
 
   (let ((*default-pathname-defaults*
           (uiop:ensure-absolute-pathname
-            (merge-pathnames
-              (make-pathname :directory `(:relative ,(source-project-name source) ,(source-version source)))
-              destination))))
+           (merge-pathnames
+            (make-pathname :directory
+                           `(:relative ,@(append (split-with #\/ (source-project-name source))
+                                                 (list (source-version source)))))
+            destination))))
     (ensure-directories-exist *default-pathname-defaults*)
 
     (progress "Writing the distinfo.")
