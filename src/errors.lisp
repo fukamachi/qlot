@@ -40,9 +40,8 @@
    (reason :initarg :reason
            :initform nil))
   (:report (lambda (condition stream)
-             (format stream "Invalid definition of '~(~A~)'.~@[~%Reason: ~A~]~%~@[[usage] ~A~]"
+             (format stream "Invalid definition of '~(~A~)'.~@[~%[usage] ~A~]"
                      (slot-value condition 'source)
-                     (slot-value condition 'reason)
                      (slot-value condition 'usage)))))
 
 (define-condition invalid-project-name (qlot-syntax-error)
