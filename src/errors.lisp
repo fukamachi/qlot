@@ -4,6 +4,7 @@
            #:qlot-simple-error
            #:unknown-source
            #:invalid-definition
+           #:invalid-project-name
            #:duplicate-project
            #:qlfile-parse-failed
            #:missing-projects
@@ -34,14 +35,22 @@
 
 (define-condition invalid-definition (qlot-syntax-error)
   ((source :initarg :source)
-   (usage :initarg :usage)
+   (usage :initarg :usage
+          :initform nil)
    (reason :initarg :reason
            :initform nil))
   (:report (lambda (condition stream)
-             (format stream "Invalid definition of '~(~A~)'.~@[~%Reason: ~A~]~%[usage] ~A"
+             (format stream "Invalid definition of '~(~A~)'.~@[~%[usage] ~A~]"
                      (slot-value condition 'source)
-                     (slot-value condition 'reason)
                      (slot-value condition 'usage)))))
+
+(define-condition invalid-project-name (qlot-syntax-error)
+  ((name :initarg :name)
+   (reason :initarg :reason
+           :initform nil))
+  (:report (lambda (condition stream)
+             (with-slots (name reason) condition
+               (format stream "~A: ~A" reason name)))))
 
 (define-condition duplicate-project (qlot-syntax-error)
   ((name :initarg :name))

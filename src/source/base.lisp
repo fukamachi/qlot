@@ -3,12 +3,16 @@
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/errors
-                #:unknown-source)
+                #:unknown-source
+                #:invalid-project-name
+                #:qlot-syntax-error
+                #:invalid-definition)
   (:export #:source
            #:source-project-name
            #:source-version
            #:source-initargs
            #:source-defrost-args
+           #:usage-of-source
            #:make-source
            #:prepare-source
            #:source-frozen-slots
@@ -40,11 +44,43 @@
     (remf initargs :project-name)
     (setf (slot-value source 'initargs) initargs)))
 
+(defmethod initialize-instance :after ((source source) &rest initargs)
+  (declare (ignore initargs))
+  (let ((project-name (source-project-name source)))
+    (check-type project-name (or string null))
+    (when project-name
+      (let ((forbidden-chars
+              (loop for char in
+                       #-(or mswindows win32)
+                       '(#\/)
+                       #+(or mswindows win32)
+                       '(#\< #\> #\: #\" #\\ #\/ #\| #\? #\*)
+                    when (find char project-name :test #'char=)
+                    collect char)))
+        (when forbidden-chars
+          (error 'invalid-project-name
+                 :name project-name
+                 :reason (format nil "Project names must not contain ~{'~A'~#[~;, and ~:;, ~]~}"
+                                 forbidden-chars)))))))
+
+(defgeneric usage-of-source (source)
+  (:method (source) nil))
+
 (defgeneric make-source (source &rest args)
   (:documentation "Receives a keyword, denoting a source type and returns an instance of such source.")
   (:method (source &rest args)
     (declare (ignore args))
-    (error 'unknown-source :name source)))
+    (error 'unknown-source :name source))
+  (:method :around (source &rest args)
+    (declare (ignore args))
+    (handler-bind ((error
+                     (lambda (e)
+                       (unless (typep e 'qlot-syntax-error)
+                         (error 'invalid-definition
+                                :source source
+                                :reason e
+                                :usage (usage-of-source source))))))
+      (call-next-method))))
 
 (defgeneric prepare-source (source)
   (:method (source)

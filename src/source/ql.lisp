@@ -9,8 +9,6 @@
   (:import-from #:qlot/source/git
                 #:source-git
                 #:source-git-remote-url)
-  (:import-from #:qlot/errors
-                #:invalid-definition)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
   (:import-from #:qlot/utils/quickdocs
@@ -47,38 +45,35 @@
     (setf (slot-value source 'qlot/source/base::initargs) initargs)
     source))
 
-(defmethod make-source ((source (eql :ql)) &rest args)
-  (handler-case
-      (destructuring-bind (project-name &rest initargs) args
-        (check-type project-name (or string (eql :all)))
-        ;; Assuming :latest if there's no arguments
-        (let ((initargs (or initargs '(:latest))))
-          (destructuring-bind (version &key distribution) initargs
-            (check-type version (or string (member :latest :upstream)))
-            (when (and (eq project-name :all)
-                       (eq version :upstream))
-              (error "Can't specify :upstream for ql :all."))
+(defmethod usage-of-source ((source (eql :ql)))
+  "ql <project name> [<version>]")
 
-            (let ((distribution (or distribution
-                                    (quicklisp-distinfo-url))))
-              (cond
-                ((eq project-name :all)
-                 (make-instance 'source-dist
-                                :project-name "quicklisp"
-                                :distribution distribution
-                                :%version version))
-                ((eq version :upstream)
-                 (make-instance 'source-ql-upstream
-                                :project-name project-name))
-                (t
-                 (make-instance 'source-ql
-                                :project-name project-name
-                                :%version version)))))))
-    (error (e)
-      (error 'invalid-definition
-             :source :ql
-             :usage "ql <project name> [<version>]"
-             :reason (princ-to-string e)))))
+(defmethod make-source ((source (eql :ql)) &rest args)
+  (destructuring-bind (project-name &rest initargs) args
+    (check-type project-name (or string (eql :all)))
+    ;; Assuming :latest if there's no arguments
+    (let ((initargs (or initargs '(:latest))))
+      (destructuring-bind (version &key distribution) initargs
+        (check-type version (or string (member :latest :upstream)))
+        (when (and (eq project-name :all)
+                   (eq version :upstream))
+          (error "Can't specify :upstream for ql :all."))
+
+        (let ((distribution (or distribution
+                                (quicklisp-distinfo-url))))
+          (cond
+            ((eq project-name :all)
+             (make-instance 'source-dist
+                            :project-name "quicklisp"
+                            :distribution distribution
+                            :%version version))
+            ((eq version :upstream)
+             (make-instance 'source-ql-upstream
+                            :project-name project-name))
+            (t
+             (make-instance 'source-ql
+                            :project-name project-name
+                            :%version version))))))))
 
 (defmethod freeze-source :before ((source source-ql-upstream))
   (unless (source-git-remote-url source)

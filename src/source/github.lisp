@@ -3,8 +3,6 @@
   (:use #:cl
         #:qlot/source/base
         #:qlot/source/http)
-  (:import-from #:qlot/errors
-                #:invalid-definition)
   (:import-from #:qlot/utils
                 #:split-with)
   (:export #:source-github
@@ -41,25 +39,23 @@
           (source-github-repos source)
           (source-github-identifier source)))
 
+(defmethod usage-of-source ((source (eql :github)))
+  "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]")
+
 (defmethod make-source ((source (eql :github)) &rest initargs)
   (let (project-name)
     ;; Assume project-name by the repository identifier
     (unless (or (= 1 (length initargs))
                 (eql 1 (position-if #'keywordp initargs)))
       (setf project-name (pop initargs)))
-    (handler-case
-        (destructuring-bind (repos &key ref branch tag) initargs
-          (apply #'make-instance 'source-github
-                 :repos repos
-                 :ref ref
-                 :branch branch
-                 :tag tag
-                 (and project-name
-                      (list :project-name project-name))))
-      (error ()
-        (error 'invalid-definition
-               :source :github
-               :usage "github <user/repository> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]")))))
+    (destructuring-bind (repos &key ref branch tag) initargs
+      (apply #'make-instance 'source-github
+             :repos repos
+             :ref ref
+             :branch branch
+             :tag tag
+             (and project-name
+                  (list :project-name project-name))))))
 
 (defmethod prepare-source ((source source-github))
   (unless (source-project-name source)

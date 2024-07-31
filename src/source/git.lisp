@@ -2,8 +2,6 @@
   (:nicknames #:qlot.source.git)
   (:use #:cl
         #:qlot/source/base)
-  (:import-from #:qlot/errors
-                #:invalid-definition)
   (:import-from #:qlot/utils
                 #:starts-with)
   (:export #:source-git
@@ -28,6 +26,9 @@
         :initform nil
         :accessor source-git-tag)))
 
+(defmethod usage-of-source ((source (eql :git)))
+  "git <project name> <remote URL> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]")
+
 (defun source-git-remote-access-url (source)
   (or
     (when (uiop:getenvp "GITHUB_TOKEN")
@@ -39,18 +40,13 @@
     (source-git-remote-url source)))
 
 (defmethod make-source ((source (eql :git)) &rest initargs)
-  (handler-case
-      (destructuring-bind (project-name remote-url &rest args) initargs
-        (check-type project-name string)
-        (check-type remote-url string)
-        (apply #'make-instance 'source-git
-               :project-name project-name
-               :remote-url remote-url
-               args))
-    (error ()
-      (error 'invalid-definition
-             :source :git
-             :usage "git <project name> <remote URL> [:ref <commit sha1>] [:branch <branch name>] [:tag <tag name>]"))))
+  (destructuring-bind (project-name remote-url &rest args) initargs
+    (check-type project-name string)
+    (check-type remote-url string)
+    (apply #'make-instance 'source-git
+           :project-name project-name
+           :remote-url remote-url
+           args)))
 
 (defmethod defrost-source :after ((source source-git))
   (when (slot-boundp source 'qlot/source/base::version)
