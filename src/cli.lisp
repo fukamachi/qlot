@@ -388,12 +388,15 @@ OPTIONS:
          (uiop:quit -1)))
 
       (ensure-package-loaded :qlot/init)
-      (let* ((qlfile (uiop:symbol-call '#:qlot/init '#:init-project *default-pathname-defaults*
-                                       :dist primary-dist))
-             (qlfile.lock (make-pathname :type "lock"
-                                         :defaults qlfile)))
-        (unless (uiop:file-exists-p qlfile.lock)
-          (warn-message "Run 'qlot install' to set up the project-local Quicklisp."))))))
+      (multiple-value-bind (qlfile created)
+          (uiop:symbol-call '#:qlot/init '#:init-project *default-pathname-defaults*
+                            :dist primary-dist)
+        (let ((qlfile.lock (make-pathname :type "lock"
+                                          :defaults qlfile)))
+          (when created
+            (message (color-text :green "Successfully initialized!")))
+          (unless (uiop:file-exists-p qlfile.lock)
+            (message "Run 'qlot install' to set up the project-local Quicklisp.")))))))
 
 (defun qlot-command-exec (argv)
   (flet ((print-exec-usage ()
