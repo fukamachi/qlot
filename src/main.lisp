@@ -4,13 +4,14 @@
   (:shadow #:remove)
   (:import-from #:qlot/logger
                 #:message)
-  (:import-from #:qlot/utils/shell
-                #:*qlot-source-directory*)
   (:import-from #:qlot/utils
                 #:ensure-package-loaded
                 #:ensure-list)
   (:import-from #:qlot/utils/shell
+                #:*qlot-source-directory*
                 #:with-env-vars)
+  (:import-from #:qlot/utils/repl
+                #:with-local-quicklisp)
   (:import-from #:qlot/config
                 #:load-qlot-config
                 #:make-config)
@@ -25,7 +26,8 @@
            #:remove
            #:check
            #:outdated
-           #:*project-root*))
+           #:*project-root*
+           #:with-local-quicklisp))
 (in-package #:qlot)
 
 (defvar *project-root* nil)
