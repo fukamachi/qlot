@@ -8,7 +8,8 @@
                 #:source-local-registry-directive
                 #:freeze-source)
   (:import-from #:qlot/logger
-                #:message)
+                #:message
+                #:warn-message)
   (:export #:dump-source-registry-conf
            #:dump-qlfile-lock))
 (in-package #:qlot/utils/qlot)
@@ -32,6 +33,9 @@
                                 (message "Adding ~S located at '~A'."
                                          (source-project-name source)
                                          (source-local-path source))
+                                (unless (uiop:directory-exists-p (source-local-path source))
+                                  (warn-message "Directory '~A' does not exist."
+                                                (source-local-path source)))
                                 `(:tree ,(source-local-registry-directive source))))))))
 
 (defun dump-qlfile-lock (file sources)
