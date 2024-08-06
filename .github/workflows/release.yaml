@@ -33,7 +33,7 @@ jobs:
       - name: Output Ultralisp version
         id: ultralisp_version
         run: |
-          ros -e '(format t "~A~%" (ql-dist:version (ql-dist:dist "quicklisp")))' >> $GITHUB_OUTPUT
+          ros -e '(format t "ultralisp_version=~A~%" (ql-dist:version (ql-dist:dist "quicklisp")))' >> $GITHUB_OUTPUT
     outputs:
       ultralisp_version: ${{ steps.ultralisp_version.outputs.ultralisp_version }}
 
