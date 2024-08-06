@@ -38,9 +38,10 @@
        (error 'qlot-simple-error
               :format-control "Directory does not exist: ~A"
               :format-arguments (list object)))
-     (let ((qlfile (merge-pathnames *default-qlfile* object)))
+     (let* ((qlfile (merge-pathnames *default-qlfile* object))
+            (qlfile-exists (uiop:file-exists-p qlfile)))
        ;; Create 'qlfile'
-       (unless (uiop:file-exists-p qlfile)
+       (unless qlfile-exists
          (message "Creating ~A" qlfile)
          (with-open-file (out qlfile
                               :if-does-not-exist :create
@@ -61,4 +62,4 @@
                                     :if-does-not-exist :create
                                     :if-exists :append)
                  (format out "~&.qlot/~%"))))))
-       qlfile))))
+       (values qlfile (not qlfile-exists))))))
