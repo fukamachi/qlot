@@ -428,6 +428,10 @@ github fukamachi/datafly
 github fukamachi/datafly :branch develop
 ```
 
+GitHub API may return 401 Forbidden when exceeding the rate limit ([API docs](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28)). It happens often because unauthenticated users can only make 60 requests per hour.
+
+Setting an environment variable `GITHUB_TOKEN` to use a custom token raises it to 5,000 requests per hour.
+
 ### local
 
 ```
