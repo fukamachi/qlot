@@ -17,7 +17,9 @@
       (whisper "Downloading ~S." url))
     (multiple-value-prog1 (qlot/http:fetch url file)
       (unless quiet
-        (whisper "Downloaded ~S." url)))))
+        (whisper "Downloaded ~S." url)))
+    (values (make-instance (intern #.(string '#:header) '#:ql-http) :status 200)
+            (probe-file file))))
 
 (defmacro with-secure-installer (() &body body)
   `(progv (list (intern #.(string '#:*fetch-scheme-functions*) '#:ql-http)
