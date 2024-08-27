@@ -209,6 +209,7 @@ To avoid the situation, we recommend not to use `~/common-lisp` directory, or ad
 
 ```
 ;; .sbclrc
+(require 'asdf)
 (push ".qlot" asdf::*default-source-registry-exclusions*)
 (asdf:initialize-source-registry)
 ```
