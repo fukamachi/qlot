@@ -389,11 +389,10 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
-(defun install-project (object &key (install-deps t) cache-directory concurrency init)
+(defun install-project (object &key (install-deps t) cache-directory concurrency)
   (handler-bind ((qlfile-not-found
                    (lambda (e)
-                     (when init
-                       (invoke-restart (find-restart 'create-qlfile e))))))
+                     (invoke-restart (find-restart 'create-qlfile e)))))
     (etypecase object
       ((or symbol string)
        (install-project (asdf:find-system object)
