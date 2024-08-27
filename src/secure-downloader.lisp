@@ -15,9 +15,9 @@
   (let ((url (https-of url)))
     (unless quiet
       (whisper "Downloading ~S." url))
-    (multiple-value-prog1 (qlot/http:fetch url file)
-      (unless quiet
-        (whisper "Downloaded ~S." url)))
+    (qlot/http:fetch url file)
+    (unless quiet
+      (whisper "Downloaded ~S." url))
     (values (make-instance (intern #.(string '#:header) '#:ql-http) :status 200)
             (probe-file file))))
 
