@@ -326,7 +326,7 @@ quicklisp at CL startup."
                deleting anyway -- ~s" pathname)
         (delete-file pathname))))
 
-(defun map-directory-tree (directory fun)
+(defun map-directory-tree (directory fun &key (test #'identity))
   "Call FUN for every file in directory and all its subdirectories,
 recursively. Uses the truename of directory as a starting point. Does
 not follow symlinks, but, on some implementations, DOES include
@@ -338,7 +338,8 @@ potentially dead symlinks."
       (let* ((current (pop directories-to-process))
              (entries (directory-entries current)))
         (dolist (entry entries)
-          (if (directoryp entry)
-              (push entry directories-to-process)
-              (funcall fun entry)))))))
+          (when (funcall test entry)
+            (if (directoryp entry)
+                (push entry directories-to-process)
+                (funcall fun entry))))))))
 
