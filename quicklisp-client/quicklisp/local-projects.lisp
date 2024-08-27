@@ -44,7 +44,14 @@
     (map-directory-tree directory
                         (lambda (file)
                           (when (funcall fun file)
-                            (push file result))))
+                            (push file result)))
+                        :test (lambda (entry)
+                                (or (not (directoryp entry))
+                                    ;; Ignore directories with names beginning with a dot.
+                                    (let ((directory-name (first (last (pathname-directory entry)))))
+                                      (not
+                                       (and (< 0 (length directory-name))
+                                            (char= (aref directory-name 0) #\.)))))))
     result))
 
 (defun local-project-system-files (pathname)

@@ -68,6 +68,7 @@
            #:rename-directory
            #:delete-directory
            #:probe-directory
+           #:directoryp
            #:directory-entries
            #:delete-directory-tree
            #:map-directory-tree
