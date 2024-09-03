@@ -24,7 +24,8 @@
                 #:split-with)
   (:import-from #:qlot/http)
   (:import-from #:qlot/errors
-                #:qlot-simple-error)
+                #:qlot-simple-error
+                #:github-ratelimit-error)
   (:import-from #:yason)
   (:export #:distify-github))
 (in-package #:qlot/distify/github)
@@ -37,12 +38,22 @@
 (defun retrieve-from-github (repos &optional action)
   (let ((cred (github-credentials)))
     (handler-case
-        (yason:parse
-         (apply #'qlot/http:get
-                (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
-                :want-stream t
-                (when cred
-                  `(:basic-auth ,cred))))
+        (handler-bind (((or dex:http-request-forbidden dex:http-request-too-many-requests)
+                         (lambda (e)
+                           (let ((headers (dex:response-headers e)))
+                             (when (nth-value 1 (gethash "x-ratelimit-remaining" headers))
+                               (error 'github-ratelimit-error
+                                      :repos repos
+                                      :retry-after (or (gethash "retry-after" headers)
+                                                       (gethash "x-ratelimit-reset" headers))
+                                      :token-used (not (null cred))
+                                      :http-error e))))))
+          (yason:parse
+           (apply #'qlot/http:get
+                  (format nil "https://api.github.com/repos/~A~@[~A~]" repos action)
+                  :want-stream t
+                  (when cred
+                    `(:basic-auth ,cred)))))
       (dex:http-request-not-found ()
         (error 'qlot-simple-error
                :format-control "'~A' is not found in GitHub."

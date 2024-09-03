@@ -14,6 +14,7 @@
            #:qlfile-lock-not-found
            #:qlot-directory-not-found
            #:qlot-directory-invalid
+           #:github-ratelimit-error
            #:ros-command-error
            #:command-not-found
            #:qlot-warning
@@ -118,6 +119,27 @@
   (:report (lambda (condition stream)
              (with-slots (path) condition
                (format stream "Directory '~A' is not valid." path)))))
+
+(define-condition github-ratelimit-error (qlot-error)
+  ((repos :type string
+          :initarg :repos
+          :documentation "Repository identifier (ex. fukamachi/dexador)")
+   (retry-after :type (or integer null)
+                :initarg :retry-after
+                :documentation "Time that has to wait in seconds.")
+   (token-used :type boolean
+               :initarg :token-used
+               :initform nil
+               :documentation "GITHUB_TOKEN is set or not")
+   (http-error :initarg :http-error
+               :documentation "A raw error object returned from Dexador"))
+  (:report (lambda (condition stream)
+             (with-slots (repos retry-after token-used)
+                 condition
+               (format stream "Exceeded the rate limit of GitHub API during access to '~A'.~@[ Retry after ~A seconds.~]~@[~%TIPS: Using a personal access token will increase the limit. Set it to an environment variable 'GITHUB_TOKEN'.~]"
+                       repos
+                       retry-after
+                       (not token-used))))))
 
 (define-condition ros-command-error (qlot-error)
   ((message :initarg :message))
