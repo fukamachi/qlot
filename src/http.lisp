@@ -36,4 +36,6 @@
            :keep-alive nil
            :proxy *proxy*
            :verbose *debug*
+           :connect-timeout nil
+           :read-timeout 30
            args)))
