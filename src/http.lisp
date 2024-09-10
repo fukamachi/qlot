@@ -16,6 +16,8 @@
   `(let ((retry-request (dex:retry-request 2 :interval 3)))
      (handler-bind ((dex:http-request-failed retry-request)
                     #-(or mswindows win32)
+                    (usocket:socket-error retry-request)
+                    #-(or mswindows win32)
                     (cl+ssl::ssl-error retry-request))
        ,@body)))
 
@@ -36,4 +38,6 @@
            :keep-alive nil
            :proxy *proxy*
            :verbose *debug*
+           :connect-timeout nil
+           :read-timeout 30
            args)))
