@@ -15,6 +15,10 @@
 (defmacro with-retry (() &body body)
   `(let ((retry-request (dex:retry-request 2 :interval 3)))
      (handler-bind ((dex:http-request-failed retry-request)
+                    #+sbcl
+                    ((or sb-bsd-sockets:interrupted-error
+                         sb-bsd-sockets:operation-timeout-error)
+                      retry-request)
                     #-(or mswindows win32)
                     (usocket:socket-error retry-request)
                     #-(or mswindows win32)
