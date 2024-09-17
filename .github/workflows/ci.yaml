@@ -44,7 +44,7 @@ jobs:
           PATH="~/.qlot/bin:~/.roswell/bin:$PATH"
           git clone https://github.com/lem-project/lem
           cd lem
-          qlot install
+          qlot install --debug
           [ -f ".qlot/setup.lisp" ]
       - name: Run qlot-uninstaller.sh
         run: |
