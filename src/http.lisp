@@ -14,15 +14,19 @@
 
 (defmacro with-retry (() &body body)
   `(let ((retry-request (dex:retry-request 2 :interval 3)))
-     (handler-bind ((dex:http-request-failed retry-request)
+     (handler-bind ((dex:http-request-failed
+                      (lambda (e)
+                        (when (<= 500 (dex:response-status e))
+                          (funcall retry-request e))))
                     #+sbcl
                     ((or sb-bsd-sockets:interrupted-error
                          sb-bsd-sockets:operation-timeout-error)
                       retry-request)
                     #-(or mswindows win32)
-                    (usocket:socket-error retry-request)
-                    #-(or mswindows win32)
-                    (cl+ssl::ssl-error retry-request))
+                    ((or usocket:socket-error
+                         usocket:timeout-error
+                         cl+ssl::ssl-error)
+                      retry-request))
        ,@body)))
 
 (defun fetch (url file &key basic-auth)
