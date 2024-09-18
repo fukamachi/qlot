@@ -12,23 +12,26 @@
            #:get))
 (in-package #:qlot/http)
 
+(defun call-with-retry (fn)
+  (let ((retry-request (dex:retry-request 2 :interval 3))
+        (retry-connect (dex:retry-request 1)))
+    (handler-bind ((dex:http-request-failed
+                     (lambda (e)
+                       (when (<= 500 (dex:response-status e))
+                         (funcall retry-request e))))
+                   #+sbcl
+                   ((or sb-bsd-sockets:interrupted-error
+                        sb-bsd-sockets:operation-timeout-error)
+                     retry-connect)
+                   #-(or mswindows win32)
+                   ((or usocket:socket-error
+                        usocket:timeout-error
+                        cl+ssl::ssl-error)
+                     retry-connect))
+      (funcall fn))))
+
 (defmacro with-retry (() &body body)
-  `(let ((retry-request (dex:retry-request 2 :interval 3))
-         (retry-connect (dex:retry-request 1)))
-     (handler-bind ((dex:http-request-failed
-                      (lambda (e)
-                        (when (<= 500 (dex:response-status e))
-                          (funcall retry-request e))))
-                    #+sbcl
-                    ((or sb-bsd-sockets:interrupted-error
-                         sb-bsd-sockets:operation-timeout-error)
-                      retry-connect)
-                    #-(or mswindows win32)
-                    ((or usocket:socket-error
-                         usocket:timeout-error
-                         cl+ssl::ssl-error)
-                      retry-connect))
-       ,@body)))
+  `(call-with-retry (lambda () ,@body)))
 
 (defun fetch (url file &key basic-auth)
   (with-retry ()
