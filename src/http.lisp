@@ -19,12 +19,17 @@
                      (lambda (e)
                        (when (<= 500 (dex:response-status e))
                          (funcall retry-request e))))
+                   #-(or mswindows win32)
+                   ((or usocket:host-down-error
+                        usocket:host-unreachable-error)
+                     retry-request)
+                   (end-of-file retry-connect)
                    #+sbcl
                    ((or sb-bsd-sockets:interrupted-error
                         sb-bsd-sockets:operation-timeout-error)
                      retry-connect)
                    #-(or mswindows win32)
-                   ((or usocket:socket-error
+                   ((or usocket:connection-reset-error
                         usocket:timeout-error
                         cl+ssl::ssl-error)
                      retry-connect))
