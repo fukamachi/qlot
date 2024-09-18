@@ -354,7 +354,12 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                         :label (source-project-name source)))))
               :failed-fn
               (lambda ()
-                (progress :aborted "Failed to install")))
+                (progress :aborted "Failed to install"))
+              :failure-hook
+              (lambda (failed-sources)
+                (error 'qlot-simple-error
+                       :format-control "Error during installation: ~{~A~#[~; and ~:;, ~]~}"
+                       :format-arguments (list (mapcar #'source-project-name failed-sources)))))
              (let ((preference (get-universal-time)))
                (with-quicklisp-home qlhome
                  (with-package-functions #:ql-dist (find-dist name all-dists (setf preference))
