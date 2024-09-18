@@ -137,7 +137,7 @@
       (push-queue (cons *progress-line* text) *mailbox*)
       text)))
 
-(defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn failed-fn failure-hook)
+(defun run-in-parallel (worker-fn jobs &key (concurrency 1) job-header-fn failed-fn)
   (declare (ignorable concurrency))
   (let* ((manager (make-progress nil))
          (*mailbox* (make-queue))
@@ -157,33 +157,24 @@
         (funcall worker-fn job)))
     #-(or ecl clasp)
     (let ((*kernel* (make-kernel concurrency
-                                 :bindings bt2:*default-special-bindings*))
-          (failed-jobs-lock (bt2:make-lock :name "failed jobs lock"))
-          (failed-jobs '()))
+                                 :bindings bt2:*default-special-bindings*)))
       (unwind-protect
            (handler-bind (#+sbcl (sb-sys:interactive-interrupt
                                    (lambda (c)
                                      (declare (ignore c))
                                      (lparallel:end-kernel))))
-             (multiple-value-prog1
-                 (task-handler-bind ((error #'lparallel:invoke-transfer-error))
-                   (pmapc
-                    (lambda (job)
-                      (let ((*progress-line*
-                              (add-line manager
-                                        (funcall (or job-header-fn #'princ-to-string) job))))
-                        (handler-case
-                            (handler-bind ((error
-                                             (lambda (e)
-                                               (when *debug*
-                                                 (uiop:print-condition-backtrace e))
-                                               (when failed-fn
-                                                 (funcall failed-fn)))))
-                              (funcall worker-fn job))
-                          (error ()
-                            (bt2:with-lock-held (failed-jobs-lock)
-                              (push job failed-jobs))))))
-                    jobs))
-               (when (and failed-jobs failure-hook)
-                 (funcall failure-hook (nreverse failed-jobs)))))
+             (task-handler-bind ((error #'lparallel:invoke-transfer-error))
+               (pmapc
+                (lambda (job)
+                  (let ((*progress-line*
+                          (add-line manager
+                                    (funcall (or job-header-fn #'princ-to-string) job))))
+                    (handler-bind ((error
+                                     (lambda (e)
+                                       (when *debug*
+                                         (uiop:print-condition-backtrace e))
+                                       (when failed-fn
+                                         (funcall failed-fn)))))
+                      (funcall worker-fn job))))
+                jobs)))
         (ignore-errors (bt2:destroy-thread progress-thread))))))
