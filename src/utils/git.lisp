@@ -2,41 +2,52 @@
   (:use #:cl)
   (:import-from #:qlot/utils/shell
                 #:safety-shell-command
-                #:shell-command-error)
+                #:shell-command-error
+                #:shell-command-error-output)
   (:import-from #:qlot/utils
-                #:split-with)
+                #:split-with
+                #:starts-with)
   (:export #:git-clone
            #:create-git-tarball
            #:git-ref))
 (in-package #:qlot/utils/git)
 
 (defun git-clone (remote-url destination &key checkout-to ref)
-  (tagbody git-cloning
-    (when (uiop:directory-exists-p destination)
-      #+(or mswindows win32)
-      (uiop:run-program (list "attrib"
-                              "-r" "-h"
-                              (format nil "~A*.*" (uiop:native-namestring destination))
-                              "/s" "/d")
-                        :error-output *error-output*
-                        :ignore-error-status t)
-      (uiop:delete-directory-tree destination :validate t))
-    (restart-case
-        (safety-shell-command "git"
-                              `("clone"
-                                ,@(and checkout-to
-                                       `("--branch" ,checkout-to))
-                                "--depth" "1"
-                                "--recursive"
-                                "--quiet"
-                                "--config" "core.eol=lf"
-                                "--config" "core.autocrlf=input"
-                                ,remote-url
-                                ,(uiop:native-namestring destination)))
-      (retry-git-clone ()
-        :report "Retry to git clone the repository."
-        (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
-        (go git-cloning))))
+  (let ((depth 1))
+    (tagbody git-cloning
+      (when (uiop:directory-exists-p destination)
+        #+(or mswindows win32)
+        (uiop:run-program (list "attrib"
+                                "-r" "-h"
+                                (format nil "~A*.*" (uiop:native-namestring destination))
+                                "/s" "/d")
+                          :error-output *error-output*
+                          :ignore-error-status t)
+        (uiop:delete-directory-tree destination :validate t))
+      (restart-case
+          (handler-bind ((shell-command-error
+                           (lambda (e)
+                             (when (and depth
+                                        (starts-with "fatal: dumb http transport does not support shallow capabilities"
+                                                     (shell-command-error-output e)))
+                               (setf depth nil)
+                               (go git-cloning)))))
+            (safety-shell-command "git"
+                                  `("clone"
+                                    ,@(and checkout-to
+                                           `("--branch" ,checkout-to))
+                                    ,@(and depth
+                                           `("--depth" ,(princ-to-string depth)))
+                                    "--recursive"
+                                    "--quiet"
+                                    "--config" "core.eol=lf"
+                                    "--config" "core.autocrlf=input"
+                                    ,remote-url
+                                    ,(uiop:native-namestring destination))))
+        (retry-git-clone ()
+          :report "Retry to git clone the repository."
+          (uiop:delete-directory-tree destination :validate t :if-does-not-exist :ignore)
+          (go git-cloning)))))
 
   (when ref
     (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
