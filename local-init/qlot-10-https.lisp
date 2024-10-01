@@ -45,10 +45,18 @@
 
 (defun which (cmd)
   (handler-case
-      (string-right-trim '(#\Newline)
-                         (with-output-to-string (s)
-                           (uiop:run-program `("which" ,cmd)
-                                             :output s)))
+    (let* ((cmd-output
+             (with-output-to-string (s)
+               (uiop:run-program #+win32
+                                 `("where" ,cmd)
+                                 #-win32
+                                 `("which" ,cmd)
+                                 :output s)))
+           (trim-at (position-if
+                      (lambda (c)
+                        (find c '(#\Newline #\Return)))
+                      cmd-output)))
+      (subseq cmd-output 0 trim-at))
     (uiop/run-program:subprocess-error ()
       nil)))
 

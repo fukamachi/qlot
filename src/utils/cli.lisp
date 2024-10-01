@@ -49,9 +49,16 @@
 
 (defun exec (args)
   (assert args)
+  #+win32
+  (uiop:run-program
+    args
+    :input :interactive
+    :output :interactive
+    :error-output :interactive)
   #+(and unix sbcl)
   (execvp (first args) args)
   #-(and unix sbcl)
   (uiop:run-program args
                     :output t
                     :error-output t))
+
