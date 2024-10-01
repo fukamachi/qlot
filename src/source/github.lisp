@@ -49,21 +49,17 @@
                 (eql 1 (position-if #'keywordp initargs)))
       (setf project-name (pop initargs)))
     (destructuring-bind (repos &key ref branch tag) initargs
-      (apply #'make-instance 'source-github
-             :repos repos
-             :ref ref
-             :branch branch
-             :tag tag
-             (and project-name
-                  (list :project-name project-name))))))
-
-(defmethod prepare-source ((source source-github))
-  (unless (source-project-name source)
-    (let ((repos (source-github-repos source)))
-      (destructuring-bind (username repository)
-          (split-with #\/ repos)
-        (declare (ignore username))
-        (setf (source-project-name source) repository)))))
+      (unless project-name
+        (destructuring-bind (username repository)
+            (split-with #\/ repos)
+          (declare (ignore username))
+          (setf project-name repository)))
+      (make-instance 'source-github
+                     :repos repos
+                     :ref ref
+                     :branch branch
+                     :tag tag
+                     :project-name project-name))))
 
 (defmethod source-identifier ((source source-github))
   (source-github-repos source))
