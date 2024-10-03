@@ -13,7 +13,7 @@
 (in-package #:qlot/utils/git)
 
 (defun git-clone (remote-url destination &key checkout-to ref)
-  (let ((depth 1))
+  (let ((shallow (not ref)))
     (tagbody git-cloning
       (when (uiop:directory-exists-p destination)
         #+(or mswindows win32)
@@ -27,17 +27,17 @@
       (restart-case
           (handler-bind ((shell-command-error
                            (lambda (e)
-                             (when (and depth
+                             (when (and shallow
                                         (starts-with "fatal: dumb http transport does not support shallow capabilities"
                                                      (shell-command-error-output e)))
-                               (setf depth nil)
+                               (setf shallow nil)
                                (go git-cloning)))))
             (safety-shell-command "git"
                                   `("clone"
                                     ,@(and checkout-to
                                            `("--branch" ,checkout-to))
-                                    ,@(and depth
-                                           `("--depth" ,(princ-to-string depth)))
+                                    ,@(and shallow
+                                           '("--depth" "1"))
                                     "--recursive"
                                     "--quiet"
                                     "--config" "core.eol=lf"
@@ -51,7 +51,7 @@
 
   (when ref
     (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                  "fetch" "--unshallow" "--quiet"))
+                                  "fetch" "--quiet"))
     (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
                                   "checkout" ,ref "--quiet"))))
 
