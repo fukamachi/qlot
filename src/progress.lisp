@@ -149,13 +149,13 @@
               (loop for (line . body) = (pop-queue *mailbox*)
                     do (refresh-progress-line manager line body)))
             :name "qlot progress manager")))
-    #+(or ecl clasp)
+    #+(or ecl clasp win32)
     (dolist (job jobs)
       (let ((*progress-line*
               (add-line manager
                         (funcall (or job-header-fn #'princ-to-string) job))))
         (funcall worker-fn job)))
-    #-(or ecl clasp)
+    #-(or ecl clasp win32)
     (let ((*kernel* (make-kernel concurrency
                                  :bindings bt2:*default-special-bindings*)))
       (unwind-protect
