@@ -13,8 +13,7 @@
                 #:qlfile-parse-failed
                 #:duplicate-project)
   (:import-from #:qlot/utils
-                #:make-keyword
-                #:split-with)
+                #:make-keyword)
   (:import-from #:qlot/utils/ql
                 #:quicklisp-distinfo-url)
   (:export #:parse-qlfile
@@ -37,6 +36,55 @@
              (char= char #\;))
          (return (subseq value 0 i)))))))
 
+(defun skip-while (s skip-chars)
+  (loop
+    (let ((char (read-char s nil nil)))
+      (unless char
+        (return))
+      (unless (member char skip-chars)
+        (return char)))))
+
+(defun read-until (s allowed-chars)
+  (loop for char = (read-char s nil nil)
+        while (and char
+                   (not (member char allowed-chars)))
+        collect char into chars
+        finally
+           (when char
+             (unread-char char s))
+           (return (values (coerce chars 'string) char))))
+
+(defun read-double-quoted (s)
+  (prog1 (read-until s '(#\"))
+    (read-char s)))
+
+(defun read-list-elem (s)
+  (with-output-to-string (res)
+    (loop
+      (multiple-value-bind (token last-char)
+          (read-until s '(#\( #\)))
+        (case last-char
+          ('nil
+           (return))
+          (#\(
+           (princ token res)
+           (princ (read-char s) res)
+           (princ (read-list-elem s) res))
+          (#\)
+           (format res "~A)" token)
+           (read-char s)
+           (return)))))))
+
+(defun read-token (s)
+  (let ((char (skip-while s '(#\Space #\Tab))))
+    (when char
+      (case char
+        (#\( (format nil "(~A" (read-list-elem s)))
+        (#\" (read-double-quoted s))
+        (otherwise
+         (format nil "~C~A" char
+                 (read-until s '(#\Space #\Tab #\" #\())))))))
+
 (defun parse-qlfile-line (line)
   (flet ((canonical-line (line)
            (string-trim '(#\Space #\Tab #\Newline #\Return)
@@ -46,7 +94,10 @@
       (return-from parse-qlfile-line))
 
     (destructuring-bind (source-type &rest args)
-        (split-with #\Space line)
+        (with-input-from-string (s line)
+          (loop for token = (read-token s)
+                while token
+                collect token))
       (apply #'make-source
              (make-keyword source-type)
              (mapcar (lambda (arg)
