@@ -79,7 +79,9 @@
   (let ((char (skip-while s '(#\Space #\Tab))))
     (when char
       (case char
-        (#\( (format nil "(~A" (read-list-elem s)))
+        (#\(
+         ;; TODO: Use a dedicated readtable to allow to use unquoted string as versions.
+         (read-from-string (format nil "(~A" (read-list-elem s))))
         (#\" (read-double-quoted s))
         (otherwise
          (format nil "~C~A" char
