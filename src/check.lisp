@@ -37,7 +37,8 @@
                 #:qlfile-not-found
                 #:qlfile-lock-not-found
                 #:missing-projects
-                #:unnecessary-projects)
+                #:unnecessary-projects
+                #:outdated-projects)
   (:export #:check-qlfile
            #:check-project
            #:available-update-project))
