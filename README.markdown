@@ -340,7 +340,7 @@ Here are few useful commands:
 <source> <project name> [arg1, arg2..]
 ```
 
-Currently, `<source>` must be one of `dist`, `ql`, `ultralisp`, `http`, `git` or `github`.
+Currently, `<source>` must be one of `dist`, `ql`, `ultralisp`, `http`, `git`, `github`, `local` or `asdf`.
 
 ### ql
 
@@ -443,6 +443,18 @@ Add a directory to the ASDF's source registry.
 
 ```
 local rove ~/Programs/lib/rove
+```
+
+### asdf (Experimental)
+
+```
+asdf <version>
+```
+
+Use a newer version of ASDF.
+
+```
+asdf 3.3.7.1
 ```
 
 ### dist

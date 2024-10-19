@@ -6,6 +6,7 @@
                 #:source-dist-name
                 #:source-version
                 #:source-local
+                #:source-asdf
                 #:defrost-source)
   (:import-from #:qlot/parser
                 #:find-lock
@@ -92,22 +93,38 @@
         (with-package-functions #:ql-dist (find-dist version)
           (let ((old-sources
                   (remove-if (lambda (source)
-                               (if (typep source 'source-local)
-                                   source-registry-up-to-date
-                                   (let ((dist (find-dist (source-dist-name source))))
-                                     (and dist
-                                          (slot-boundp source 'qlot/source/base::version)
-                                          (equal (version dist)
-                                                 (source-version source))))))
+                               (typecase source
+                                 (source-local
+                                  source-registry-up-to-date)
+                                 (source-asdf
+                                  (let ((asdf-dir (merge-pathnames #P"local-projects/asdf/" qlhome)))
+                                    (and (uiop:directory-exists-p asdf-dir)
+                                         (progn
+                                           (asdf:load-asd (merge-pathnames #P"asdf.asd" asdf-dir))
+                                           (equal (asdf:asdf-version)
+                                                  (source-version source))))))
+                                 (otherwise
+                                  (let ((dist (find-dist (source-dist-name source))))
+                                    (and dist
+                                         (slot-boundp source 'qlot/source/base::version)
+                                         (equal (version dist)
+                                                (source-version source)))))))
                              sources)))
             (when old-sources
               (error 'missing-projects
                      :projects (mapcar #'source-project-name old-sources)))))
         (with-package-functions #:ql-dist (all-dists name)
           (let ((extra-dists
-                  (remove-if (lambda (dist-name)
-                               (find dist-name sources :test #'string= :key #'source-dist-name))
-                             (mapcar #'name (all-dists)))))
+                  (append
+                   (remove-if (lambda (dist-name)
+                                (find dist-name sources :test #'string= :key #'source-dist-name))
+                              (mapcar #'name (all-dists)))
+                   (and (not (find-if (lambda (source)
+                                        (typep source 'source-asdf))
+                                      sources))
+                        (let ((asdf-dir (merge-pathnames #P"local-projects/asdf/" qlhome)))
+                          (and (uiop:directory-exists-p asdf-dir)
+                               (list "asdf")))))))
             (when extra-dists
               (error 'unnecessary-projects
                      :projects extra-dists)))))))

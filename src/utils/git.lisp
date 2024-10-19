@@ -7,12 +7,20 @@
   (:import-from #:qlot/utils
                 #:split-with
                 #:starts-with)
-  (:export #:git-clone
+  (:export #:git-checkout
+           #:git-clone
            #:create-git-tarball
            #:git-ref))
 (in-package #:qlot/utils/git)
 
-(defun git-clone (remote-url destination &key checkout-to ref)
+(defun git-checkout (directory ref)
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "fetch" "--quiet"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "checkout" ,ref "--quiet"))
+  (values))
+
+(defun git-clone (remote-url destination &key checkout-to ref (recursive t))
   (let ((shallow (not ref)))
     (tagbody git-cloning
       (when (uiop:directory-exists-p destination)
@@ -38,7 +46,8 @@
                                            `("--branch" ,checkout-to))
                                     ,@(and shallow
                                            '("--depth" "1"))
-                                    "--recursive"
+                                    ,@(and recursive
+                                           '("--recursive"))
                                     "--quiet"
                                     "--config" "core.eol=lf"
                                     "--config" "core.autocrlf=input"
@@ -50,10 +59,7 @@
           (go git-cloning)))))
 
   (when ref
-    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                  "fetch" "--quiet"))
-    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                  "checkout" ,ref "--quiet"))))
+    (git-checkout destination ref)))
 
 (defun create-git-tarball (project-directory destination ref)
   (check-type project-directory pathname)
