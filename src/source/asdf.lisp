@@ -22,5 +22,7 @@
            args)))
 
 (defmethod source= ((source1 source-asdf) (source2 source-asdf))
-  (string= (source-version source1)
-           (source-version source2)))
+  (and (string= (source-asdf-remote-url source1)
+                (source-asdf-remote-url source2))
+       (string= (source-version source1)
+                (source-version source2))))
