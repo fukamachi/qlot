@@ -99,10 +99,12 @@
                                  (source-asdf
                                   (let ((asdf-dir (merge-pathnames #P"local-projects/asdf/" qlhome)))
                                     (and (uiop:directory-exists-p asdf-dir)
-                                         (progn
-                                           (asdf:load-asd (merge-pathnames #P"asdf.asd" asdf-dir))
-                                           (equal (asdf:asdf-version)
-                                                  (source-version source))))))
+                                         (let ((version-file (merge-pathnames #P"version.lisp-expr" asdf-dir)))
+                                           ;; XXX: Skip if the version file doesn't exist.
+                                           (or (not (uiop:file-exists-p version-file))
+                                               (ignore-errors
+                                                 (equal (uiop:read-file-form version-file)
+                                                        (source-version source))))))))
                                  (otherwise
                                   (let ((dist (find-dist (source-dist-name source))))
                                     (and dist
