@@ -7,17 +7,25 @@
   (:import-from #:qlot/utils
                 #:split-with
                 #:starts-with)
-  (:export #:git-checkout
+  (:export #:git-switch-tag
            #:git-clone
            #:create-git-tarball
            #:git-ref))
 (in-package #:qlot/utils/git)
 
+(defun git-fetch (directory &rest args)
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "fetch" "--quiet" ,@args))
+  (values))
+
 (defun git-checkout (directory ref)
   (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
-                                "fetch" "--quiet"))
-  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
                                 "checkout" ,ref "--quiet"))
+  (values))
+
+(defun git-switch-tag (directory tag)
+  (git-fetch directory "origin" (format nil "refs/tags/~A:refs/tags/~:*~A" tag) "--no-tags")
+  (git-checkout directory tag)
   (values))
 
 (defun git-clone (remote-url destination &key checkout-to ref (recursive t))
@@ -59,6 +67,7 @@
           (go git-cloning)))))
 
   (when ref
+    (git-fetch destination)
     (git-checkout destination ref)))
 
 (defun create-git-tarball (project-directory destination ref)

@@ -64,7 +64,7 @@
                 #:tmp-directory
                 #:delete-tmp-directory)
   (:import-from #:qlot/utils/git
-                #:git-checkout
+                #:git-switch-tag
                 #:git-clone)
   (:import-from #:qlot/color
                 #:color-text
@@ -392,7 +392,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
          (cond
            ((uiop:directory-exists-p asdf-dir)
             ;; Tag switch
-            (git-checkout asdf-dir (source-version asdf-source)))
+            (git-switch-tag asdf-dir (source-version asdf-source)))
            (t
             (message "Downloading ASDF to '~A'." asdf-dir)
             ;; Clone
