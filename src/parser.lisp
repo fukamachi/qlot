@@ -21,7 +21,8 @@
            #:parse-qlfile-lock
            #:parse-qlfile-line
            #:find-lock
-           #:read-qlfile-for-install))
+           #:read-qlfile-for-install
+           #:read-qlfile-for-outdated))
 (in-package #:qlot/parser)
 
 (defun trim-comment (value)
@@ -158,3 +159,12 @@
                                                  :test (lambda (name)
                                                          (not (find name projects :test 'equal)))))
         sources)))
+
+(defun read-qlfile-for-outdated (qlfile)
+  (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
+        (sources (parse-qlfile qlfile)))
+    (unless (find "quicklisp" sources
+                  :key #'source-dist-name
+                  :test #'string=)
+      (push default-ql-source sources))
+    sources))

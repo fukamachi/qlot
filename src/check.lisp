@@ -6,12 +6,13 @@
                 #:source-dist-name
                 #:source-version
                 #:source-local
-                #:defrost-source)
+                #:defrost-source
+                #:make-source)
   (:import-from #:qlot/parser
                 #:find-lock
-                #:parse-qlfile
                 #:parse-qlfile-lock
-                #:read-qlfile-for-install)
+                #:read-qlfile-for-install
+                #:read-qlfile-for-outdated)
   (:import-from #:qlot/server
                 #:with-qlot-server)
   (:import-from #:qlot/logger
@@ -22,7 +23,8 @@
   (:import-from #:qlot/utils
                 #:with-package-functions)
   (:import-from #:qlot/utils/ql
-                #:with-quicklisp-home)
+                #:with-quicklisp-home
+                #:quicklisp-distinfo-url)
   (:import-from #:qlot/utils/qlot
                 #:dump-source-registry-conf)
   (:import-from #:qlot/utils/project
@@ -132,7 +134,7 @@
     (pathname
      (check-local-quicklisp object)
      (let* ((qlfile (ensure-qlfile-pathname object))
-            (sources (parse-qlfile qlfile))
+            (sources (read-qlfile-for-outdated qlfile))
             (sources
               (if (null projects)
                   sources
@@ -160,14 +162,15 @@
                        (with-qlot-server (source :destination tmp-dir
                                                  :distinfo-only t
                                                  :silent t)
-                         (if (available-update dist)
-                             (progn
-                               (push (source-project-name source) new-update-projects)
-                               (message "New version of ~S is available.~%  Current: ~A~%  Latest:  ~A"
-                                        (source-project-name source)
-                                        (version dist)
-                                        (source-version source)))
-                             (clear-whisper))))
+                         (let ((new-dist (available-update dist)))
+                           (if new-dist
+                               (progn
+                                 (push (source-project-name source) new-update-projects)
+                                 (message "New version of ~S is available.~%  Current: ~A~%  Latest:  ~A"
+                                          (source-project-name source)
+                                          (version dist)
+                                          (version new-dist)))
+                               (clear-whisper)))))
                      (message "~S is not installed yet. Skipped."
                               (source-project-name source))))))
            (when new-update-projects
