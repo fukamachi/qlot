@@ -21,7 +21,6 @@
            #:source-dist-name
            #:source-identifier
            #:source=
-           #:write-distinfo
            #:source-install-url
            #:source-version-prefix))
 (in-package #:qlot/source/base)
@@ -136,21 +135,6 @@
     (and (eq (class-of source1) (class-of source2))
          (string= (source-project-name source1)
                   (source-project-name source2)))))
-
-(defun write-distinfo (source &optional (stream *standard-output*))
-  (format stream "~{~(~A~): ~A~%~}"
-          (list :name (source-dist-name source)
-                :version (source-version source)
-                :distinfo-subscription-url (format nil "qlot://localhost/~A.txt"
-                                                   (source-project-name source))
-                :canonical-distinfo-url (format nil "qlot://localhost/~A.txt"
-                                                (source-project-name source))
-                :release-index-url (format nil "qlot://localhost/~A/~A/releases.txt"
-                                           (source-project-name source)
-                                           (source-version source))
-                :system-index-url (format nil "qlot://localhost/~A/~A/systems.txt"
-                                          (source-project-name source)
-                                          (source-version source)))))
 
 (defgeneric source-install-url (source)
   (:method ((source source))
