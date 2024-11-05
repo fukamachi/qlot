@@ -4,6 +4,7 @@
                 #:source-project-name
                 #:source-version
                 #:source-version-prefix
+                #:source-published-at
                 #:source-github-repos
                 #:source-github-ref
                 #:source-github-branch
@@ -27,6 +28,7 @@
                 #:qlot-simple-error
                 #:github-ratelimit-error)
   (:import-from #:yason)
+  (:import-from #:local-time)
   (:export #:distify-github))
 (in-package #:qlot/distify/github)
 
@@ -71,12 +73,16 @@
                                            (format nil "/git/refs/tags/~A" name))
                      :from-end t))
            (get-branch-ref (name)
-             (reduce #'gethash
-                     '("sha" "commit")
-                     :initial-value
+             (let ((branch-info
                      (retrieve-from-github (source-github-repos source)
-                                           (format nil "/branches/~A" name))
-                     :from-end t)))
+                                           (format nil "/branches/~A" name))))
+               (values
+                (reduce #'gethash '("sha" "commit")
+                        :initial-value branch-info
+                        :from-end t)
+                (reduce #'gethash '("date" "committer" "commit" "commit")
+                        :initial-value branch-info
+                        :from-end t)))))
     (cond
       ((source-github-ref source))
       ((source-github-branch source)
@@ -89,8 +95,12 @@
 (defun load-source-github-version (source)
   (unless (ignore-errors (source-github-ref source))
     (progress "Retrieving the git ref from GitHub.")
-    (setf (source-github-ref source)
-          (retrieve-source-git-ref-from-github source)))
+    (multiple-value-bind (ref date)
+        (retrieve-source-git-ref-from-github source)
+      (setf (source-github-ref source) ref)
+      (when date
+        (setf (source-published-at source)
+              (local-time:timestamp-to-universal (local-time:parse-rfc3339-timestring date))))))
   (unless (ignore-errors (source-version source))
     (setf (source-version source)
           (format nil "~A~A"
@@ -110,7 +120,29 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (progress "Writing the distinfo to ~S." destination)
-    (write-source-distinfo source destination)
+    (when (and (not distinfo-only)
+               (not (source-published-at source)))
+      (setf (source-published-at source)
+            (local-time:timestamp-to-universal
+             (local-time:parse-rfc3339-timestring
+              (cond
+                ((source-github-tag source)
+                 (reduce #'gethash
+                         '("date" "tagger")
+                         :initial-value
+                         (retrieve-from-github (source-github-repos source)
+                                               (format nil "/git/tags/~A" (source-github-ref source)))
+                         :from-end t))
+                (t
+                 (reduce #'gethash
+                         '("date" "committer" "commit")
+                         :initial-value
+                         (retrieve-from-github (source-github-repos source)
+                                               (format nil "/commits/~A" (source-github-ref source)))
+                         :from-end t)))))))
+    (write-source-distinfo source destination
+                           (and (source-published-at source)
+                                (list :qlot.published-at (source-published-at source))))
     (progress "Wrote the distinfo to ~S." destination)
 
     (when distinfo-only

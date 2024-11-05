@@ -4,7 +4,8 @@
                 #:source-project-name
                 #:source-dist-name
                 #:source-version
-                #:source-version-prefix)
+                #:source-version-prefix
+                #:source-published-at)
   (:import-from #:qlot/source/git
                 #:source-git
                 #:source-git-branch
@@ -102,8 +103,9 @@
                    :no-checkout (or distinfo-only
                                     (not (uiop:file-exists-p archive-file))))
         (progress "Writing the distinfo.")
+        (setf (source-published-at source) (git-committed-date source-directory))
         (write-source-distinfo source destination
-                               (list :qlot.published-date (git-committed-date source-directory)))
+                               (list :qlot.published-at (source-published-at source)))
 
         (cond
           ((not (uiop:file-exists-p archive-file))

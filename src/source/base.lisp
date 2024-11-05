@@ -10,6 +10,7 @@
   (:export #:source
            #:source-project-name
            #:source-version
+           #:source-published-at
            #:source-initargs
            #:source-defrost-args
            #:usage-of-source
@@ -31,6 +32,9 @@
                  :accessor source-project-name)
    (version :initarg :version
             :accessor source-version)
+   (published-at :initarg :published-at
+                 :initform nil
+                 :accessor source-published-at)
 
    ;; Keep these variables for dumping to qlfile.lock.
    (initargs :reader source-initargs)
@@ -87,7 +91,8 @@
 
 (defgeneric source-frozen-slots (source)
   (:method ((source source))
-    '()))
+    (and (source-published-at source)
+         `(:published-at ,(source-published-at source)))))
 
 (defgeneric freeze-source (source)
   (:method ((source source))
