@@ -88,5 +88,7 @@
       (error "No git references named '~A'." ref-identifier))))
 
 (defun git-committed-date (repository-dir)
-  (safety-shell-command "git" `("-C" ,(uiop:native-namestring repository-dir)
-                                "log" "-1" "--format=%ct" "HEAD")))
+  (parse-integer
+   (string-right-trim '(#\Newline #\Return)
+                      (safety-shell-command "git" `("-C" ,(uiop:native-namestring repository-dir)
+                                                    "log" "-1" "--format=%ct" "HEAD")))))

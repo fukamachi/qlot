@@ -103,7 +103,10 @@
                    :no-checkout (or distinfo-only
                                     (not (uiop:file-exists-p archive-file))))
         (progress "Writing the distinfo.")
-        (setf (source-published-at source) (git-committed-date source-directory))
+        (setf (source-published-at source)
+              ;; Convert the unix time to a universal one (from 1900-01-01).
+              (+ (* 25567 (* 60 60 24))
+                 (git-committed-date source-directory)))
         (write-source-distinfo source destination
                                (list :qlot.published-at (source-published-at source)))
 
