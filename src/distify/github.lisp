@@ -120,6 +120,9 @@
     (ensure-directories-exist *default-pathname-defaults*)
 
     (progress "Writing the distinfo to ~S." destination)
+    ;; TODO: Stop making an extra API request just for getting the published time.
+    ;;   It is used only when using `qlot outdated`. Maybe it can be deferred until then?
+    #+todo
     (when (and (not distinfo-only)
                (not (source-published-at source)))
       (setf (source-published-at source)
