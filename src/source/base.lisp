@@ -91,8 +91,7 @@
 
 (defgeneric source-frozen-slots (source)
   (:method ((source source))
-    (and (source-published-at source)
-         `(:published-at ,(source-published-at source)))))
+    nil))
 
 (defgeneric freeze-source (source)
   (:method ((source source))
