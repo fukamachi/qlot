@@ -53,7 +53,7 @@
       (let ((data (parse-distinfo-file (merge-pathnames "dists/cl-ppcre/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "ql-2018-08-31")))
       (let ((data (parse-distinfo-file (merge-pathnames "dists/lsx/distinfo.txt" qlhome))))
-        (ok (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
+        (ok (equal (aget data "version") "github-7c7c00ddd125810a67bee18534d34b7a6fc84a0a")))
       (let ((data (parse-distinfo-file (merge-pathnames "dists/fukamachi-lack/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "ultralisp-20190904101505")))
       (let ((data (parse-distinfo-file (merge-pathnames "dists/mito/distinfo.txt" qlhome))))
@@ -82,7 +82,7 @@
                      :projects '("fukamachi-lack"))
 
       (let ((data (parse-distinfo-file (merge-pathnames "dists/lsx/distinfo.txt" qlhome))))
-        (ok (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
+        (ok (equal (aget data "version") "github-7c7c00ddd125810a67bee18534d34b7a6fc84a0a")))
 
       (update-qlfile qlfile
                      :quicklisp-home qlhome
@@ -97,7 +97,7 @@
       (let ((data (parse-distinfo-file (merge-pathnames "dists/cl-ppcre/distinfo.txt" qlhome))))
         (ok (equal (aget data "version") "ql-2018-08-31")))
       (let ((data (parse-distinfo-file (merge-pathnames "dists/lsx/distinfo.txt" qlhome))))
-        (ng (equal (aget data "version") "github-546032449c010e4153501accf1cac521")))
+        (ng (equal (aget data "version") "github-7c7c00ddd125810a67bee18534d34b7a6fc84a0a")))
       (let ((data (parse-distinfo-file (merge-pathnames "dists/fukamachi-lack/distinfo.txt" qlhome))))
         (ng (equal (aget data "version") "ultralisp-20190904101505")))
       (let ((data (parse-distinfo-file (merge-pathnames "dists/mito/distinfo.txt" qlhome))))
