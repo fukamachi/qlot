@@ -7,13 +7,29 @@
   (:import-from #:qlot/utils
                 #:split-with
                 #:starts-with)
-  (:export #:git-clone
+  (:export #:git-switch-tag
+           #:git-clone
            #:create-git-tarball
            #:git-ref
            #:git-committed-date))
 (in-package #:qlot/utils/git)
 
-(defun git-clone (remote-url destination &key checkout-to ref no-checkout)
+(defun git-fetch (directory ref &rest args)
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "fetch" "--depth" "1" "origin" ,ref "--quiet" ,@args))
+  (values))
+
+(defun git-checkout (directory ref)
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "checkout" ,ref "--quiet"))
+  (values))
+
+(defun git-switch-tag (directory tag)
+  (git-fetch directory "origin" (format nil "refs/tags/~A:refs/tags/~:*~A" tag) "--no-tags")
+  (git-checkout directory tag)
+  (values))
+
+(defun git-clone (remote-url destination &key checkout-to ref no-checkout (recursive t))
   (let ((shallow (not ref)))
     (tagbody git-cloning
       (when (uiop:directory-exists-p destination)
@@ -37,7 +53,7 @@
                                   `("clone"
                                     ,@(if (or ref no-checkout)
                                           '("--no-checkout")
-                                          '("--recursive"))
+                                          (and recursive '("--recursive")))
                                     ,@(and checkout-to
                                            `("--branch" ,checkout-to))
                                     ,@(and shallow
@@ -53,12 +69,11 @@
           (go git-cloning)))))
 
   (when ref
-    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                  "fetch" "--depth" "1" "origin" ,ref "--quiet"))
-    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                  "checkout" ,ref "--quiet"))
-    (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
-                                  "submodule" "update" "--init" "--recursive" "--quiet")))
+    (git-fetch destination ref)
+    (git-checkout destination ref)
+    (when recursive
+      (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
+                                    "submodule" "update" "--init" "--recursive" "--quiet"))))
   (values))
 
 (defun create-git-tarball (project-directory destination ref)

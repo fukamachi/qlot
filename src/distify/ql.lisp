@@ -23,8 +23,19 @@
   (:import-from #:qlot/http)
   (:import-from #:fuzzy-match
                 #:fuzzy-match)
+  (:import-from #:cl-ppcre)
   (:export #:distify-ql))
 (in-package #:qlot/distify/ql)
+
+(defun get-version-from-archive-url (archive-url)
+  (when (stringp archive-url)
+    (let ((matches
+            (nth-value
+             1
+             (ppcre:scan-to-strings "^https?://beta\\.quicklisp\\.org/archive/[^/]+/(\\d{4}-\\d{2}-\\d{2})"
+                                    archive-url))))
+      (and matches
+           (aref matches 0)))))
 
 (defun load-source-ql-version (source)
   (progress "Getting the distinfo.")
@@ -49,6 +60,10 @@
         (parse-space-delimited-stream stream
                                       :test (lambda (data)
                                               (when (equal (first data) (source-project-name source))
+                                                (let ((latest-version
+                                                        (get-version-from-archive-url (second data))))
+                                                  (when latest-version
+                                                    (setf version latest-version)))
                                                 (return t))
                                               (push (first data) candidates)))
         (error 'qlot-simple-error

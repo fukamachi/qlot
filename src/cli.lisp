@@ -524,7 +524,7 @@ OPTIONS:
 
       ;; Complete the source type
       (unless (member (first argv)
-                      '("dist" "git" "github" "http" "local" "ql" "ultralisp")
+                      '("dist" "git" "github" "http" "local" "ql" "ultralisp" "asdf")
                       :test 'equal)
         (setf argv
               (if (find #\/ (first argv) :test 'char=)
