@@ -61,6 +61,12 @@
                      :tag tag
                      :project-name project-name))))
 
+(defmethod defrost-source :after ((source source-github))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (setf (source-github-ref source)
+          (subseq (source-version source)
+                  (length (source-version-prefix source))))))
+
 (defmethod source-identifier ((source source-github))
   (source-github-repos source))
 
