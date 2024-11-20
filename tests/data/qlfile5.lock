@@ -17,7 +17,7 @@
 ("lsx" .
  (:class qlot.source.github:source-github
   :initargs (:project-name "lsx" :repos "fukamachi/lsx" :ref nil :branch nil :tag nil)
-  :version "github-546032449c010e4153501accf1cac521"))
+  :version "github-7c7c00ddd125810a67bee18534d34b7a6fc84a0a"))
 ("fukamachi-lack" .
  (:class qlot.source.ultralisp:source-ultralisp
   :initargs (:project-name "fukamachi-lack" :%version :latest)

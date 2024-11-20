@@ -575,6 +575,8 @@ OPTIONS:
         (do-options (option argv)
           ("--help"
            (print-remove-usage))
+          ("--debug"
+           (qlot-option-debug))
           ("--no-install"
            (setf no-install t))
           (otherwise
@@ -626,6 +628,8 @@ SYNOPSIS:
     (do-options (option argv)
       ("--help"
        (print-check-usage))
+      ("--debug"
+       (qlot-option-debug))
       (otherwise
        (error-message "qlot: extra arguments for 'qlot check'")
        (warn-message "Run 'qlot check --help' to see the usage.")
@@ -646,6 +650,8 @@ SYNOPSIS:
       (do-options (option argv)
         ("--help"
          (print-outdated-usage))
+        ("--debug"
+         (qlot-option-debug))
         (otherwise
          (when (and (starts-with "--" option)
                     (not (equal "--" option)))

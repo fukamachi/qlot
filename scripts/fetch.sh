@@ -33,5 +33,5 @@ fi
 exec $lisp --noinform --no-sysinit --no-userinit --non-interactive \
   --load "$setup_file" \
   --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
-  --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (asdf:load-system :qlot/fetch))' \
+  --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (handler-bind (#+sbcl (sb-kernel:redefinition-warning (function muffle-warning))) (asdf:load-system :qlot/fetch)))' \
   --eval '(qlot/fetch::main)' -- "$@"
