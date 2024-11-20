@@ -40,7 +40,9 @@
           (ok (equal (aget metadata "version") "git-64941e1848354767e08e57aca90d7c40350bb6b3"))
           (ok (equal (aget metadata "distinfo-subscription-url") "qlot://localhost/cl-dbi.txt"))
           (ok (equal (aget metadata "release-index-url") "qlot://localhost/cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/releases.txt"))
-          (ok (equal (aget metadata "system-index-url") "qlot://localhost/cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/systems.txt"))))
+          (ok (equal (aget metadata "system-index-url") "qlot://localhost/cl-dbi/git-64941e1848354767e08e57aca90d7c40350bb6b3/systems.txt"))
+          (ok (equal (aget metadata "qlot.published-at")
+                     "3776006654"))))
 
       (testing "systems.txt"
         (ok (uiop:file-exists-p systems.txt))

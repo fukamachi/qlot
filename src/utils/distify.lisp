@@ -16,10 +16,10 @@
                 #:https-of)
   (:import-from #:qlot/http)
   (:import-from #:qlot/source
+                #:source-dist-name
                 #:source-distinfo-url
                 #:source-project-name
-                #:source-version
-                #:write-distinfo)
+                #:source-version)
   (:import-from #:ironclad)
   (:export #:releases.txt
            #:systems.txt
@@ -117,10 +117,29 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
          distribution
          version))))))
 
-(defun write-source-distinfo (source destination)
+(defun write-distinfo (distinfo.txt key-values)
+  (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
+    (format out "~{~(~A~): ~A~%~}"
+            key-values)))
+
+(defun write-source-distinfo (source destination &optional additional-values)
   (let ((distinfo.txt (merge-pathnames
-                        (make-pathname :name (source-project-name source)
-                                       :type "txt")
-                        destination)))
-    (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
-      (write-distinfo source out))))
+                       (make-pathname :name (source-project-name source)
+                                      :type "txt")
+                       destination))
+        (distinfo-key-values
+          (append
+           (list :name (source-dist-name source)
+                 :version (source-version source)
+                 :distinfo-subscription-url (format nil "qlot://localhost/~A.txt"
+                                                    (source-project-name source))
+                 :canonical-distinfo-url (format nil "qlot://localhost/~A.txt"
+                                                 (source-project-name source))
+                 :release-index-url (format nil "qlot://localhost/~A/~A/releases.txt"
+                                            (source-project-name source)
+                                            (source-version source))
+                 :system-index-url (format nil "qlot://localhost/~A/~A/systems.txt"
+                                           (source-project-name source)
+                                           (source-version source)))
+           additional-values)))
+    (write-distinfo distinfo.txt distinfo-key-values)))

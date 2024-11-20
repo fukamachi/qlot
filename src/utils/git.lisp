@@ -10,12 +10,13 @@
   (:export #:git-switch-tag
            #:git-clone
            #:create-git-tarball
-           #:git-ref))
+           #:git-ref
+           #:git-committed-date))
 (in-package #:qlot/utils/git)
 
-(defun git-fetch (directory &rest args)
+(defun git-fetch (directory ref &rest args)
   (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
-                                "fetch" "--quiet" ,@args))
+                                "fetch" "--depth" "1" "origin" ,ref "--quiet" ,@args))
   (values))
 
 (defun git-checkout (directory ref)
@@ -28,7 +29,7 @@
   (git-checkout directory tag)
   (values))
 
-(defun git-clone (remote-url destination &key checkout-to ref (recursive t))
+(defun git-clone (remote-url destination &key checkout-to ref no-checkout (recursive t))
   (let ((shallow (not ref)))
     (tagbody git-cloning
       (when (uiop:directory-exists-p destination)
@@ -50,12 +51,13 @@
                                (go git-cloning)))))
             (safety-shell-command "git"
                                   `("clone"
+                                    ,@(if (or ref no-checkout)
+                                          '("--no-checkout")
+                                          (and recursive '("--recursive")))
                                     ,@(and checkout-to
                                            `("--branch" ,checkout-to))
                                     ,@(and shallow
                                            '("--depth" "1"))
-                                    ,@(and recursive
-                                           '("--recursive"))
                                     "--quiet"
                                     "--config" "core.eol=lf"
                                     "--config" "core.autocrlf=input"
@@ -67,8 +69,12 @@
           (go git-cloning)))))
 
   (when ref
-    (git-fetch destination)
-    (git-checkout destination ref)))
+    (git-fetch destination ref)
+    (git-checkout destination ref)
+    (when recursive
+      (safety-shell-command "git" `("-C" ,(uiop:native-namestring destination)
+                                    "submodule" "update" "--init" "--recursive" "--quiet"))))
+  (values))
 
 (defun create-git-tarball (project-directory destination ref)
   (check-type project-directory pathname)
@@ -95,3 +101,9 @@
     (shell-command-error (e)
       (warn (princ-to-string e))
       (error "No git references named '~A'." ref-identifier))))
+
+(defun git-committed-date (repository-dir)
+  (parse-integer
+   (string-right-trim '(#\Newline #\Return)
+                      (safety-shell-command "git" `("-C" ,(uiop:native-namestring repository-dir)
+                                                    "log" "-1" "--format=%ct" "HEAD")))))

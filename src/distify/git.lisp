@@ -4,7 +4,8 @@
                 #:source-project-name
                 #:source-dist-name
                 #:source-version
-                #:source-version-prefix)
+                #:source-version-prefix
+                #:source-published-at)
   (:import-from #:qlot/source/git
                 #:source-git
                 #:source-git-branch
@@ -24,6 +25,7 @@
   (:import-from #:qlot/utils/git
                 #:git-clone
                 #:git-ref
+                #:git-committed-date
                 #:create-git-tarball)
   (:import-from #:qlot/utils/quickdocs
                 #:project-upstream-url)
@@ -71,48 +73,55 @@
   (progress "Determining the project version.")
   (load-source-git-version source)
 
-  (let ((*default-pathname-defaults*
-          (uiop:ensure-absolute-pathname
-           (merge-pathnames
-            (make-pathname :directory
-                           `(:relative ,@(append (split-with #\/ (source-project-name source))
-                                                 (list (source-version source)))))
-            destination))))
+  (let* ((*default-pathname-defaults*
+           (uiop:ensure-absolute-pathname
+            (merge-pathnames
+             (make-pathname :directory
+                            `(:relative ,@(append (split-with #\/ (source-project-name source))
+                                                  (list (source-version source)))))
+             destination)))
+         (archive-file (merge-pathnames "archive.tar.gz")))
     (ensure-directories-exist *default-pathname-defaults*)
 
-    (progress "Writing the distinfo.")
-    (write-source-distinfo source destination)
-
     (when distinfo-only
+      (progress "Writing the distinfo.")
+      (write-source-distinfo source destination)
       (return-from distify-git))
 
-    (let ((archive-file (merge-pathnames "archive.tar.gz")))
-      (cond
-        ((not (uiop:file-exists-p archive-file))
-         (with-tmp-directory (softwares-dir)
-           (let ((source-directory (uiop:ensure-directory-pathname
-                                     (merge-pathnames (format nil "~A-~A"
-                                                              (source-project-name source)
-                                                              (source-git-identifier source))
-                                                      softwares-dir))))
-             (progress "Running git clone.")
-             (git-clone (source-git-remote-access-url source)
-                        source-directory
-                        :checkout-to (or (source-git-branch source)
-                                         (source-git-tag source))
-                        :ref (source-git-ref source))
+    (with-tmp-directory (softwares-dir)
+      (let ((source-directory (uiop:ensure-directory-pathname
+                               (merge-pathnames (format nil "~A-~A"
+                                                        (source-project-name source)
+                                                        (source-git-identifier source))
+                                                softwares-dir))))
+        (progress "Running git clone.")
+        (git-clone (source-git-remote-access-url source)
+                   source-directory
+                   :checkout-to (or (source-git-branch source)
+                                    (source-git-tag source))
+                   :ref (source-git-ref source)
+                   :no-checkout (or distinfo-only
+                                    (not (uiop:file-exists-p archive-file))))
+        (progress "Writing the distinfo.")
+        (setf (source-published-at source)
+              ;; Convert the unix time to a universal one (from 1900-01-01).
+              (+ (* 25567 (* 60 60 24))
+                 (git-committed-date source-directory)))
+        (write-source-distinfo source destination
+                               (list :qlot.published-at (source-published-at source)))
 
-             (progress "Creating a tarball.")
-             (create-git-tarball source-directory
-                                 archive-file
-                                 (source-git-ref source))
-             (unless (and (uiop:file-exists-p "systems.txt")
-                          (uiop:file-exists-p "releases.txt"))
-               (progress "Writing metadata files.")
-               (write-metadata-files source *default-pathname-defaults* source-directory archive-file)))))
-        ((not (and (uiop:file-exists-p "systems.txt")
-                   (uiop:file-exists-p "releases.txt")))
-         (with-tmp-directory (softwares-dir)
+        (cond
+          ((not (uiop:file-exists-p archive-file))
+           (progress "Creating a tarball.")
+           (create-git-tarball source-directory
+                               archive-file
+                               (source-git-ref source))
+           (unless (and (uiop:file-exists-p "systems.txt")
+                        (uiop:file-exists-p "releases.txt"))
+             (progress "Writing metadata files.")
+             (write-metadata-files source *default-pathname-defaults* source-directory archive-file)))
+          ((not (and (uiop:file-exists-p "systems.txt")
+                     (uiop:file-exists-p "releases.txt")))
            (progress "Extracting a tarball.")
            (let ((source-directory (extract-tarball archive-file softwares-dir)))
              (progress "Writing metadata files.")
