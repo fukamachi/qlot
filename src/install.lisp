@@ -11,6 +11,8 @@
                 #:source-local
                 #:source-local-path
                 #:source-local-registry-directive
+                #:source-asdf
+                #:source-asdf-remote-url
                 #:source-project-name
                 #:source-version
                 #:source-install-url
@@ -61,6 +63,9 @@
   (:import-from #:qlot/utils/tmp
                 #:tmp-directory
                 #:delete-tmp-directory)
+  (:import-from #:qlot/utils/git
+                #:git-switch-tag
+                #:git-clone)
   (:import-from #:qlot/color
                 #:color-text
                 #:*enable-color*)
@@ -280,7 +285,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (unwind-protect
            (let* ((sources-non-local
                     (remove-if (lambda (source)
-                                 (typep source 'source-local))
+                                 (typep source '(or source-local source-asdf)))
                                sources))
                   (sources-to-install
                     (with-quicklisp-home qlhome
@@ -376,6 +381,29 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
             (unless (find (name dist) sources :test #'string= :key #'source-dist-name)
               (message "Removing dist ~S." (name dist))
               (uninstall dist))))))
+
+    ;; ASDF
+    (let ((asdf-source (find-if (lambda (source)
+                                  (typep source 'source-asdf))
+                                sources))
+          (asdf-dir (merge-pathnames #P"local-projects/asdf/" qlhome)))
+      (cond
+        (asdf-source
+         (cond
+           ((uiop:directory-exists-p asdf-dir)
+            ;; Tag switch
+            (git-switch-tag asdf-dir (source-version asdf-source)))
+           (t
+            (message "Downloading ASDF to '~A'." asdf-dir)
+            ;; Clone
+            (git-clone (source-asdf-remote-url asdf-source)
+                       asdf-dir
+                       :checkout-to (source-version asdf-source)
+                       :recursive nil))))
+        (t
+         (when (uiop:directory-exists-p asdf-dir)
+           (message "Removing ASDF at '~A'." asdf-dir)
+           (uiop:delete-directory-tree asdf-dir :validate t :if-does-not-exist :ignore)))))
 
     (with-open-file (out (merge-pathnames #P"source-registry.conf" qlhome)
                          :direction :output
