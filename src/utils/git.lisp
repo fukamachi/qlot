@@ -25,7 +25,7 @@
   (values))
 
 (defun git-switch-tag (directory tag)
-  (git-fetch directory "origin" (format nil "refs/tags/~A:refs/tags/~:*~A" tag) "--no-tags")
+  (git-fetch directory tag (format nil "refs/tags/~A:refs/tags/~:*~A" tag) "--no-tags")
   (git-checkout directory tag)
   (values))
 
