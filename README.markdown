@@ -530,12 +530,7 @@ See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up
 
 ### Vim/Neovim
 
-# Setting up Vlime with Qlot
-
-## Installation Steps
-
 1. Install [vlime/vlime](https://github.com/vlime/vlime)
-
 2. Add the appropriate configuration to your Vim/Neovim `init.vim`:
 
    #### If you use Roswell:
@@ -567,7 +562,6 @@ See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up
    ```
 
 3. Relaunch Vim/Neovim
-
 4. Navigate to your project directory with `:cd /path/to/project/` and start Vlime with `:call VlimeQlotExec()`
 
 ## Working with local git repositories
