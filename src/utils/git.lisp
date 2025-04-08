@@ -25,7 +25,8 @@
   (values))
 
 (defun git-switch-tag (directory tag)
-  (git-fetch directory "origin" (format nil "refs/tags/~A:refs/tags/~:*~A" tag) "--no-tags")
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "fetch" "--depth" "1" "origin" "tag" ,tag "--quiet"))
   (git-checkout directory tag)
   (values))
 
