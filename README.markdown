@@ -579,7 +579,7 @@ FROM fukamachi/qlot AS qlot-env
 
 WORKDIR /app
 COPY qlfile* myapp.asd .
-RUN qlot install --no-deps && qlot bundle
+RUN qlot bundle
 
 FROM debian:bookworm-slim AS main
 
