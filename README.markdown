@@ -334,6 +334,20 @@ Here are few useful commands:
 * `qlot exec ros build some-app.ros` - another command, useful, to build a binary
   from systems, fixed in `qlfile` and `qlfile.lock`. This way you can be sure that your builds are stable.
 
+### bundle
+
+`qlot bundle` collects and copies all dependencies into a dedicated directory, making your application runnable without requiring Qlot or Quicklisp at runtime.
+
+```
+$ qlot bundle                           # Install into '.bundle-libs'
+$ qlot bundle --exclude myapp-test      # Install dependencies except for myapp-test
+$ qlot bundle --output vendor           # Install into 'vendor'
+```
+
+To load the bundled libraries, simply load `.bundle-libs/setup.lisp`.
+
+`qlot bundle` is ideal for creating self-contained Common Lisp projects, enabling reliable and portable deployment.
+
 ## `qlfile` syntax
 
 "qlfile" is a collection of Quicklisp dist declarations. Each line of that represents a dist.
