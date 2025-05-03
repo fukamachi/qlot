@@ -61,7 +61,8 @@
               (with-package-functions #:ql (bundle-systems)
                 (with-source-registry (`(:source-registry :ignore-inherited-configuration
                                          (:tree ,project-root)
-                                         (:also-exclude ".qlot")))
+                                         (:also-exclude ".qlot")
+                                         (:also-exclude ,(uiop:native-namestring bundle-directory))))
                   (handler-bind ((error
                                    (lambda (e)
                                      (when (eq (class-name (class-of e))

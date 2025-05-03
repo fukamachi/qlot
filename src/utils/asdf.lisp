@@ -53,6 +53,12 @@
                                 (invoke-restart (find-restart 'asdf:retry ,e)))))))
            ,@body)))))
 
+(defun bundle-directory-p (dir)
+  (and (uiop:directory-exists-p dir)
+       (uiop:file-exists-p (merge-pathnames "system-index.txt" dir))
+       (uiop:file-exists-p (merge-pathnames "setup.lisp" dir))
+       t))
+
 (defun directory-system-files (directory &key ignore-directories)
   (labels ((asd-file-p (path)
              (and (equal (pathname-type path) "asd")
@@ -67,7 +73,8 @@
                                  *exclude-directories*
                                  :test #'string=)
                            (and (stringp dir-name)
-                                (char= (aref dir-name 0) #\.)))
+                                (char= (aref dir-name 0) #\.))
+                           (bundle-directory-p dir))
                  (nconc
                    (mapcar #'truename
                            (remove-if-not #'asd-file-p
@@ -225,7 +232,8 @@
                            (find dir-name
                                  *exclude-directories*
                                  :test 'string=)
-                           (char= (aref dir-name 0) #\.))
+                           (char= (aref dir-name 0) #\.)
+                           (bundle-directory-p subdir))
                 append (directory-lisp-files subdir
                                              :ignore-directories ignore-directories))))
 
