@@ -82,6 +82,13 @@ if [ "$QLOT_SETUP_FILE" = "" ]; then
     echo "Run '$QLOT_SOURCE_DIR/scripts/setup.sh' first." >&2
     exit 1
   fi
+elif [ "$(basename "$QLOT_SETUP_FILE")" = "bundle.lisp" ] && [ ! -f "$QLOT_SETUP_FILE" ]; then
+  QLOT_SETUP_FILE="$(dirname "$QLOT_SETUP_FILE")"/setup.lisp
+fi
+
+if [ ! -f "$QLOT_SETUP_FILE" ]; then
+  echo "$QLOT_SETUP_FILE doesn't exist"
+  exit 1
 fi
 
 # shellcheck disable=SC2086
