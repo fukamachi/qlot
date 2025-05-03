@@ -180,6 +180,9 @@
                       (uiop:file-exists-p (merge-pathnames "setup.lisp" quicklisp-home)))
                  (error "Invalid Quicklisp home: ~A" quicklisp-home)))
             ((uiop:file-exists-p
+              (merge-pathnames ".bundle-libs/setup.lisp"
+                               *qlot-source-directory*)))
+            ((uiop:file-exists-p
               (merge-pathnames ".bundle-libs/bundle.lisp"
                                *qlot-source-directory*)))
             ((uiop:file-exists-p

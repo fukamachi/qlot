@@ -11,6 +11,7 @@
   (cond
     ((find :quicklisp *features*)
      (uiop:symbol-call '#:ql-setup '#:qmerge #P"setup.lisp"))
+    ((uiop:file-exists-p (merge-pathnames #P".bundle-libs/setup.lisp" *qlot-source-directory*)))
     ((uiop:file-exists-p (merge-pathnames #P".bundle-libs/bundle.lisp" *qlot-source-directory*)))
     (t nil)))
 
