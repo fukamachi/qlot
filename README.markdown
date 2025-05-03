@@ -27,6 +27,8 @@
   * [Emacs](#emacs)
   * [Vim/Neovim](#vimneovim)
 * [Working with local git repositories](#working-with-local-git-repositories)
+* [Examples](#examples)
+  * [Building a Docker image](#building-a-docker-image)
 
 ## Usage
 
@@ -552,6 +554,41 @@ endfunction
 ## Working with local git repositories
 
 `PROJECT_ROOT/.qlot/local-projects` can be used for local git repositories. Symbolic links are also accessible in Qlot environment.
+
+## Examples
+
+### Building a Docker image
+
+```dockerfile
+FROM fukamachi/qlot AS qlot-env
+
+WORKDIR /app
+COPY qlfile* .
+RUN qlot install --no-deps
+COPY myapp.asd .
+RUN set -x; \
+  qlot exec sbcl --dynamic-space-size 4096 --non-interactive \
+    --eval '(ql:quickload (asdf:system-depends-on (asdf:find-system :myapp)))'
+
+FROM debian:bookworm-slim AS main
+
+# Copy SBCL binary
+COPY --from=fukamachi/sbcl:2.5.3 /root/.roswell/impls/*/linux/sbcl-bin/2.5.3 /usr/local
+
+WORKDIR /app
+
+# Copy .qlot directory
+COPY --from=qlot-env /app/.qlot /app/.qlot
+COPY --from=qlot-env /root/.cache/common-lisp /root/.cache/common-lisp
+
+# Run whatever you want
+COPY . .
+
+RUN set -x; \
+  sbcl --dynamic-space-size 4096 --load .qlot/setup.lisp --eval '(ql:quickload :myapp)'
+
+CMD ["sbcl", "--load", ".qlot/setup.lisp", "--eval", "(ql:quickload :myapp :silent t)", "--eval", "(myapp:main)"]
+```
 
 ## Author
 
