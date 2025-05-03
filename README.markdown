@@ -595,10 +595,12 @@ COPY --from=qlot-env /app/.bundle-libs /app/.bundle-libs
 COPY . .
 
 RUN set -x; \
-  sbcl --dynamic-space-size 4096 --load .bundle-libs/bundle.lisp --eval '(asdf:load-system :myapp)'
+  sbcl --dynamic-space-size 4096 --load .bundle-libs/setup.lisp --eval '(asdf:load-system :myapp)'
 
-CMD ["sbcl", "--load", ".bundle-libs/bundle.lisp", "--eval", "(asdf:load-system :myapp)", "--eval", "(myapp:main)"]
+CMD ["sbcl", "--load", ".bundle-libs/setup.lisp", "--eval", "(asdf:load-system :myapp)", "--eval", "(myapp:main)"]
 ```
+
+NOTE: `.bundle-libs/bundle.lisp` renamed to `setup.lisp` from v1.7.0. If it doesn't exist, try using `bundle.lisp`.
 
 ## Author
 

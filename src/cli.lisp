@@ -673,7 +673,7 @@ SYNOPSIS:
 DESCRIPTION:
     This command bundles project dependencies to a specific directory.
     The default is '.bundle-libs/'.
-    Load './.bundle-libs/bundle.lisp' to make them available.
+    Load './.bundle-libs/setup.lisp' to make them available.
     Read https://www.quicklisp.org/beta/bundles.html for the detail.
 
 OPTIONS:

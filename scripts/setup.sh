@@ -21,7 +21,7 @@ fi
 
 export QLOT_FETCH=curl
 
-if [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+if [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" ]; then
   if [ ! -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
     $lisp --noinform --no-sysinit --no-userinit --non-interactive \
       --eval '(require :asdf)' \
@@ -36,9 +36,9 @@ if [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
   fi
 fi
 
-if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" ]; then
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
-    --load "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" \
+    --load "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" \
     --eval "(asdf:load-asd #P\"$QLOT_SOURCE_DIR/qlot.asd\")" \
     --eval '(let ((*standard-output* (make-broadcast-stream)) (*trace-output* (make-broadcast-stream))) (mapc (function asdf:load-system) (list :qlot :qlot/subcommands :qlot/cli :qlot/fetch)))'
 else

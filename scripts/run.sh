@@ -71,7 +71,9 @@ case "$lisp" in
 esac
 
 if [ "$QLOT_SETUP_FILE" = "" ]; then
-  if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+  if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" ]; then
+    QLOT_SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp"
+  elif [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
     QLOT_SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
   elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
     QLOT_SETUP_FILE="$QLOT_SOURCE_DIR/.qlot/setup.lisp"

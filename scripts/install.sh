@@ -20,7 +20,9 @@ fi
 
 mkdir -p "$QLOT_BIN_DIR"
 
-if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
+if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" ]; then
+  SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp"
+elif [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
   SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
 elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
   SETUP_FILE="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
