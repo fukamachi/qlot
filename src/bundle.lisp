@@ -2,6 +2,7 @@
   (:use #:cl)
   (:import-from #:qlot/utils/project
                 #:check-local-quicklisp
+                #:qlot-directory-not-found
                 #:local-quicklisp-home)
   (:import-from #:qlot/utils/dependencies
                 #:project-dependencies-in-child-process)
@@ -10,7 +11,8 @@
   (:import-from #:qlot/utils/asdf
                 #:with-source-registry)
   (:import-from #:qlot/utils
-                #:with-package-functions)
+                #:with-package-functions
+                #:ensure-package-loaded)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
@@ -23,7 +25,13 @@
 (defun %bundle-project (project-root &key exclude output)
   (assert (uiop:absolute-pathname-p project-root))
 
-  (check-local-quicklisp project-root)
+  (handler-case
+      (check-local-quicklisp project-root)
+    (qlot-directory-not-found ()
+      (ensure-package-loaded :qlot/install)
+      (uiop:symbol-call '#:qlot/install '#:install-project
+                        project-root
+                        :install-deps nil)))
 
   (let ((quicklisp-home (local-quicklisp-home project-root)))
     (unless (find-package '#:ql)
