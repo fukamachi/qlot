@@ -56,7 +56,8 @@
                                        (when (asdf:find-system (uiop:symbol-call '#:ql-bundle '#:system-not-found-system e) nil)
                                          (invoke-restart (find-restart (uiop:intern* '#:omit '#:ql-bundle) e)))))))
                     (bundle-systems dependency-names
-                                    :to bundle-directory))))))
+                                    :to bundle-directory
+                                    :overwrite t))))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
 (defun bundle-project (object &key exclude)
