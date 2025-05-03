@@ -578,12 +578,8 @@ See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up
 FROM fukamachi/qlot AS qlot-env
 
 WORKDIR /app
-COPY qlfile* .
-RUN qlot install --no-deps
-COPY myapp.asd .
-RUN set -x; \
-  qlot exec sbcl --dynamic-space-size 4096 --non-interactive \
-    --eval '(ql:quickload (asdf:system-depends-on (asdf:find-system :myapp)))'
+COPY qlfile* myapp.asd .
+RUN qlot install --no-deps && qlot bundle
 
 FROM debian:bookworm-slim AS main
 
@@ -592,17 +588,16 @@ COPY --from=fukamachi/sbcl:2.5.3 /root/.roswell/impls/*/linux/sbcl-bin/2.5.3 /us
 
 WORKDIR /app
 
-# Copy .qlot directory
-COPY --from=qlot-env /app/.qlot /app/.qlot
-COPY --from=qlot-env /root/.cache/common-lisp /root/.cache/common-lisp
+# Copy .bundle-libs directory
+COPY --from=qlot-env /app/.bundle-libs /app/.bundle-libs
 
 # Run whatever you want
 COPY . .
 
 RUN set -x; \
-  sbcl --dynamic-space-size 4096 --load .qlot/setup.lisp --eval '(ql:quickload :myapp)'
+  sbcl --dynamic-space-size 4096 --load .bundle-libs/bundle.lisp --eval '(asdf:load-system :myapp)'
 
-CMD ["sbcl", "--load", ".qlot/setup.lisp", "--eval", "(ql:quickload :myapp :silent t)", "--eval", "(myapp:main)"]
+CMD ["sbcl", "--load", ".bundle-libs/bundle.lisp", "--eval", "(asdf:load-system :myapp)", "--eval", "(myapp:main)"]
 ```
 
 ## Author
