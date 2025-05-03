@@ -79,6 +79,12 @@
           ;; Rename bundle.lisp -> setup.lisp.
           (rename-file (merge-pathnames #P"bundle.lisp" bundle-directory)
                        (merge-pathnames #P"setup.lisp" bundle-directory))
+          ;; Copy local-projects/asdf.
+          (let ((asdf-directory (merge-pathnames #P"local-projects/asdf/" quicklisp-home)))
+            (when (uiop:directory-exists-p asdf-directory)
+              (uiop:symbol-call '#:ql-bundle '#:copy-directory-tree
+                                asdf-directory
+                                (merge-pathnames #P"local-projects/asdf/" bundle-directory))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
 (defun bundle-project (object &key exclude output)
