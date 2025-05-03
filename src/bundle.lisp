@@ -63,6 +63,9 @@
                     (bundle-systems dependency-names
                                     :to bundle-directory
                                     :overwrite t))))))
+          (let ((bundle-info.sexp (merge-pathnames #P"bundle-info.sexp" bundle-directory)))
+            (when (uiop:file-exists-p bundle-info.sexp)
+              (delete-file bundle-info.sexp)))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
 (defun bundle-project (object &key exclude output)
