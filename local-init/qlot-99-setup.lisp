@@ -62,7 +62,11 @@
                 (not (equal dirname ""))
                 (not (char= (aref dirname 0) #\.))
                 (not (find dirname asdf/source-registry:*default-source-registry-exclusions*
-                           :test 'equal)))))
+                           :test 'equal))
+                (not
+                 (and
+                  (uiop:file-exists-p (merge-pathnames #P"system-index.txt" dir))
+                  (uiop:file-exists-p (merge-pathnames #P"setup.lisp" dir)))))))
        t
        (lambda (dir)
          (let* ((system-files
