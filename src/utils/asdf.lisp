@@ -53,14 +53,17 @@
                                 (invoke-restart (find-restart 'asdf:retry ,e)))))))
            ,@body)))))
 
-(defun directory-system-files (directory)
+(defun directory-system-files (directory &key ignore-directories)
   (labels ((asd-file-p (path)
              (and (equal (pathname-type path) "asd")
                   ;; KLUDGE: Ignore skeleton.asd of CL-Project
                   (not (search "skeleton" (pathname-name path)))))
            (collect-asd-files-in-directory (dir)
              (let ((dir-name (car (last (pathname-directory dir)))))
-               (unless (or (find dir-name
+               (unless (or (find dir
+                                 ignore-directories
+                                 :test 'uiop:pathname-equal)
+                           (find dir-name
                                  *exclude-directories*
                                  :test #'string=)
                            (and (stringp dir-name)
@@ -186,11 +189,13 @@
 (defun system-pathname (system-name)
   (gethash system-name *system-pathname*))
 
-(defmacro with-directory ((system-file system-name dependencies &key eval-form) directory &body body)
+(defmacro with-directory ((system-file system-name dependencies &key eval-form ignore-directories)
+                          directory &body body)
   (let ((value (gensym "VALUE"))
         (dir-system-files (gensym "DIR-SYSTEM-FILES")))
     `(with-traversal-context
-       (let ((,dir-system-files (directory-system-files ,directory)))
+       (let ((,dir-system-files (directory-system-files ,directory
+                                                        :ignore-directories ,ignore-directories)))
          (dolist (,system-file ,dir-system-files)
            (handler-case
                (handler-bind ((style-warning #'muffle-warning))
@@ -210,15 +215,19 @@
                  (declare (ignorable ,system-name ,dependencies))
                  ,@body))))))))
 
-(defun directory-lisp-files (directory)
+(defun directory-lisp-files (directory &key ignore-directories)
   (append (uiop:directory-files directory "*.lisp")
           (loop for subdir in (uiop:subdirectories directory)
                 for dir-name = (car (last (pathname-directory subdir)))
-                unless (or (find dir-name
+                unless (or (find subdir
+                                 ignore-directories
+                                 :test 'uiop:pathname-equal)
+                           (find dir-name
                                  *exclude-directories*
                                  :test 'string=)
                            (char= (aref dir-name 0) #\.))
-                append (directory-lisp-files subdir))))
+                append (directory-lisp-files subdir
+                                             :ignore-directories ignore-directories))))
 
 (defun lisp-file-system-name (file root primary-system-name)
   (block nil

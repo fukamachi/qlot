@@ -102,7 +102,7 @@
       (merge-pathnames *qlot-directory* project-root)
       *default-pathname-defaults*)))
 
-(defun project-dependencies (project-root &key exclude)
+(defun project-dependencies (project-root &key exclude ignore-directories)
   (with-package-functions #:ql-dist (find-system name)
     (let* ((all-dependencies '())
            (pis-already-seen-files '())
@@ -116,7 +116,8 @@
                                      (funcall fn system-name))
                                    exclude-functions))))))
       (with-directory (system-file system-name dependencies
-                                   :eval-form t)
+                                   :eval-form t
+                                   :ignore-directories ignore-directories)
           project-root
         (pushnew system-name project-system-names :test 'equal)
         (when (or (null test)
@@ -147,7 +148,8 @@
                   (when (subtypep system-class (find-class 'asdf:package-inferred-system))
                     (let* ((lisp-files
                              (set-difference
-                              (directory-lisp-files (uiop:pathname-directory-pathname system-file))
+                              (directory-lisp-files (uiop:pathname-directory-pathname system-file)
+                                                    :ignore-directories ignore-directories)
                               pis-already-seen-files
                               :test 'equal))
                            (pis-dependencies

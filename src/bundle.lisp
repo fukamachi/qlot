@@ -18,9 +18,9 @@
   (:export #:bundle-project))
 (in-package #:qlot/bundle)
 
-(defvar *bundle-directory* #P".bundle-libs/")
+(defvar *default-bundle-directory-name* ".bundle-libs")
 
-(defun %bundle-project (project-root &key exclude)
+(defun %bundle-project (project-root &key exclude output)
   (assert (uiop:absolute-pathname-p project-root))
 
   (check-local-quicklisp project-root)
@@ -30,16 +30,21 @@
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
     (with-quicklisp-home quicklisp-home
-      (let* ((dependencies (with-package-functions #:ql-dist (find-system)
+      (let* ((bundle-directory (uiop:ensure-directory-pathname
+                                 (merge-pathnames (or output *default-bundle-directory-name*)
+                                                  project-root)))
+             (dependencies (with-package-functions #:ql-dist (find-system)
                              (mapcar #'find-system
                                      (project-dependencies-in-child-process project-root quicklisp-home
-                                                                            :exclude exclude))))
+                                                                            :exclude exclude
+                                                                            :ignore-directories
+                                                                            (list bundle-directory)))))
              (dep-releases (with-package-functions #:ql-dist (release name)
                              (delete-duplicates
                               (mapcar #'release dependencies)
                               :key #'name
-                              :test 'equal)))
-             (bundle-directory (merge-pathnames *bundle-directory* project-root)))
+                              :test 'equal))))
+        (ensure-directories-exist bundle-directory)
         (when dep-releases
           (message "Bundling ~D ~:*dependenc~[ies~;y~:;ies~]..."
                    (length dep-releases))
@@ -60,11 +65,17 @@
                                     :overwrite t))))))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
-(defun bundle-project (object &key exclude)
+(defun bundle-project (object &key exclude output)
   (etypecase object
     ((or symbol string)
-     (bundle-project (asdf:find-system object) :exclude exclude))
+     (bundle-project (asdf:find-system object)
+                     :exclude exclude
+                     :output output))
     (asdf:system
-     (%bundle-project (asdf:system-source-directory object) :exclude exclude))
+     (%bundle-project (asdf:system-source-directory object)
+                      :exclude exclude
+                      :output output))
     (pathname
-     (%bundle-project object :exclude exclude))))
+     (%bundle-project object
+                      :exclude exclude
+                      :output output))))

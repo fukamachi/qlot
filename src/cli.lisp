@@ -668,23 +668,28 @@ SYNOPSIS:
            (format *error-output* "~&qlot bundle - Bundle project dependencies.
 
 SYNOPSIS:
-    qlot bundle [[--exclude SYSTEM-NAME]..]
+    qlot bundle [--output DIRECTORY] [[--exclude SYSTEM-NAME]..]
 
 DESCRIPTION:
-    This command bundles project dependencies to './.bundle-libs'.
+    This command bundles project dependencies to a specific directory.
+    The default is '.bundle-libs/'.
     Load './.bundle-libs/bundle.lisp' to make them available.
     Read https://www.quicklisp.org/beta/bundles.html for the detail.
 
 OPTIONS:
+    --output <directory>
+        Specify the directory to install.
     --exclude <system name>
         Exclude specific system names and those dependencies.
         This option can be specified multiple times.
 ")
            (uiop:quit -1)))
-    (let (exclude)
+    (let (exclude output)
       (do-options (option argv)
         ("--debug"
          (qlot-option-debug))
+        (("--output" output-path)
+         (setf output output-path))
         (("--exclude" name)
          (setf exclude
                (append exclude
@@ -699,6 +704,7 @@ OPTIONS:
       (ensure-package-loaded :qlot/bundle)
       (uiop:symbol-call '#:qlot/bundle '#:bundle-project
                         *default-pathname-defaults*
+                        :output output
                         :exclude exclude))))
 
 (defun qlot-command-toplevel (argv)
