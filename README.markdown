@@ -532,24 +532,39 @@ See the [Sly manual](https://joaotavora.github.io/sly/#Multiple-Lisps) to set up
 
 ### Vim/Neovim
 
-1. Install [vlime/vlime](https://github.com/vlime/vlime).
-2. Add the following code to your Vim/Neovim init.vim.
+1. Install [vlime/vlime](https://github.com/vlime/vlime)
+2. Add the appropriate configuration to your Vim/Neovim `init.vim`:
 
-```vimscript
-let g:vlime_cl_use_terminal = v:true
-let s:vlime_path = '/path/to/vlime'
-function! VlimeBuildServerCommandFor_qlot(vlime_loader, vlime_eval)
-    return ["qlot", "exec", "ros", "run",
-               \ "--load", s:vlime_path . "/lisp/load-vlime.lisp",
-               \ "--eval", vlime_eval]
-endfunction
-function! VlimeQlotExec()
-    call vlime#server#New(v:true, get(g:, "vlime_cl_use_terminal", v:false), v:null, "qlot")
-endfunction
-```
+   #### If you use Roswell:
+   ```vim
+   let g:vlime_cl_use_terminal = v:true
+   let s:vlime_path = '/path/to/vlime'
+   function! VlimeBuildServerCommandFor_qlot(vlime_loader, vlime_eval)
+       return ["qlot", "exec", "ros", "run",
+                 \ "--load", s:vlime_path . "/lisp/load-vlime.lisp",
+                 \ "--eval", a:vlime_eval]
+   endfunction
+   function! VlimeQlotExec()
+       call vlime#server#New(v:true, get(g:, "vlime_cl_use_terminal", v:false), v:null, "qlot")
+   endfunction
+   ```
 
-3. Relaunch the Vim/Neovim.
-4. Change the directory by `:cd /path/to/project/` and invoke `:call VlimeQlotExec()`.
+   #### If you use plain SBCL:
+   ```vim
+   let g:vlime_cl_use_terminal = v:true
+   let s:vlime_path = '/path/to/vlime'
+   function! VlimeBuildServerCommandFor_qlot(vlime_loader, vlime_eval)
+       return ["qlot", "exec", "sbcl",
+                 \ "--load", s:vlime_path . "/lisp/load-vlime.lisp",
+                 \ "--eval", a:vlime_eval]
+   endfunction
+   function! VlimeQlotExec()
+       call vlime#server#New(v:true, get(g:, "vlime_cl_use_terminal", v:false), v:null, "qlot")
+   endfunction
+   ```
+
+3. Relaunch Vim/Neovim
+4. Navigate to your project directory with `:cd /path/to/project/` and start Vlime with `:call VlimeQlotExec()`
 
 ## Working with local git repositories
 
