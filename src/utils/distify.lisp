@@ -13,7 +13,8 @@
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
   (:import-from #:qlot/utils
-                #:https-of)
+                #:https-of
+                #:split-with)
   (:import-from #:qlot/http)
   (:import-from #:qlot/source
                 #:source-dist-name
@@ -93,29 +94,48 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                               :test 'equal
                               :from-end t)))))))))
 
+(defun find-versioned-distinfo-url (available-versions-url version)
+  (let ((stream
+          (qlot/http:get (https-of available-versions-url)
+                         :want-stream t)))
+    (loop for line = (read-line stream nil nil)
+          while line
+          for (v distinfo-url) = (split-with #\Space line :limit 2)
+          when (equal v version)
+          do (return distinfo-url))))
+
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data
            (parse-distinfo-stream (qlot/http:get (https-of distribution)
                                                  :want-stream t)))
-         (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
-                                            :test #'string=)))
-         (distinfo-url (or (cdr (assoc "canonical-distinfo-url" distinfo-data
-                                       :test #'string=))
-                           (cdr (assoc "distinfo-subscription-url" distinfo-data
-                                       :test #'string=))
-                           distribution)))
+         (canonical-distinfo-url
+           (cdr (assoc "canonical-distinfo-url" distinfo-data
+                       :test #'string=)))
+         (distinfo-template-url
+           (cdr (assoc "distinfo-template-url" distinfo-data
+                       :test #'string=))))
     (https-of
      (cond
        ((eq :latest version)
-        distinfo-url)
+        (or canonical-distinfo-url
+            (cdr (assoc "distinfo-subscription-url" distinfo-data
+                        :test #'string=))
+            distribution))
        (distinfo-template-url
         (make-versioned-distinfo-url-with-template
          distinfo-template-url
          version))
        (t
-        (make-versioned-distinfo-url
-         distribution
-         version))))))
+        (let ((available-versions-url
+                (cdr (assoc "available-versions-url" distinfo-data
+                            :test #'string=))))
+          (cond
+            (available-versions-url
+             (find-versioned-distinfo-url available-versions-url version))
+            (t
+             (make-versioned-distinfo-url
+              distribution
+              version)))))))))
 
 (defun write-distinfo (distinfo.txt key-values)
   (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
