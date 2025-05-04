@@ -97,17 +97,20 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
   (let* ((distinfo-data
            (parse-distinfo-stream (qlot/http:get (https-of distribution)
                                                  :want-stream t)))
-         (distinfo-template-url (cdr (assoc "distinfo-template-url" distinfo-data
-                                            :test #'string=)))
-         (distinfo-url (or (cdr (assoc "canonical-distinfo-url" distinfo-data
-                                       :test #'string=))
-                           (cdr (assoc "distinfo-subscription-url" distinfo-data
-                                       :test #'string=))
-                           distribution)))
+         (distinfo-template-url
+           (cdr (assoc "distinfo-template-url" distinfo-data
+                       :test #'string=)))
+         (canonical-distinfo-url
+           (cdr (assoc "canonical-distinfo-url" distinfo-data
+                       :test #'string=))))
     (https-of
      (cond
        ((eq :latest version)
-        distinfo-url)
+        (or canonical-distinfo-url
+            (cdr (assoc "distinfo-subscription-url" distinfo-data
+                        :test #'string=))
+            distribution))
+       (canonical-distinfo-url)
        (distinfo-template-url
         (make-versioned-distinfo-url-with-template
          distinfo-template-url
