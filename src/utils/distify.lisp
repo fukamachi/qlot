@@ -93,16 +93,29 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                               :test 'equal
                               :from-end t)))))))))
 
+(defun make-distinfo-template-url (distinfo version)
+  (when (and (stringp distinfo)
+             (stringp version)
+             (< (length version) (length distinfo)))
+    (let ((pos (search version distinfo :from-end t)))
+      (when pos
+        (format nil "~A{{version}}~A"
+                (subseq distinfo 0 pos)
+                (subseq distinfo (+ pos (length version))))))))
+
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data
            (parse-distinfo-stream (qlot/http:get (https-of distribution)
                                                  :want-stream t)))
-         (distinfo-template-url
-           (cdr (assoc "distinfo-template-url" distinfo-data
-                       :test #'string=)))
          (canonical-distinfo-url
            (cdr (assoc "canonical-distinfo-url" distinfo-data
-                       :test #'string=))))
+                       :test #'string=)))
+         (distinfo-template-url
+           (or (cdr (assoc "distinfo-template-url" distinfo-data
+                           :test #'string=))
+               (make-distinfo-template-url canonical-distinfo-url
+                                           (cdr (assoc "version" distinfo-data
+                                                       :test #'string=))))))
     (https-of
      (cond
        ((eq :latest version)
@@ -110,7 +123,6 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
             (cdr (assoc "distinfo-subscription-url" distinfo-data
                         :test #'string=))
             distribution))
-       (canonical-distinfo-url)
        (distinfo-template-url
         (make-versioned-distinfo-url-with-template
          distinfo-template-url
