@@ -13,7 +13,8 @@
                 #:make-versioned-distinfo-url
                 #:make-versioned-distinfo-url-with-template)
   (:import-from #:qlot/utils
-                #:https-of)
+                #:https-of
+                #:split-with)
   (:import-from #:qlot/http)
   (:import-from #:qlot/source
                 #:source-dist-name
@@ -93,15 +94,15 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                               :test 'equal
                               :from-end t)))))))))
 
-(defun make-distinfo-template-url (distinfo version)
-  (when (and (stringp distinfo)
-             (stringp version)
-             (< (length version) (length distinfo)))
-    (let ((pos (search version distinfo :from-end t)))
-      (when pos
-        (format nil "~A{{version}}~A"
-                (subseq distinfo 0 pos)
-                (subseq distinfo (+ pos (length version))))))))
+(defun find-versioned-distinfo-url (available-versions-url version)
+  (let ((stream
+          (qlot/http:get (https-of available-versions-url)
+                         :want-stream t)))
+    (loop for line = (read-line stream nil nil)
+          while line
+          for (v distinfo-url) = (split-with #\Space line :limit 2)
+          when (equal v version)
+          do (return distinfo-url))))
 
 (defun get-distinfo-url (distribution version)
   (let* ((distinfo-data
@@ -111,11 +112,8 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
            (cdr (assoc "canonical-distinfo-url" distinfo-data
                        :test #'string=)))
          (distinfo-template-url
-           (or (cdr (assoc "distinfo-template-url" distinfo-data
-                           :test #'string=))
-               (make-distinfo-template-url canonical-distinfo-url
-                                           (cdr (assoc "version" distinfo-data
-                                                       :test #'string=))))))
+           (cdr (assoc "distinfo-template-url" distinfo-data
+                       :test #'string=))))
     (https-of
      (cond
        ((eq :latest version)
@@ -128,9 +126,16 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
          distinfo-template-url
          version))
        (t
-        (make-versioned-distinfo-url
-         distribution
-         version))))))
+        (let ((available-versions-url
+                (cdr (assoc "available-versions-url" distinfo-data
+                            :test #'string=))))
+          (cond
+            (available-versions-url
+             (find-versioned-distinfo-url available-versions-url version))
+            (t
+             (make-versioned-distinfo-url
+              distribution
+              version)))))))))
 
 (defun write-distinfo (distinfo.txt key-values)
   (uiop:with-output-file (out distinfo.txt :if-exists :supersede)
