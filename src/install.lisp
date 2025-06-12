@@ -329,18 +329,20 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                    (source-project-name source)
                                    (source-project-name source)
                                    (source-version source)))
-                        ((string= (source-dist-name source) "quicklisp")
+                        ((typep source 'source-dist)
                          (with-package-functions #:ql-dist (uninstall version)
-                           (let* ((current-dist (find-dist "quicklisp"))
+                           (let* ((current-dist (find-dist (source-dist-name source)))
                                   (current-version (version current-dist)))
-                             (uninstall (find-dist "quicklisp"))
+                             (uninstall current-dist)
                              (with-qlot-server (source :destination tmp-dir :silent t)
                                (bt2:with-lock-held (install-lock)
                                  (install-source source)))
                              (if (equal current-version (source-version source))
-                                 (progress :done "No update on dist \"quicklisp\" version ~S."
+                                 (progress :done "No update on dist \"~A\" version ~S."
+                                           (source-dist-name source)
                                            current-version)
-                                 (progress :done "Updated dist \"quicklisp\" version ~S -> ~S."
+                                 (progress :done "Updated dist \"~A\" version ~S -> ~S."
+                                           (source-dist-name source)
                                            current-version
                                            (source-version source))))))
                         (t
