@@ -56,10 +56,10 @@
                     (when (uiop:file-exists-p gitignore)
                       (uiop:read-file-lines gitignore))))
              (unless (member ".qlot/" ignore-entries :test 'equal)
-               (message "Adding .qlot/ to .gitignore")
+               (message "Adding /.qlot/ to .gitignore")
                (with-open-file (out (merge-pathnames ".gitignore" object)
                                     :direction :output
                                     :if-does-not-exist :create
                                     :if-exists :append)
-                 (format out "~&.qlot/~%"))))))
+                 (format out "~&/.qlot/~%"))))))
        (values qlfile (not qlfile-exists))))))
