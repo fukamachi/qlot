@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Find the script directory
+SCRIPT="$0"
+while [ -L "$SCRIPT" ]; do
+  SCRIPT_DIR=$(cd "$(dirname "$SCRIPT")" && pwd)
+  SCRIPT=$(readlink "$SCRIPT")
+  [[ $SCRIPT != /* ]] && SCRIPT="$SCRIPT_DIR/$SCRIPT"
+done
+PROJECT_DIR=$(cd "$(dirname "$SCRIPT")/.." && pwd)
+
+exec "$PROJECT_DIR/scripts/run.sh" "$@"
