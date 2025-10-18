@@ -2,6 +2,14 @@
 
 set -eu
 
+# Check if a directory is in PATH
+check_in_path() {
+  case ":$PATH:" in
+    *":$1:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 if [ "$(id -u)" -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}

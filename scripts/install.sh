@@ -37,13 +37,10 @@ fi
 
 mkdir -p "$QLOT_BIN_DIR"
 
-if [ -f "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" ]; then
-  SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp"
-elif [ -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ]; then
-  SETUP_FILE="$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp"
-elif [ -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
-  SETUP_FILE="$QLOT_SOURCE_DIR/.qlot/setup.lisp"
-else
+# Check that Qlot is setup
+if [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/setup.lisp" ] && \
+   [ ! -f "$QLOT_SOURCE_DIR/.bundle-libs/bundle.lisp" ] && \
+   [ ! -f "$QLOT_SOURCE_DIR/.qlot/setup.lisp" ]; then
   errmsg "Qlot isn't setup yet. Run 'scripts/setup.sh' first."
   exit 1
 fi

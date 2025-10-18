@@ -5,6 +5,14 @@ set -eu
 VERSION=${VERSION:-heads/master}
 QLOT_ARCHIVE=${QLOT_ARCHIVE:-https://github.com/fukamachi/qlot/archive/refs/$VERSION.tar.gz}
 
+# Check if a directory is in PATH
+check_in_path() {
+  case ":$PATH:" in
+    *":$1:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 if [ "$(id -u)" -eq 0 ]; then
   QLOT_BASE=${QLOT_BASE:-/usr/local}
   QLOT_HOME=${QLOT_HOME:-"$QLOT_BASE/lib/qlot"}
@@ -68,14 +76,6 @@ else
   exit 1
 fi
 
-# Check if a directory is in PATH
-check_in_path() {
-  case ":$PATH:" in
-    *":$1:"*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 qlot_version() {
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
     --eval '(require :asdf)' --eval "(asdf:load-asd \"$QLOT_SOURCE_DIR/qlot.asd\")" \
@@ -123,7 +123,8 @@ cd "$QLOT_SOURCE_DIR"
 mkdir -p "$QLOT_LOGS_DIR"
 install_log_path="$QLOT_LOGS_DIR/install-$(date '+%s').log"
 echo "Setting it up. This may take a while..."
-setup_success=$(scripts/setup.sh > "$install_log_path" 2>&1)
+scripts/setup.sh > "$install_log_path" 2>&1
+setup_success=$?
 
 if [ "$setup_success" -ne 0 ]; then
   errmsg "Setup process is failed. See '$install_log_path' for the detailed logs."
@@ -131,7 +132,8 @@ if [ "$setup_success" -ne 0 ]; then
   exit "$setup_success"
 fi
 
-install_success=$(QLOT_BIN_DIR="$QLOT_BIN_DIR" scripts/install.sh >> "$install_log_path" 2>&1)
+QLOT_BIN_DIR="$QLOT_BIN_DIR" scripts/install.sh >> "$install_log_path" 2>&1
+install_success=$?
 
 if [ "$install_success" -ne 0 ]; then
   errmsg "Install process is failed. See '$install_log_path' for the detailed logs."
