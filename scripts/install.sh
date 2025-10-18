@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eu
+set -eux
 
 QLOT_SOURCE_DIR=$(realpath "$(dirname -- "${0%/*}")")
 
@@ -59,19 +59,4 @@ fi
 mkdir -p "$REGISTRY_DIR"
 if [ ! -f "$REGISTRY_DIR/qlot.asd" ]; then
   ln -sf "$QLOT_SOURCE_DIR/qlot.asd" "$REGISTRY_DIR/qlot.asd"
-fi
-
-# Show post-install message
-echo ""
-echo "Qlot installed to: $QLOT_BIN_DIR/qlot"
-
-if [ "$(id -u)" -ne 0 ]; then
-  if ! check_in_path "$QLOT_BIN_DIR"; then
-    echo ""
-    echo "$(ansi 33)Note: $QLOT_BIN_DIR is not in your PATH.$(ansi 0)"
-    echo "Add it to your PATH by adding this to your shell config:"
-    echo ""
-    echo "  export PATH=\"$QLOT_BIN_DIR:\$PATH\""
-    echo ""
-  fi
 fi

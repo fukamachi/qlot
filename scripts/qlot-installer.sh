@@ -60,6 +60,14 @@ else
   exit 1
 fi
 
+# Check if a directory is in PATH
+check_in_path() {
+  case ":$PATH:" in
+    *":$1:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 qlot_version() {
   $lisp --noinform --no-sysinit --no-userinit --non-interactive \
     --eval '(require :asdf)' --eval "(asdf:load-asd \"$QLOT_SOURCE_DIR/qlot.asd\")" \
@@ -128,10 +136,12 @@ success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME
 echo ''
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "The executable script is located at '$QLOT_BIN_DIR/qlot'."
-  echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
-  echo ''
-  echo "    export PATH=\"$QLOT_BIN_DIR:\$PATH\""
-  echo ''
+  if ! check_in_path "$QLOT_BIN_DIR"; then
+    echo "$(ansi 33)The executable script is located at '$QLOT_BIN_DIR/qlot'.$(ansi 0)"
+    echo "To make it runnable by your shell, please add '$QLOT_BIN_DIR' to '\$PATH'."
+    echo ''
+    echo "    export PATH=\"$QLOT_BIN_DIR:\$PATH\""
+    echo ''
+  fi
 fi
 echo 'Enjoy!'
