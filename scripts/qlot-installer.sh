@@ -18,7 +18,15 @@ else
   else
     QLOT_HOME=${QLOT_HOME:-~/.qlot}
   fi
-  QLOT_BIN_DIR=${QLOT_BIN_DIR:-${XDG_BIN_HOME:-"$QLOT_HOME/bin"}}
+  if [ -z "${QLOT_BIN_DIR:-}" ]; then
+    if [ -n "${XDG_BIN_HOME:-}" ]; then
+      QLOT_BIN_DIR="$XDG_BIN_HOME"
+    elif check_in_path "$HOME/.local/bin"; then
+      QLOT_BIN_DIR="$HOME/.local/bin"
+    else
+      QLOT_BIN_DIR="$QLOT_HOME/bin"
+    fi
+  fi
   QLOT_TMP_DIR="$QLOT_HOME/tmp"
   QLOT_SOURCE_DIR=${QLOT_SOURCE_DIR:-"$QLOT_HOME/qlot"}
   QLOT_LOGS_DIR="$QLOT_HOME/logs"
