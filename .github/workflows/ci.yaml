@@ -2,11 +2,12 @@ name: CI
 
 on:
   push:
+  pull_request:
   schedule:
     - cron: '0 15 * * *'
 
 jobs:
-  test:
+  test-unix:
     name: ${{ matrix.lisp }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -41,7 +42,7 @@ jobs:
         run: scripts/install.sh
       - name: Run qlot install for Lem
         run: |
-          PATH="~/.qlot/bin:~/.roswell/bin:$PATH"
+          PATH="~/.qlot/bin:~/.local/bin:~/.roswell/bin:$PATH"
           git clone https://github.com/lem-project/lem
           cd lem
           qlot install --debug
@@ -50,3 +51,78 @@ jobs:
         run: |
           scripts/qlot-uninstaller.sh
           [ ! $(which qlot) ]
+
+  test-windows:
+    name: ${{ matrix.lisp }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin/2.3.9]
+        os: [windows-latest]
+
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            git
+      - name: Prepare git
+        run: git config --global core.autocrlf input
+        shell: bash
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Roswell
+        env:
+          LISP: ${{ matrix.lisp }}
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Install Ultralisp
+        run: ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
+      - name: Install Rove
+        run: |
+          ros install fukamachi/rove
+      - name: Install dependencies
+        run: ros install fukamachi/dexador
+      - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ros -s rove -e '(or (rove:run :qlot-tests) (uiop:quit -1))'
+
+  test-exec:
+    name: qlot exec - ${{ matrix.lisp }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        lisp: [sbcl-bin, ecl, ccl-bin]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Roswell
+        env:
+          LISP: ${{ matrix.lisp }}
+          ROSWELL_INSTALL_DIR: /usr
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      - name: Compile local-inits
+        run: |
+          for file in $(find ./local-init -name "*.lisp"); do
+            ros -e "(or (compile-file #P\"$file\") (uiop:quit -1))"
+          done
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable scripts/*
