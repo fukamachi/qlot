@@ -116,7 +116,7 @@
                                      (funcall fn system-name))
                                    exclude-functions))))))
       (with-directory (system-file system-name dependencies
-                                   :eval-form t
+                                   :eval-form nil
                                    :ignore-directories ignore-directories)
           project-root
         (pushnew system-name project-system-names :test 'equal)
