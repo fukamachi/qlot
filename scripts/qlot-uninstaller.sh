@@ -21,8 +21,15 @@ ansi() {
 }
 [ -t 1 ] || ansi() { :; }
 
-rm "$QLOT_BIN_DIR"/qlot
-rm -r "$QLOT_HOME"
+rm -f "$QLOT_BIN_DIR"/qlot
+
+# If QLOT_HOME is a symlink, just remove the link
+# Otherwise, recursively delete the directory
+if [ -L "$QLOT_HOME" ]; then
+  rm "$QLOT_HOME"
+elif [ -d "$QLOT_HOME" ]; then
+  rm -r "$QLOT_HOME"
+fi
 
 if [ "$(id -u)" -eq 0 ]; then
   REGISTRY_DIR=/usr/local/share/common-lisp/systems
