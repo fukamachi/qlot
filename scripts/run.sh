@@ -16,10 +16,10 @@ errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
 
 # shellcheck disable=SC2153
 if [ "$LISP" = "" ]; then
-  if [ "$(which ros 2>/dev/null)" != "" ]; then
-    lisp="ros"
-  elif [ "$(which sbcl 2>/dev/null)" != "" ]; then
+  if [ "$(which sbcl 2>/dev/null)" != "" ]; then
     lisp="sbcl"
+  elif [ "$(which ros 2>/dev/null)" != "" ]; then
+    lisp="ros"
   elif [ "$(which ecl 2>/dev/null)" != "" ]; then
     lisp="ecl"
   elif [ "$(which clasp 2>/dev/null)" != "" ]; then

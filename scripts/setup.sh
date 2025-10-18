@@ -10,10 +10,10 @@ ansi() {
 }
 [ -t 1 ] || ansi() { :; }
 errmsg() { printf "%sError: %s%s\n" "$(ansi 31)" "$1" "$(ansi 0)"; }
-if [ "$(which ros 2>/dev/null)" != "" ]; then
-  lisp="ros +Q -L sbcl-bin run --"
-elif [ "$(which sbcl 2>/dev/null)" != "" ]; then
+if [ "$(which sbcl 2>/dev/null)" != "" ]; then
   lisp="sbcl"
+elif [ "$(which ros 2>/dev/null)" != "" ]; then
+  lisp="ros +Q -L sbcl-bin run --"
 else
   errmsg "sbcl is required to setup Qlot."
   exit 1
