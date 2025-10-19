@@ -125,4 +125,4 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run ShellCheck
         run: |
-          docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable scripts/*
+          docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable scripts/* bin/qlot

@@ -5,7 +5,10 @@ SCRIPT="$0"
 while [ -L "$SCRIPT" ]; do
   SCRIPT_DIR=$(cd "$(dirname "$SCRIPT")" && pwd)
   SCRIPT=$(readlink "$SCRIPT")
-  [[ $SCRIPT != /* ]] && SCRIPT="$SCRIPT_DIR/$SCRIPT"
+  case "$SCRIPT" in
+    /*) ;;
+    *) SCRIPT="$SCRIPT_DIR/$SCRIPT" ;;
+  esac
 done
 PROJECT_DIR=$(cd "$(dirname "$SCRIPT")/.." && pwd)
 
