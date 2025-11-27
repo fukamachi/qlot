@@ -4,6 +4,9 @@
                 #:system-class-name
                 #:system-pathname
                 #:with-directory
+                #:with-traversal-context
+                #:*registry*
+                #:read-asd-file
                 #:directory-system-files
                 #:directory-lisp-files
                 #:lisp-file-system-name
@@ -35,6 +38,19 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
     (error "Wild pathnames cannot be normalized."))
   (first (uiop:directory* path)))
 
+(defun system-file-has-matching-system-p (system-file)
+  "Check if SYSTEM-FILE defines at least one system whose name matches the file's basename.
+Quicklisp expects this for proper installation of releases."
+  (let ((basename (pathname-name system-file))
+        (systems (gethash system-file *registry*)))
+    (if systems
+        ;; Check if any system's name matches the file's basename
+        (some (lambda (system-info)
+                (string-equal (car system-info) basename))
+              systems)
+        ;; If not in registry, assume it matches (fallback behavior)
+        t)))
+
 (defun releases.txt (project-name project-version source-directory tarball-file)
   (let* ((source-directory (normalize-pathname source-directory))
          (prefix (car (last (pathname-directory source-directory)))))
@@ -45,22 +61,36 @@ Does not resolve symlinks, but PATH must actually exist in the filesystem."
                     (ironclad:digest-file :md5 tarball-file))
                   (ironclad:byte-array-to-hex-string
                     (ironclad:digest-stream :sha1 in))))
-      (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
-              project-name
-              (format nil "qlot://localhost/~A/~A/~A"
-                      project-name
-                      project-version
-                      (file-namestring tarball-file))
-              size
-              file-md5
-              content-sha1
-              prefix
-              (let (result)
-                (dolist (system-file (directory-system-files source-directory))
-                  (push (subseq (namestring system-file)
-                                (length (namestring source-directory)))
-                        result))
-                result)))))
+      ;; Collect system files, but only include those with matching system names
+      ;; Quicklisp's install method expects find-system-in-dist to find a system
+      ;; whose name matches (pathname-name file) for each file in system-files
+      (let* ((system-files (directory-system-files source-directory))
+             (filtered-files
+               (with-traversal-context
+                 ;; First, read all .asd files to populate *registry*
+                 (dolist (sf system-files)
+                   (handler-case
+                       (handler-bind ((style-warning #'muffle-warning))
+                         (read-asd-file sf))
+                     (error ())))
+                 ;; Then filter to only include files with matching system names
+                 (remove-if-not #'system-file-has-matching-system-p system-files))))
+        (format nil "# project url size file-md5 content-sha1 prefix [system-file1..system-fileN]~%~A ~A ~A ~A ~A ~A~{ ~A~}~%"
+                project-name
+                (format nil "qlot://localhost/~A/~A/~A"
+                        project-name
+                        project-version
+                        (file-namestring tarball-file))
+                size
+                file-md5
+                content-sha1
+                prefix
+                (let (result)
+                  (dolist (system-file filtered-files)
+                    (push (subseq (namestring system-file)
+                                  (length (namestring source-directory)))
+                          result))
+                  result))))))
 
 (defun systems.txt (project-name source-directory)
   (with-output-to-string (s)

@@ -11,6 +11,9 @@
            #:system-class-name
            #:system-pathname
            #:with-directory
+           #:with-traversal-context
+           #:*registry*
+           #:read-asd-file
            #:directory-lisp-files
            #:lisp-file-system-name
            #:lisp-file-dependencies
