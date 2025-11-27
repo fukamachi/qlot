@@ -85,6 +85,12 @@
               (uiop:symbol-call '#:ql-bundle '#:copy-directory-tree
                                 asdf-directory
                                 (merge-pathnames #P"local-projects/asdf/" bundle-directory))))
+          ;; Keep local-projects/.
+          (ensure-directories-exist (merge-pathnames #P"local-projects/" bundle-directory))
+          (with-open-file (out (merge-pathnames #P"local-projects/.keep" bundle-directory)
+                               :if-exists :overwrite
+                               :if-does-not-exist :create
+                               :direction :output))
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
 (defun bundle-project (object &key exclude output)
