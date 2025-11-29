@@ -282,16 +282,28 @@
   (ensure-directories-exist to)
   (copy-directory from to))
 
+(defun strip-trailing-slash (path)
+  "Remove trailing slash from a path string."
+  (let ((str (if (pathnamep path)
+                 (namestring path)
+                 path)))
+    (if (and (< 1 (length str))
+             (char= (char str (1- (length str))) #\/))
+        (subseq str 0 (1- (length str)))
+        str)))
+
 (defun create-symlink (target link)
+  "Create a symbolic link at LINK pointing to TARGET.
+TARGET and LINK can be pathnames or strings. Directory pathnames
+with trailing slashes are handled correctly."
   (remove-path link)
   (handler-case
-      (progn
+      (let ((target-str (strip-trailing-slash target))
+            (link-str (strip-trailing-slash link)))
         #+sbcl
-        (sb-posix:symlink (namestring target) (namestring link))
+        (sb-posix:symlink target-str link-str)
         #-sbcl
-        (uiop:run-program (list "ln" "-s"
-                                (uiop:native-namestring target)
-                                (uiop:native-namestring link))
+        (uiop:run-program (list "ln" "-s" target-str link-str)
                           :ignore-error-status t))
     (error ()
       ;; Fallback to copy when symlink creation fails (e.g., restricted FS)
@@ -483,23 +495,52 @@
           (ignore-errors (uiop:delete-directory-tree metadata-staging :validate t))
           (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))))))
 
+(defun parse-releases-txt (dist-path)
+  "Parse releases.txt and return an alist mapping prefix to release-name."
+  (let ((releases-file (merge-pathnames "releases.txt" dist-path))
+        (result nil))
+    (when (uiop:file-exists-p releases-file)
+      (with-open-file (stream releases-file)
+        (loop for line = (read-line stream nil nil)
+              while line
+              do (unless (or (zerop (length line))
+                             (char= (char line 0) #\#))
+                   ;; Format: project url size file-md5 content-sha1 prefix [system-file1..]
+                   (let* ((parts (uiop:split-string line :separator " "))
+                          (release-name (first parts))
+                          (prefix (sixth parts)))
+                     (when (and release-name prefix)
+                       (push (cons prefix release-name) result)))))))
+    result))
+
 (defun create-install-markers (dist-path)
+  "Create Quicklisp install marker files for all projects in dist-path.
+Paths in marker files are stored relative to qlhome (parent of dists/)."
   (let* ((installed-dir (merge-pathnames "installed/" dist-path))
          (releases-dir (merge-pathnames "releases/" installed-dir))
          (systems-dir (merge-pathnames "systems/" installed-dir))
-         (software-dir (merge-pathnames "software/" dist-path)))
+         (software-dir (merge-pathnames "software/" dist-path))
+         ;; qlhome is the parent of dists/, which is two levels up from dist-path
+         ;; dist-path: .qlot/dists/<distname>/ -> qlhome: .qlot/
+         (qlhome (uiop:pathname-parent-directory-pathname
+                  (uiop:pathname-parent-directory-pathname dist-path)))
+         ;; Get prefix -> release-name mapping
+         (prefix-to-name (parse-releases-txt dist-path)))
     (ensure-directories-exist releases-dir)
     (ensure-directories-exist systems-dir)
     (dolist (project-path (uiop:subdirectories software-dir))
-      (let ((project-name (car (last (pathname-directory project-path)))))
-        (with-open-file (s (merge-pathnames (format nil "~A.txt" project-name) releases-dir)
+      (let* ((prefix (car (last (pathname-directory project-path))))
+             ;; Use the release name from releases.txt, fall back to prefix if not found
+             (release-name (or (cdr (assoc prefix prefix-to-name :test #'string=))
+                               prefix)))
+        (with-open-file (s (merge-pathnames (format nil "~A.txt" release-name) releases-dir)
                            :direction :output :if-exists :supersede)
-          (write-line (namestring project-path) s))
+          (write-line (enough-namestring project-path qlhome) s))
         (dolist (asd-file (uiop:directory-files project-path "*.asd"))
           (let ((system-name (pathname-name asd-file)))
             (with-open-file (s (merge-pathnames (format nil "~A.txt" system-name) systems-dir)
                                :direction :output :if-exists :supersede)
-              (write-line (namestring asd-file) s))))))))
+              (write-line (enough-namestring asd-file qlhome) s))))))))
 
 (defun list-directory-entries (directory)
   "List all entries (files and subdirectories) in DIRECTORY without resolving symlinks."
