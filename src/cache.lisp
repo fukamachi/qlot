@@ -35,6 +35,7 @@
            #:split-path
            #:url-has-credentials-p
            #:source-has-credentials-p
+           #:make-directory-read-only
            #:staging-path
            #:validate-dist-installation
            #:clear-cache
@@ -261,7 +262,10 @@
           (sources (cache-sources-path source)))
       (and metadata sources
            (uiop:directory-exists-p metadata)
-           (probe-file sources)))))
+           (uiop:directory-exists-p sources)
+           (uiop:file-exists-p (merge-pathnames "distinfo.txt" metadata))
+           (uiop:file-exists-p (merge-pathnames "systems.txt" metadata))
+           (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))))))
 
 (defun move-directory (from to)
   (handler-case
@@ -279,13 +283,19 @@
   (copy-directory from to))
 
 (defun create-symlink (target link)
-  #+sbcl
-  (sb-posix:symlink (namestring target) (namestring link))
-  #-sbcl
-  (uiop:run-program (list "ln" "-s"
-                          (uiop:native-namestring target)
-                          (uiop:native-namestring link))
-                    :ignore-error-status t))
+  (remove-path link)
+  (handler-case
+      (progn
+        #+sbcl
+        (sb-posix:symlink (namestring target) (namestring link))
+        #-sbcl
+        (uiop:run-program (list "ln" "-s"
+                                (uiop:native-namestring target)
+                                (uiop:native-namestring link))
+                          :ignore-error-status t))
+    (error ()
+      ;; Fallback to copy when symlink creation fails (e.g., restricted FS)
+      (copy-directory-tree target link))))
 
 (defun remove-path (path)
   (cond
@@ -297,50 +307,199 @@
 
 (defun make-directory-read-only (path)
   #+sbcl
-  (sb-posix:chmod (namestring path) #o555)
+  (progn
+    (dolist (file (uiop:directory-files path))
+      (sb-posix:chmod (namestring file) #o444))
+    (dolist (subdir (uiop:subdirectories path))
+      (make-directory-read-only subdir))
+    (sb-posix:chmod (namestring path) #o755))
   #-sbcl
   (uiop:run-program (list "chmod" "-R" "a-w,a+r" (uiop:native-namestring path))
                     :ignore-error-status t))
 
-(defun restore-from-cache (source dist-path)
-  (declare (ignore source dist-path))
-  nil)
-
-(defun save-to-cache (source dist-path)
-  (declare (ignore source dist-path))
-  nil)
-
-(defun save-to-cache-impl (source dist-path)
-  (declare (ignore source dist-path))
-  nil)
-
-(defun create-install-markers (dist-path)
-  (declare (ignore dist-path))
-  nil)
-
 (defun cache-lock-file ()
   (merge-pathnames "cache.lock" *cache-directory*))
 
-(defstruct cache-lock
-  stream)
+(defun acquire-lock (stream mode)
+  #+sbcl
+  (let ((fd (sb-sys:fd-stream-fd stream)))
+    (ecase mode
+      (:shared
+       (sb-posix:fcntl fd sb-posix:f-setlkw
+                       (make-instance 'sb-posix:flock
+                                      :type sb-posix:f-rdlck
+                                      :whence sb-posix:seek-set
+                                      :start 0
+                                      :len 0)))
+      (:exclusive
+       (sb-posix:fcntl fd sb-posix:f-setlkw
+                       (make-instance 'sb-posix:flock
+                                      :type sb-posix:f-wrlck
+                                      :whence sb-posix:seek-set
+                                      :start 0
+                                      :len 0)))))
+  #+ccl
+  (let ((fd (ccl::stream-device stream :input)))
+    (ecase mode
+      (:shared (ccl::%flock fd 1))
+      (:exclusive (ccl::%flock fd 2))))
+  #+ecl
+  (let ((fd (ext:file-stream-fd stream)))
+    (ecase mode
+      (:shared (ext:flock fd :shared :wait t))
+      (:exclusive (ext:flock fd :exclusive :wait t))))
+  #-(or sbcl ccl ecl)
+  (declare (ignore stream mode)))
 
-(defun acquire-lock (&key (mode :exclusive))
-  (declare (ignore mode))
-  (let ((lock-file (cache-lock-file)))
-    (ensure-directories-exist lock-file)
-    (make-cache-lock :stream (open lock-file
-                                   :direction :io
-                                   :if-does-not-exist :create
-                                   :if-exists :append))))
+(defun release-lock (stream)
+  #+sbcl
+  (let ((fd (sb-sys:fd-stream-fd stream)))
+    (sb-posix:fcntl fd sb-posix:f-setlk
+                    (make-instance 'sb-posix:flock
+                                   :type sb-posix:f-unlck
+                                   :whence sb-posix:seek-set
+                                   :start 0
+                                   :len 0)))
+  #+ccl
+  (let ((fd (ccl::stream-device stream :input)))
+    (ccl::%flock fd 8))
+  #+ecl
+  (let ((fd (ext:file-stream-fd stream)))
+    (ext:flock fd :unlock))
+  #-(or sbcl ccl ecl)
+  (declare (ignore stream)))
 
-(defun release-lock (lock)
-  (when (and lock (cache-lock-stream lock))
-    (close (cache-lock-stream lock))))
+(defmacro with-cache-lock ((mode) &body body)
+  (let ((lock-stream (gensym "LOCK-STREAM")))
+    `(let* ((lock-file (cache-lock-file))
+            (,lock-stream (progn
+                            (ensure-directories-exist lock-file)
+                            (open lock-file
+                                  :direction :io
+                                  :if-does-not-exist :create
+                                  :if-exists :overwrite))))
+       (unwind-protect
+            (progn
+              (acquire-lock ,lock-stream ,mode)
+              ,@body)
+         (release-lock ,lock-stream)
+         (close ,lock-stream)))))
 
-(defmacro with-cache-lock ((&optional (mode :exclusive)) &body body)
-  `(let ((lock (acquire-lock :mode ,mode)))
-     (unwind-protect (progn ,@body)
-       (release-lock lock))))
+(defun restore-from-cache (source dist-path)
+  "Restore SOURCE into DIST-PATH from cache. Returns T on success, NIL on fallback."
+  (handler-case
+      (with-cache-lock (:shared)
+        (let ((metadata-cache (cache-metadata-path source))
+              (sources-cache (cache-sources-path source)))
+          (ensure-directories-exist dist-path)
+          ;; copy metadata files
+          (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+            (let ((src (merge-pathnames file metadata-cache))
+                  (dst (merge-pathnames file dist-path)))
+              (uiop:delete-file-if-exists dst)
+              (uiop:copy-file src dst)))
+          ;; link software dirs
+          (let ((software-dir (merge-pathnames "software/" dist-path)))
+            (ensure-directories-exist software-dir)
+            (dolist (project-dir (uiop:subdirectories sources-cache))
+              (let* ((dir-name (car (last (pathname-directory project-dir))))
+                     (link-path (merge-pathnames
+                                 (make-pathname :directory (list :relative dir-name))
+                                 software-dir)))
+                (create-symlink project-dir link-path))))
+          (create-install-markers dist-path)
+          t))
+    ((or file-error type-error) (e)
+      (warn "Cache for ~A is unusable, will reinstall: ~A"
+            (source-project-name source) e)
+      (ignore-errors
+        (uiop:delete-directory-tree (cache-metadata-path source) :validate t)
+        (uiop:delete-directory-tree (cache-sources-path source) :validate t))
+      nil)))
+
+(defun save-to-cache (source dist-path)
+  "Attempt to save SOURCE from DIST-PATH into cache; non-fatal on failure."
+  (when (source-has-credentials-p source)
+    (warn "Skipping cache for ~A: credentials present in URL" (source-project-name source))
+    (return-from save-to-cache))
+  (handler-case
+      (save-to-cache-impl source dist-path)
+    (storage-condition (e)
+      (warn "Failed to cache ~A: storage error ~A" (source-project-name source) e))
+    (file-error (e)
+      (warn "Failed to cache ~A: ~A" (source-project-name source) e))))
+
+(defun save-to-cache-impl (source dist-path)
+  (let ((metadata-cache (cache-metadata-path source))
+        (sources-cache (cache-sources-path source)))
+    (with-cache-lock (:exclusive)
+      (when (cache-exists-p source)
+        ;; ensure local software points at cache if someone else wrote it
+        (let ((software-dir (merge-pathnames "software/" dist-path)))
+          (dolist (project-dir (uiop:subdirectories software-dir))
+            (let* ((dir-name (car (last (pathname-directory project-dir))))
+                   (cache-target (merge-pathnames
+                                  (make-pathname :directory (list :relative dir-name))
+                                  sources-cache)))
+              (remove-path project-dir)
+              (create-symlink cache-target project-dir))))
+        (return-from save-to-cache-impl))
+      (let ((metadata-staging (staging-path metadata-cache))
+            (sources-staging (staging-path sources-cache)))
+        (ignore-errors (uiop:delete-directory-tree metadata-staging :validate t))
+        (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))
+        (unwind-protect
+             (progn
+               ;; metadata
+               (ensure-directories-exist metadata-staging)
+               (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+                 (let ((src (merge-pathnames file dist-path))
+                       (dst (merge-pathnames file metadata-staging)))
+                   (uiop:delete-file-if-exists dst)
+                   (uiop:copy-file src dst)))
+               ;; sources
+               (let* ((software-dir (merge-pathnames "software/" dist-path))
+                      (project-dirs (uiop:subdirectories software-dir)))
+                 (ensure-directories-exist sources-staging)
+                 (dolist (project-dir project-dirs)
+                   (let* ((dir-name (car (last (pathname-directory project-dir))))
+                          (staging-target (merge-pathnames
+                                           (make-pathname :directory (list :relative dir-name))
+                                           sources-staging)))
+                     (move-directory project-dir staging-target))))
+               ;; atomically publish
+               (rename-file metadata-staging metadata-cache)
+               (rename-file sources-staging sources-cache)
+               (make-directory-read-only sources-cache)
+               ;; recreate symlinks in project pointing to cache
+               (let ((software-dir (merge-pathnames "software/" dist-path)))
+                 (ensure-directories-exist software-dir)
+                 (dolist (project-dir (uiop:subdirectories sources-cache))
+                   (let* ((dir-name (car (last (pathname-directory project-dir))))
+                          (link-path (merge-pathnames
+                                      (make-pathname :directory (list :relative dir-name))
+                                      software-dir)))
+                     (create-symlink project-dir link-path))))))
+          (ignore-errors (uiop:delete-directory-tree metadata-staging :validate t))
+          (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))))))
+
+(defun create-install-markers (dist-path)
+  (let* ((installed-dir (merge-pathnames "installed/" dist-path))
+         (releases-dir (merge-pathnames "releases/" installed-dir))
+         (systems-dir (merge-pathnames "systems/" installed-dir))
+         (software-dir (merge-pathnames "software/" dist-path)))
+    (ensure-directories-exist releases-dir)
+    (ensure-directories-exist systems-dir)
+    (dolist (project-path (uiop:subdirectories software-dir))
+      (let ((project-name (car (last (pathname-directory project-path)))))
+        (with-open-file (s (merge-pathnames (format nil "~A.txt" project-name) releases-dir)
+                           :direction :output :if-exists :supersede)
+          (write-line (namestring project-path) s))
+        (dolist (asd-file (uiop:directory-files project-path "*.asd"))
+          (let ((system-name (pathname-name asd-file)))
+            (with-open-file (s (merge-pathnames (format nil "~A.txt" system-name) systems-dir)
+                               :direction :output :if-exists :supersede)
+              (write-line (namestring asd-file) s))))))))
 
 (defun validate-dist-installation (dist-path)
   (let ((software (merge-pathnames "software/" dist-path)))

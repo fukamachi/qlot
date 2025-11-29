@@ -2,6 +2,7 @@
   :class :package-inferred-system
   :pathname "tests"
   :depends-on ("rove"
+               "qlot"
                "qlot-tests/main"
                "qlot-tests/parser"
                "qlot-tests/distify/ql"
@@ -13,6 +14,7 @@
                "qlot-tests/distify"
                "qlot-tests/server"
                "qlot-tests/install/quicklisp"
+               "qlot-tests/install/cache"
                "qlot-tests/install"
                "qlot-tests/cache"
                "qlot-tests/quicklisp/clean"

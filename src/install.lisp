@@ -9,15 +9,11 @@
                 #:source-dist
                 #:source-dist-name
                 #:source-local
-                #:source-local-path
-                #:source-local-registry-directive
                 #:source-asdf
                 #:source-asdf-remote-url
                 #:source-project-name
                 #:source-version
-                #:source-install-url
-                #:freeze-source
-                #:source=)
+                #:source-install-url)
   (:import-from #:qlot/parser
                 #:read-qlfile-for-install)
   (:import-from #:qlot/server
@@ -28,8 +24,7 @@
                 #:*debug*
                 #:*enable-whisper*
                 #:*terminal*
-                #:message
-                #:debug-log)
+                #:message)
   (:import-from #:qlot/secure-downloader
                 #:with-secure-installer)
   (:import-from #:qlot/progress
@@ -37,20 +32,12 @@
                 #:progress)
   (:import-from #:qlot/utils
                 #:with-package-functions
-                #:starts-with
                 #:find-duplicated-entry)
   (:import-from #:qlot/utils/ql
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/qlot
                 #:dump-source-registry-conf
                 #:dump-qlfile-lock)
-  (:import-from #:qlot/config
-                #:dump-qlot-config)
-  (:import-from #:qlot/utils/asdf
-                #:with-directory
-                #:with-autoload-on-missing
-                #:directory-lisp-files
-                #:lisp-file-dependencies)
   (:import-from #:qlot/utils/project
                 #:*qlot-directory*
                 #:*default-qlfile*
@@ -66,6 +53,12 @@
   (:import-from #:qlot/utils/git
                 #:git-switch-tag
                 #:git-clone)
+  (:import-from #:qlot/cache
+                #:*cache-enabled*
+                #:cache-exists-p
+                #:restore-from-cache
+                #:save-to-cache
+                #:validate-dist-installation)
   (:import-from #:qlot/color
                 #:color-text
                 #:*enable-color*)
@@ -80,7 +73,11 @@
   (:export #:install-qlfile
            #:update-qlfile
            #:install-project
-           #:update-project))
+           #:update-project
+           #:source-dist-path
+           #:register-dist-with-quicklisp
+           #:invalidate-broken-dist
+           #:format-cache-status))
 (in-package #:qlot/install)
 
 (defmacro without-linewrap (() &body body)
@@ -264,6 +261,42 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                    max))
                (format nil "~@[ ~A~]" label)))
 
+(defun source-dist-path (source qlhome)
+  (merge-pathnames
+   (make-pathname :directory (list :relative "dists" (source-dist-name source)))
+   qlhome))
+
+(defun format-cache-status (source status elapsed-time)
+  (format nil "~A: ~A (~,1Fs)"
+          (source-project-name source)
+          (ecase status
+            (:hit "restored from cache")
+            (:miss "downloaded and cached")
+            (:skip "caching skipped")
+            (:disabled "cache disabled"))
+          elapsed-time))
+
+(defun register-dist-with-quicklisp (source qlhome)
+  (let* ((dist-path (source-dist-path source qlhome))
+         (enabled (merge-pathnames "enabled.txt" dist-path))
+         (preference (merge-pathnames "preference.txt" dist-path)))
+    (ensure-directories-exist enabled)
+    (with-open-file (out enabled
+                         :direction :output
+                         :if-does-not-exist :create
+                         :if-exists :supersede)
+      (write-line (source-dist-name source) out))
+    (with-open-file (out preference
+                         :direction :output
+                         :if-does-not-exist :create
+                         :if-exists :supersede)
+      (write-line "100" out))
+    dist-path))
+
+(defun invalidate-broken-dist (dist-path)
+  (ignore-errors
+    (uiop:delete-directory-tree dist-path :validate t)))
+
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory concurrency)
   (check-type concurrency (or null (integer 0)))
   (let ((sources (read-qlfile-for-install qlfile
@@ -291,11 +324,19 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                     (with-quicklisp-home qlhome
                       (with-package-functions #:ql-dist (find-dist version)
                         (remove-if (lambda (source)
-                                     (let ((dist (find-dist (source-dist-name source))))
+                                     (let* ((dist (find-dist (source-dist-name source)))
+                                            (dist-path (and dist (source-dist-path source qlhome))))
                                        (and dist
+                                            (not (member (source-project-name source)
+                                                         projects
+                                                         :test #'string=))
                                             (slot-boundp source 'qlot/source/base::version)
                                             (equal (version dist)
-                                                   (source-version source)))))
+                                                   (source-version source))
+                                            (let ((valid (validate-dist-installation dist-path)))
+                                              (unless valid
+                                                (invalidate-broken-dist dist-path))
+                                              valid))))
                                    sources-non-local))))
                   (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
                                                             (*terminal* . ,*terminal*)
@@ -308,49 +349,78 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                   (current-count 0)
                   (max-count (length sources-to-install)))
              (run-in-parallel
-              (lambda (source)
+             (lambda (source)
                 (with-quicklisp-home qlhome
                   (with-package-functions #:ql-dist (find-dist version)
-                    (let ((dist (find-dist (source-dist-name source))))
-                      (cond
-                        ((not dist)
-                         (progress :in-progress "Installing ~S."
-                                   (source-dist-name source))
-                         (with-qlot-server (source :destination tmp-dir :silent t)
-                           (bt2:with-lock-held (install-lock)
-                             (install-source source)))
-                         (progress :done "Newly installed ~S version ~S."
-                                   (source-dist-name source)
-                                   (source-version source)))
-                        ((and (slot-boundp source 'qlot/source/base::version)
-                              (equal (version dist)
-                                     (source-version source)))
-                         (progress :done "Already have dist ~S version ~S."
-                                   (source-project-name source)
-                                   (source-project-name source)
-                                   (source-version source)))
-                        ((typep source 'source-dist)
-                         (with-package-functions #:ql-dist (uninstall version)
-                           (let* ((current-dist (find-dist (source-dist-name source)))
-                                  (current-version (version current-dist)))
-                             (uninstall current-dist)
+                    (block install-source-block
+                      (let ((dist-path (source-dist-path source qlhome))
+                            (start-time (get-internal-real-time))
+                            (dist (find-dist (source-dist-name source)))
+                            (cache-restore-allowed (and *cache-enabled* (not ignore-lock))))
+                        (when (and dist
+                                   (not ignore-lock)
+                                   (not (slot-boundp source 'qlot/source/base::version)))
+                          (setf (source-version source) (version dist)))
+                        (labels ((elapsed ()
+                                   (/ (- (get-internal-real-time) start-time)
+                                      internal-time-units-per-second))
+                                 (report (status)
+                                   (progress :done "~A"
+                                             (format-cache-status source status (elapsed))))
+                                 (cache-status ()
+                                   (cond
+                                     ((not *cache-enabled*) :disabled)
+                                     ((progn
+                                        (save-to-cache source dist-path)
+                                        (cache-exists-p source))
+                                      :miss)
+                                     (t :skip))))
+                          (when (and cache-restore-allowed
+                                     (cache-exists-p source)
+                                     (restore-from-cache source dist-path))
+                            (register-dist-with-quicklisp source qlhome)
+                            (report :hit)
+                            (return-from install-source-block))
+                          (cond
+                            ((not dist)
+                             (progress :in-progress "Installing ~S."
+                                       (source-dist-name source))
                              (with-qlot-server (source :destination tmp-dir :silent t)
                                (bt2:with-lock-held (install-lock)
                                  (install-source source)))
-                             (if (equal current-version (source-version source))
-                                 (progress :done "No update on dist \"~A\" version ~S."
-                                           (source-dist-name source)
-                                           current-version)
-                                 (progress :done "Updated dist \"~A\" version ~S -> ~S."
-                                           (source-dist-name source)
-                                           current-version
-                                           (source-version source))))))
-                        (t
-                         (with-qlot-server (source :destination tmp-dir
-                                                   :distinfo-only t
-                                                   :silent t)
-                           (bt2:with-lock-held (install-lock)
-                             (update-source source tmp-dir)))))))))
+                             (report (cache-status)))
+                            ((and (not ignore-lock)
+                                  (slot-boundp source 'qlot/source/base::version)
+                                  (equal (version dist)
+                                         (source-version source)))
+                             (progress :done "Already have dist ~S version ~S."
+                                       (source-project-name source)
+                                       (source-project-name source)
+                                       (source-version source)))
+                            ((typep source 'source-dist)
+                             (with-package-functions #:ql-dist (uninstall version)
+                               (let* ((current-dist (find-dist (source-dist-name source)))
+                                      (current-version (version current-dist)))
+                                 (uninstall current-dist)
+                                 (with-qlot-server (source :destination tmp-dir :silent t)
+                                   (bt2:with-lock-held (install-lock)
+                                     (install-source source)))
+                                 (if (equal current-version (source-version source))
+                                     (progress :done "No update on dist \"~A\" version ~S."
+                                               (source-dist-name source)
+                                               current-version)
+                                     (progress :done "Updated dist \"~A\" version ~S -> ~S."
+                                               (source-dist-name source)
+                                               current-version
+                                               (source-version source)))
+                                 (report (cache-status)))))
+                            (t
+                             (with-qlot-server (source :destination tmp-dir
+                                                       :distinfo-only t
+                                                       :silent t)
+                               (bt2:with-lock-held (install-lock)
+                                 (update-source source tmp-dir)))
+                             (report (cache-status))))))))))
               sources-to-install
               :concurrency (or concurrency 4)
               :job-header-fn
