@@ -501,10 +501,17 @@
                                :direction :output :if-exists :supersede)
               (write-line (namestring asd-file) s))))))))
 
+(defun list-directory-entries (directory)
+  "List all entries (files and subdirectories) in DIRECTORY without resolving symlinks."
+  (append (uiop:directory-files directory)
+          (uiop:subdirectories directory)))
+
 (defun validate-dist-installation (dist-path)
+  "Validate that all entries in the dist's software directory are accessible.
+Returns T if the installation is valid, NIL otherwise."
   (let ((software (merge-pathnames "software/" dist-path)))
     (if (uiop:directory-exists-p software)
-        (let ((entries (ql-dist::directory-entries software)))
+        (let ((entries (list-directory-entries software)))
           (and entries
                (loop for entry in entries
                      always (probe-file entry))))
