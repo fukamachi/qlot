@@ -348,6 +348,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                             (*terminal* . ,*terminal*)
                                                             (*debug* . ,*debug*)
                                                             (*enable-whisper* . nil)
+                                                            (qlot/cache:*cache-directory* . ,qlot/cache:*cache-directory*)
+                                                            (qlot/cache:*cache-enabled* . ,qlot/cache:*cache-enabled*)
                                                             (,(uiop:intern* '#:*fetch-scheme-functions* '#:ql-http) . ',(symbol-value (uiop:intern* '#:*fetch-scheme-functions* '#:ql-http))))
                                                           bt2:*default-special-bindings*))
                   (lock (bt2:make-lock))

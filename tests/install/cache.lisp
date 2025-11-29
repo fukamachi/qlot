@@ -55,6 +55,7 @@
 
 (deftest format-cache-status-test
   (let ((source (make-source :ql "alexandria" :latest)))
+    (setf (qlot/source/base:source-version source) "20250622")
     (testing "Cache hit shows 'from cache'"
       (let ((message (format-cache-status source :hit :new 0.5)))
         (ok (search "alexandria" message))
