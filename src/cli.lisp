@@ -262,18 +262,22 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
        (setf concurrency (parse-integer jobs)))
       ("--debug"
        (qlot-option-debug))
+      ("--no-cache"
+       (setf (uiop:getenv "QLOT_NO_CACHE") "1"))
       ("--help"
        (format *error-output*
                "~&qlot install - Install libraries to './.qlot'.
 
 SYNOPSIS:
-    qlot install [--no-deps] [--cache DIRECTORY]
+    qlot install [--no-deps] [--cache DIRECTORY] [--no-cache]
 
 OPTIONS:
     --no-deps
         Don't install dependencies of all systems from the current directory.
     --cache [directory]
         Keep intermediate files for fast reinstallation.
+    --no-cache
+        Disable shared cache usage for this invocation.
     --jobs [concurrency]
         The number of threads to install simultaneously. (Default: 4)
     --debug
@@ -286,13 +290,18 @@ OPTIONS:
          (message (color-text :yellow "Did you mean:~%    qlot add ~A" option)))
        (uiop:quit -1)))
     (ensure-package-loaded :qlot/install)
+    (when cache
+      (setf (uiop:getenv "QLOT_CACHE_DIRECTORY")
+            (uiop:native-namestring
+             (uiop:ensure-absolute-pathname
+              (uiop:ensure-directory-pathname cache)
+              *default-pathname-defaults*))))
+    (when (or (uiop:getenv "QLOT_NO_CACHE")
+              (uiop:getenv "QLOT_CACHE_DIRECTORY"))
+      (uiop:symbol-call '#:qlot/cache '#:initialize-cache))
     (uiop:symbol-call '#:qlot/install '#:install-project
                       *default-pathname-defaults*
                       :install-deps install-deps
-                      :cache-directory (and cache
-                                            (uiop:ensure-absolute-pathname
-                                             (uiop:ensure-directory-pathname cache)
-                                             *default-pathname-defaults*))
                       :concurrency concurrency)))
 
 (defun qlot-command-update (argv)
@@ -320,18 +329,22 @@ OPTIONS:
        (setf concurrency (parse-integer jobs)))
       ("--debug"
        (qlot-option-debug))
+      ("--no-cache"
+       (setf (uiop:getenv "QLOT_NO_CACHE") "1"))
       ("--help"
        (format *error-output*
                "~&qlot update - Update specific libraries.
 
 SYNOPSIS:
-    qlot update [name...] [--no-deps] [--cache DIRECTORY]
+    qlot update [name...] [--no-deps] [--cache DIRECTORY] [--no-cache]
 
 OPTIONS:
     --no-deps
         Don't install dependencies of all systems from the current directory.
     --cache [directory]
         Keep intermediate files for fast reinstallation.
+    --no-cache
+        Disable shared cache usage for this invocation.
     --jobs [concurrency]
         The number of threads to install simultaneously. (Default: 4)
     --debug
@@ -344,14 +357,19 @@ OPTIONS:
            (setf projects
                  (append projects (list option))))))
     (ensure-package-loaded :qlot/install)
+    (when cache
+      (setf (uiop:getenv "QLOT_CACHE_DIRECTORY")
+            (uiop:native-namestring
+             (uiop:ensure-absolute-pathname
+              (uiop:ensure-directory-pathname cache)
+              *default-pathname-defaults*))))
+    (when (or (uiop:getenv "QLOT_NO_CACHE")
+              (uiop:getenv "QLOT_CACHE_DIRECTORY"))
+      (uiop:symbol-call '#:qlot/cache '#:initialize-cache))
     (uiop:symbol-call '#:qlot/install '#:update-project
                       *default-pathname-defaults*
                       :projects projects
                       :install-deps install-deps
-                      :cache-directory (and cache
-                                            (uiop:ensure-absolute-pathname
-                                             (uiop:ensure-directory-pathname cache)
-                                             *default-pathname-defaults*))
                       :concurrency concurrency)))
 
 (defun qlot-command-init (argv)

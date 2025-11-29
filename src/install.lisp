@@ -102,7 +102,6 @@
 
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
-                                   cache-directory
                                    concurrency)
   (unless (uiop:file-exists-p qlfile)
     (restart-case
@@ -130,7 +129,6 @@
     (without-linewrap ()
       (with-secure-installer ()
         (apply-qlfile-to-qlhome qlfile quicklisp-home
-                                :cache-directory cache-directory
                                 :concurrency concurrency)
 
         ;; Install project dependencies
@@ -142,7 +140,6 @@
 (defun update-qlfile (qlfile &key quicklisp-home
                                   projects
                                   (install-deps t)
-                                  cache-directory
                                   concurrency)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
@@ -162,7 +159,6 @@
         (apply-qlfile-to-qlhome qlfile quicklisp-home
                                 :ignore-lock t
                                 :projects projects
-                                :cache-directory cache-directory
                                 :concurrency concurrency)
 
         ;; Install project dependencies
@@ -297,7 +293,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (ignore-errors
     (uiop:delete-directory-tree dist-path :validate t)))
 
-(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects cache-directory concurrency)
+(defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects concurrency)
   (check-type concurrency (or null (integer 0)))
   (let ((sources (read-qlfile-for-install qlfile
                                           :ignore-lock ignore-lock
@@ -307,7 +303,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      :test #'string=)))
         (when missing
           (error 'missing-projects :projects missing))))
-    (let ((tmp-dir (or cache-directory (tmp-directory))))
+    (let ((tmp-dir (tmp-directory)))
       (ensure-directories-exist tmp-dir)
       (mapc #'prepare-source sources)
       (let ((dup (find-duplicated-entry sources
@@ -445,8 +441,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                         (mapcar #'name (all-dists)))))
                        (setf (preference dist)
                              (incf preference))))))))
-        (unless cache-directory
-          (delete-tmp-directory tmp-dir)))
+        (delete-tmp-directory tmp-dir))
       (with-quicklisp-home qlhome
         (with-package-functions #:ql-dist (uninstall name all-dists)
           (dolist (dist (all-dists))
@@ -489,7 +484,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
-(defun install-project (object &key (install-deps t) cache-directory concurrency)
+(defun install-project (object &key (install-deps t) concurrency)
   (handler-bind ((qlfile-not-found
                    (lambda (e)
                      (invoke-restart (find-restart 'create-qlfile e)))))
@@ -497,42 +492,35 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       ((or symbol string)
        (install-project (asdf:find-system object)
                         :install-deps install-deps
-                        :cache-directory cache-directory
                         :concurrency concurrency))
       (asdf:system
        (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                        :quicklisp-home (asdf:system-relative-pathname
                                         object *qlot-directory*)
                        :install-deps install-deps
-                       :cache-directory cache-directory
                        :concurrency concurrency))
       (pathname
        (install-qlfile (ensure-qlfile-pathname object)
                        :install-deps install-deps
-                       :cache-directory cache-directory
                        :concurrency concurrency)))))
 
 (defun update-project (object &key projects
                                    (install-deps t)
-                                   cache-directory
                                    concurrency)
   (etypecase object
     ((or symbol string)
      (update-project (asdf:find-system object)
                      :projects projects
                      :install-deps install-deps
-                     :cache-directory cache-directory
                      :concurrency concurrency))
     (asdf:system
      (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)
                     :quicklisp-home (asdf:system-relative-pathname object *qlot-directory*)
                     :projects projects
                     :install-deps install-deps
-                    :cache-directory cache-directory
                     :concurrency concurrency))
     (pathname
      (update-qlfile (ensure-qlfile-pathname object)
                     :projects projects
                     :install-deps install-deps
-                    :cache-directory cache-directory
                     :concurrency concurrency))))
