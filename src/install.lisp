@@ -295,9 +295,14 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects concurrency)
   (check-type concurrency (or null (integer 0)))
-  (let ((sources (read-qlfile-for-install qlfile
-                                          :ignore-lock ignore-lock
-                                          :projects projects)))
+  (let* ((qlfile-lock (make-pathname :defaults qlfile
+                                     :name (file-namestring qlfile)
+                                     :type "lock"))
+         (sources-from-lock (and (not ignore-lock)
+                                 (uiop:file-exists-p qlfile-lock)))
+         (sources (read-qlfile-for-install qlfile
+                                           :ignore-lock ignore-lock
+                                           :projects projects)))
     (when projects
       (let ((missing (set-difference projects (mapcar #'source-project-name sources)
                                      :test #'string=)))
@@ -305,7 +310,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
           (error 'missing-projects :projects missing))))
     (let ((tmp-dir (tmp-directory)))
       (ensure-directories-exist tmp-dir)
-      (mapc #'prepare-source sources)
+      (unless sources-from-lock
+        (mapc #'prepare-source sources))
       (let ((dup (find-duplicated-entry sources
                                         :key #'source-project-name
                                         :test 'equal)))
