@@ -1099,12 +1099,10 @@ FUN."
   (let* ((releases (provided-releases dist))
          (known-archives (mapcar 'local-archive-file releases))
          (known-directories (mapcar 'base-directory releases))
-         (present-archives (mapcar 'truename
-                                   (directory-entries
-                                    (relative-to dist "archives/"))))
-         (present-directories (mapcar 'truename
-                                      (directory-entries
-                                       (relative-to dist "software/"))))
+         (present-archives (directory-entries
+                            (relative-to dist "archives/")))
+         (present-directories (directory-entries
+                               (relative-to dist "software/")))
          (garbage-archives
           (set-difference present-archives known-archives
                           :test 'equalp))
