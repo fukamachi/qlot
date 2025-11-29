@@ -55,7 +55,17 @@
 
 (deftest format-cache-status-test
   (let ((source (make-source :ql "alexandria" :latest)))
-    (dolist (status '(:hit :miss :skip :disabled))
-      (let ((message (format-cache-status source status 0.5)))
+    (testing "Cache hit shows 'from cache'"
+      (let ((message (format-cache-status source :hit :new 0.5)))
         (ok (search "alexandria" message))
-        (ok (typep message 'string))))))
+        (ok (search "from cache" message))
+        (ok (search "Installed" message))))
+    (testing "Cache miss shows no 'from cache'"
+      (let ((message (format-cache-status source :miss :new 0.5)))
+        (ok (search "alexandria" message))
+        (ng (search "from cache" message))
+        (ok (search "Installed" message))))
+    (testing "Update shows 'Updated'"
+      (let ((message (format-cache-status source :hit :update 0.5)))
+        (ok (search "Updated" message))
+        (ok (search "from cache" message))))))

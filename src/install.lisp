@@ -262,14 +262,18 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
    (make-pathname :directory (list :relative "dists" (source-dist-name source)))
    qlhome))
 
-(defun format-cache-status (source status elapsed-time)
-  (format nil "~A: ~A (~,1Fs)"
+(defun format-cache-status (source cache-status install-type elapsed-time)
+  (format nil "~A ~S version ~S~A. (~,1Fs)"
+          (ecase install-type
+            (:new "Installed")
+            (:update "Updated"))
           (source-project-name source)
-          (ecase status
-            (:hit "restored from cache")
-            (:miss "downloaded and cached")
-            (:skip "caching skipped")
-            (:disabled "cache disabled"))
+          (source-version source)
+          (ecase cache-status
+            (:hit " from cache")
+            (:miss "")
+            (:skip "")
+            (:disabled ""))
           elapsed-time))
 
 (defun register-dist-with-quicklisp (source qlhome)
@@ -366,9 +370,9 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                         (labels ((elapsed ()
                                    (/ (- (get-internal-real-time) start-time)
                                       internal-time-units-per-second))
-                                 (report (status)
+                                 (report (cache-status install-type)
                                    (progress :done "~A"
-                                             (format-cache-status source status (elapsed))))
+                                             (format-cache-status source cache-status install-type (elapsed))))
                                  (cache-status ()
                                    (cond
                                      ((not *cache-enabled*) :disabled)
@@ -381,7 +385,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      (cache-exists-p source)
                                      (restore-from-cache source dist-path))
                             (register-dist-with-quicklisp source qlhome)
-                            (report :hit)
+                            (report :hit (if dist :update :new))
                             (return-from install-source-block))
                           (cond
                             ((not dist)
@@ -390,7 +394,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                              (with-qlot-server (source :destination tmp-dir :silent t)
                                (bt2:with-lock-held (install-lock)
                                  (install-source source)))
-                             (report (cache-status)))
+                             (report (cache-status) :new))
                             ((and (not ignore-lock)
                                   (slot-boundp source 'qlot/source/base::version)
                                   (equal (version dist)
@@ -415,14 +419,14 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                (source-dist-name source)
                                                current-version
                                                (source-version source)))
-                                 (report (cache-status)))))
+                                 (report (cache-status) :update))))
                             (t
                              (with-qlot-server (source :destination tmp-dir
                                                        :distinfo-only t
                                                        :silent t)
                                (bt2:with-lock-held (install-lock)
                                  (update-source source tmp-dir)))
-                             (report (cache-status))))))))))
+                             (report (cache-status) :update)))))))))
               sources-to-install
               :concurrency (or concurrency 4)
               :job-header-fn
