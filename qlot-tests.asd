@@ -14,6 +14,7 @@
                "qlot-tests/server"
                "qlot-tests/install/quicklisp"
                "qlot-tests/install"
+               "qlot-tests/cache"
                "qlot-tests/quicklisp/clean"
                "qlot-tests/utils"
                "qlot-tests/utils/ql"
