@@ -24,7 +24,8 @@
                 #:*debug*
                 #:*enable-whisper*
                 #:*terminal*
-                #:message)
+                #:message
+                #:without-linewrap)
   (:import-from #:qlot/secure-downloader
                 #:with-secure-installer)
   (:import-from #:qlot/progress
@@ -86,14 +87,6 @@
            #:format-cache-status
            #:with-release-cache))
 (in-package #:qlot/install)
-
-(defmacro without-linewrap (() &body body)
-  `(progn
-     (when *terminal*
-       (format t "~C[?7l" #\Esc))
-     (unwind-protect (progn ,@body)
-       (when *terminal*
-         (format t "~C[?7h" #\Esc)))))
 
 ;;;
 ;;; Release-level caching hook
