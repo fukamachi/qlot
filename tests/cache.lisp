@@ -189,3 +189,311 @@
             (ok (uiop:directory-exists-p link))
             (ok (or (equal (truename link) (truename cache-project))
                     (uiop:file-exists-p (merge-pathnames "serapeum.asd" link))))))))))
+
+;;; ==========================================================================
+;;; Tests for cache-key with unbound version slots
+;;; These tests ensure that cache-key returns NIL when version is unbound,
+;;; rather than signalling an error.
+;;; ==========================================================================
+
+(deftest test-cache-key-source-ql-unbound-version
+  (testing "cache-key returns NIL when version slot is unbound"
+    (let ((source (make-source :ql "test-lib" :latest)))
+      ;; Do NOT set the version - leave it unbound
+      (ok (not (slot-boundp source 'qlot/source/base::version))
+          "Version slot should be unbound")
+      (ok (null (cache-key source))
+          "cache-key should return NIL for unbound version"))))
+
+(deftest test-cache-key-source-ultralisp-unbound-version
+  (testing "cache-key returns NIL when version slot is unbound"
+    (let ((source (make-source :ultralisp "test-lib")))
+      ;; Do NOT set the version - leave it unbound
+      (ok (not (slot-boundp source 'qlot/source/base::version))
+          "Version slot should be unbound")
+      (ok (null (cache-key source))
+          "cache-key should return NIL for unbound version"))))
+
+(deftest test-cache-key-source-dist-unbound-version
+  (testing "cache-key returns NIL when version slot is unbound"
+    (let ((source (make-source :dist "https://dist.ultralisp.org/")))
+      ;; Do NOT set the version - leave it unbound
+      (ok (not (slot-boundp source 'qlot/source/base::version))
+          "Version slot should be unbound")
+      (ok (null (cache-key source))
+          "cache-key should return NIL for unbound version"))))
+
+(deftest test-cache-key-source-ultralisp-with-version
+  (testing "cache-key returns correct key when version is set"
+    (let ((source (make-source :ultralisp "test-lib")))
+      (setf (source-version source) "20240101")
+      (ok (equal '("ql" "ultralisp" "test-lib-20240101")
+                 (cache-key source))))))
+
+(deftest test-cache-key-source-dist-with-version
+  (testing "cache-key returns correct key when version is set"
+    (let ((source (make-source :dist "https://dist.ultralisp.org/")))
+      (setf (source-version source) "20240101")
+      (let ((key (cache-key source)))
+        (ok (listp key) "cache-key should return a list")
+        (ok (equal "dist" (first key)) "First element should be 'dist'")))))
+
+;;; ==========================================================================
+;;; Tests for cache-exists-p with unbound version
+;;; ==========================================================================
+
+(deftest test-cache-exists-p-unbound-version
+  (testing "cache-exists-p returns NIL (not error) when version is unbound"
+    (with-tmp-directory (tmp)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname tmp))
+            (*cache-enabled* t))
+        (let ((source (make-source :ql "test-lib" :latest)))
+          ;; Do NOT set the version - leave it unbound
+          (ok (not (slot-boundp source 'qlot/source/base::version))
+              "Version slot should be unbound")
+          ;; This should return NIL, not signal an error
+          (ok (null (cache-exists-p source))
+              "cache-exists-p should return NIL for unbound version"))))))
+
+(deftest test-cache-exists-p-unbound-version-ultralisp
+  (testing "cache-exists-p returns NIL for ultralisp source with unbound version"
+    (with-tmp-directory (tmp)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname tmp))
+            (*cache-enabled* t))
+        (let ((source (make-source :ultralisp "test-lib")))
+          (ok (not (slot-boundp source 'qlot/source/base::version)))
+          (ok (null (cache-exists-p source))))))))
+
+(deftest test-cache-exists-p-unbound-version-dist
+  (testing "cache-exists-p returns NIL for dist source with unbound version"
+    (with-tmp-directory (tmp)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname tmp))
+            (*cache-enabled* t))
+        (let ((source (make-source :dist "https://example.com/dist/my-dist.txt")))
+          (ok (not (slot-boundp source 'qlot/source/base::version)))
+          (ok (null (cache-exists-p source))))))))
+
+;;; ==========================================================================
+;;; Tests for symlink-p function
+;;; ==========================================================================
+
+(deftest test-symlink-p-regular-file
+  (testing "symlink-p returns NIL for regular files"
+    (with-tmp-directory (tmp)
+      (let ((file (merge-pathnames "test.txt" tmp)))
+        (with-open-file (s file :direction :output :if-does-not-exist :create)
+          (write-line "test" s))
+        (ng (qlot/cache::symlink-p file)
+            "symlink-p should return NIL for regular files")))))
+
+(deftest test-symlink-p-directory
+  (testing "symlink-p returns NIL for directories"
+    (with-tmp-directory (tmp)
+      (let ((dir (merge-pathnames "subdir/" tmp)))
+        (ensure-directories-exist dir)
+        (ng (qlot/cache::symlink-p dir)
+            "symlink-p should return NIL for directories")))))
+
+(deftest test-symlink-p-symlink-to-file
+  (testing "symlink-p returns T for symlinks to files"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target.txt" tmp))
+            (link (merge-pathnames "link.txt" tmp)))
+        (with-open-file (s target :direction :output :if-does-not-exist :create)
+          (write-line "test" s))
+        (make-symlink target link)
+        (ok (qlot/cache::symlink-p link)
+            "symlink-p should return T for symlinks to files")))))
+
+(deftest test-symlink-p-symlink-to-directory
+  (testing "symlink-p returns T for symlinks to directories"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target-dir/" tmp))
+            (link (merge-pathnames "link-dir" tmp)))
+        (ensure-directories-exist target)
+        (make-symlink target link)
+        (ok (qlot/cache::symlink-p link)
+            "symlink-p should return T for symlinks to directories")))))
+
+(deftest test-symlink-p-with-trailing-slash
+  (testing "symlink-p handles paths with trailing slashes correctly"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target-dir/" tmp))
+            (link (merge-pathnames "link-dir" tmp)))
+        (ensure-directories-exist target)
+        (make-symlink target link)
+        ;; Test with trailing slash (this was a bug - trailing slash caused lstat to follow)
+        (ok (qlot/cache::symlink-p (uiop:ensure-directory-pathname link))
+            "symlink-p should work with trailing slash")))))
+
+(deftest test-symlink-p-nonexistent
+  (testing "symlink-p returns NIL for nonexistent paths"
+    (with-tmp-directory (tmp)
+      (let ((nonexistent (merge-pathnames "does-not-exist" tmp)))
+        (ng (qlot/cache::symlink-p nonexistent)
+            "symlink-p should return NIL for nonexistent paths")))))
+
+(deftest test-symlink-p-broken-symlink
+  (testing "symlink-p returns T for broken symlinks"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "nonexistent-target" tmp))
+            (link (merge-pathnames "broken-link" tmp)))
+        ;; Create symlink to nonexistent target
+        (make-symlink target link)
+        (ok (qlot/cache::symlink-p link)
+            "symlink-p should return T for broken symlinks")))))
+
+;;; ==========================================================================
+;;; Tests for strip-trailing-slash
+;;; ==========================================================================
+
+(deftest test-strip-trailing-slash
+  (testing "strip-trailing-slash removes trailing slash"
+    (ok (equal "/path/to/dir" (qlot/cache::strip-trailing-slash "/path/to/dir/"))
+        "Should remove trailing slash"))
+  (testing "strip-trailing-slash leaves paths without trailing slash unchanged"
+    (ok (equal "/path/to/file" (qlot/cache::strip-trailing-slash "/path/to/file"))
+        "Should leave path without trailing slash unchanged"))
+  (testing "strip-trailing-slash handles single slash"
+    (ok (equal "/" (qlot/cache::strip-trailing-slash "/"))
+        "Should not remove single slash"))
+  (testing "strip-trailing-slash handles pathnames"
+    (ok (equal "/path/to/dir" (qlot/cache::strip-trailing-slash #P"/path/to/dir/"))
+        "Should handle pathname objects")))
+
+;;; ==========================================================================
+;;; Tests for create-symlink
+;;; ==========================================================================
+
+(deftest test-create-symlink-basic
+  (testing "create-symlink creates a working symlink"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target.txt" tmp))
+            (link (merge-pathnames "link.txt" tmp)))
+        (with-open-file (s target :direction :output :if-does-not-exist :create)
+          (write-line "content" s))
+        (qlot/cache::create-symlink target link)
+        (ok (uiop:file-exists-p link)
+            "Symlink should exist")
+        (ok (qlot/cache::symlink-p link)
+            "Should be a symlink")
+        (ok (equal (with-open-file (s link) (read-line s))
+                   "content")
+            "Should read through symlink")))))
+
+(deftest test-create-symlink-replaces-existing
+  (testing "create-symlink replaces existing file/symlink"
+    (with-tmp-directory (tmp)
+      (let ((target1 (merge-pathnames "target1.txt" tmp))
+            (target2 (merge-pathnames "target2.txt" tmp))
+            (link (merge-pathnames "link.txt" tmp)))
+        (with-open-file (s target1 :direction :output :if-does-not-exist :create)
+          (write-line "content1" s))
+        (with-open-file (s target2 :direction :output :if-does-not-exist :create)
+          (write-line "content2" s))
+        ;; Create first symlink
+        (qlot/cache::create-symlink target1 link)
+        (ok (equal "content1" (with-open-file (s link) (read-line s))))
+        ;; Replace with new target
+        (qlot/cache::create-symlink target2 link)
+        (ok (equal "content2" (with-open-file (s link) (read-line s)))
+            "Should read from new target after replacement")))))
+
+;;; ==========================================================================
+;;; Tests for remove-path
+;;; ==========================================================================
+
+(deftest test-remove-path-file
+  (testing "remove-path removes regular files"
+    (with-tmp-directory (tmp)
+      (let ((file (merge-pathnames "test.txt" tmp)))
+        (with-open-file (s file :direction :output :if-does-not-exist :create)
+          (write-line "test" s))
+        (ok (uiop:file-exists-p file))
+        (qlot/cache::remove-path file)
+        (ng (uiop:file-exists-p file)
+            "File should be removed")))))
+
+(deftest test-remove-path-directory
+  (testing "remove-path removes directories"
+    (with-tmp-directory (tmp)
+      (let ((dir (merge-pathnames "subdir/" tmp)))
+        (ensure-directories-exist (merge-pathnames "file.txt" dir))
+        (with-open-file (s (merge-pathnames "file.txt" dir)
+                           :direction :output :if-does-not-exist :create)
+          (write-line "test" s))
+        (ok (uiop:directory-exists-p dir))
+        (qlot/cache::remove-path dir)
+        (ng (uiop:directory-exists-p dir)
+            "Directory should be removed")))))
+
+(deftest test-remove-path-symlink-to-directory
+  (testing "remove-path removes symlinks to directories (without following)"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target-dir/" tmp))
+            (link (merge-pathnames "link-dir" tmp)))
+        (ensure-directories-exist (merge-pathnames "file.txt" target))
+        (with-open-file (s (merge-pathnames "file.txt" target)
+                           :direction :output :if-does-not-exist :create)
+          (write-line "test" s))
+        (make-symlink target link)
+        (ok (qlot/cache::symlink-p link) "Should be a symlink before removal")
+        (ok (uiop:directory-exists-p target) "Target should exist")
+        (qlot/cache::remove-path link)
+        (ng (probe-file link) "Symlink should be removed")
+        (ok (uiop:directory-exists-p target)
+            "Target directory should NOT be removed")))))
+
+(deftest test-remove-path-nonexistent
+  (testing "remove-path handles nonexistent paths gracefully"
+    (with-tmp-directory (tmp)
+      (let ((nonexistent (merge-pathnames "does-not-exist" tmp)))
+        ;; Should not signal an error
+        (ok (null (qlot/cache::remove-path nonexistent))
+            "remove-path should return NIL for nonexistent paths")))))
+
+;;; ==========================================================================
+;;; Tests for save-to-cache with symlinks
+;;; ==========================================================================
+
+(deftest test-save-to-cache-skips-symlinks
+  (testing "save-to-cache skips symlinked directories in software/"
+    (with-tmp-directory (cache-root)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
+            (*cache-enabled* t)
+            (source (make-source :ql "mylib" :latest)))
+        (setf (source-version source) "20240601")
+        (with-tmp-directory (dist-path)
+          ;; Create metadata files
+          (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+            (with-open-file (s (merge-pathnames file dist-path)
+                               :direction :output
+                               :if-does-not-exist :create)
+              (write-line file s)))
+          ;; Create a real software directory
+          (let ((real-dir (merge-pathnames "software/real-lib-20240601/" dist-path)))
+            (ensure-directories-exist real-dir)
+            (with-open-file (s (merge-pathnames "real.asd" real-dir)
+                               :direction :output
+                               :if-does-not-exist :create)
+              (write-line "; real" s)))
+          ;; Create a symlink in software/ (simulating release-level cache)
+          (let* ((external-target (merge-pathnames "external-target/" cache-root))
+                 ;; Note: symlink path should not have trailing slash
+                 (symlink-dir (merge-pathnames "software/symlinked-lib" dist-path)))
+            (ensure-directories-exist external-target)
+            (with-open-file (s (merge-pathnames "external.asd" external-target)
+                               :direction :output
+                               :if-does-not-exist :create)
+              (write-line "; external" s))
+            ;; Ensure software/ directory exists first
+            (ensure-directories-exist (merge-pathnames "software/" dist-path))
+            (make-symlink external-target symlink-dir))
+          ;; Save to cache
+          (save-to-cache source dist-path)
+          ;; Verify: real-lib should be in cache, symlinked-lib should NOT be
+          (let ((cache-src (cache-sources-path source)))
+            (ok (uiop:directory-exists-p (merge-pathnames "real-lib-20240601/" cache-src))
+                "Real directory should be cached")
+            (ng (uiop:directory-exists-p (merge-pathnames "symlinked-lib/" cache-src))
+                "Symlinked directory should NOT be cached")))))))

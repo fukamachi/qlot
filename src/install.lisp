@@ -103,7 +103,7 @@
 This makes Quicklisp recognize the release as installed."
   (with-package-functions #:ql-dist (dist relative-to base-directory prefix
                                      system-files install-metadata-file
-                                     provided-systems find-system-in-dist name)
+                                     provided-systems find-system-in-dist)
     (let ((dist (dist release))
           (tracking (install-metadata-file release)))
       ;; Write release tracking file
@@ -141,8 +141,7 @@ This makes Quicklisp recognize the release as installed."
              (archive-md5 (archive-md5 release))
              (prefix (prefix release))
              (software-dir (relative-to dist
-                                        (make-pathname :directory '(:relative "software"))))
-             (qlhome (symbol-value (find-symbol "*QUICKLISP-HOME*" :ql-setup))))
+                                        (make-pathname :directory '(:relative "software")))))
         ;; Check cache first
         (if (release-cache-exists-p dist-url release-name archive-md5)
             (progn
