@@ -5,7 +5,8 @@
                 #:debug-log
                 #:*logger-message-stream*
                 #:*terminal*
-                #:clear-whisper)
+                #:clear-whisper
+                #:enable-linewrap)
   (:import-from #:qlot/errors
                 #:missing-projects
                 #:unnecessary-projects
@@ -789,6 +790,7 @@ OPTIONS:
                                                           :keep t)
                                  (uiop:print-condition-backtrace c :stream out)
                                  error.log)))
+                         (enable-linewrap)
                          (fresh-line)
                          (error-message "Unexpected error: ~A" c)
                          (message "This could be a bug in Qlot.~%Report it at https://github.com/fukamachi/qlot/issues/new/choose.")

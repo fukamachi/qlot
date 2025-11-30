@@ -11,7 +11,9 @@
            #:clear-whisper
            #:message
            #:warn-message
-           #:debug-log))
+           #:debug-log
+           #:enable-linewrap
+           #:without-linewrap))
 (in-package #:qlot/logger)
 
 (defvar *logger-message-stream*
@@ -73,3 +75,14 @@
             "[debug] ~A~%"
             (apply #'format nil format-control format-arguments)))
   (values))
+
+(defun enable-linewrap ()
+  (when *terminal*
+    (format t "~C[?7h" #\Esc)))
+
+(defmacro without-linewrap (() &body body)
+  `(progn
+     (when *terminal*
+       (format t "~C[?7l" #\Esc))
+     (unwind-protect (progn ,@body)
+       (enable-linewrap))))
