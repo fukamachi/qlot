@@ -20,6 +20,7 @@
 * [Optional settings](#optional-settings)
   * [ASDF configuration to prevent from loading by mistake](#asdf-configuration-to-prevent-from-loading-by-mistake)
 * [Tutorial](#tutorial)
+* [Shared Dependency Cache](#shared-dependency-cache)
 * [qlfile syntax](#qlfile-syntax)
 * [Priorities of distributions](#priorities-of-distributions)
 * [Working with SLIME](#working-with-slime)
@@ -271,6 +272,7 @@ It will also overwrite `qlfile.lock`.
 
 ```
 $ qlot install
+$ qlot install --no-cache   # Disable shared cache for this invocation
 ```
 
 ### update
@@ -279,6 +281,7 @@ $ qlot install
 
 ```
 $ qlot update
+$ qlot update --no-cache    # Disable shared cache for this invocation
 
 # Update a specific project
 $ qlot update mito
@@ -347,6 +350,31 @@ $ qlot bundle --output vendor           # Install into 'vendor'
 To load the bundled libraries, simply load `.bundle-libs/setup.lisp`.
 
 `qlot bundle` is ideal for creating self-contained Common Lisp projects, enabling reliable and portable deployment.
+
+## Shared Dependency Cache
+
+Qlot includes a shared dependency cache that reduces disk space and speeds up installations across multiple projects. Dependencies are cached globally in `~/.cache/qlot/` and shared via symbolic links.
+
+When you run `qlot install`, Qlot checks if each dependency already exists in the cache. If cached, it creates a symbolic link; otherwise, it downloads normally and saves to the cache. This means multiple projects using the same version of a library share a single copy on disk.
+
+### Disabling the Cache
+
+To disable caching for a specific invocation, use `--no-cache`:
+
+```shell
+qlot install --no-cache
+qlot update --no-cache
+```
+
+### Clearing the Cache
+
+To clear the cache, simply delete the cache directory:
+
+```shell
+rm -rf ~/.cache/qlot/
+```
+
+After clearing the cache, run `qlot install` in your projects to reinstall dependencies.
 
 ## `qlfile` syntax
 
