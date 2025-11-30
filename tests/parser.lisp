@@ -23,6 +23,8 @@
                 #:source-ql-dist-dist-name
                 #:freeze-source
                 #:resolve-ql-dist-sources)
+  (:import-from #:qlot/utils/ql
+                #:quicklisp-distinfo-url)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed
                 #:qlot-error
@@ -221,7 +223,24 @@
       (ok (equal (source-distribution ql-dist-1)
                  "https://dist.ultralisp.org/"))
       (ok (equal (source-distribution ql-dist-2)
-                 "https://dist.shirakumo.org/shirakumo.txt")))))
+                 "https://dist.shirakumo.org/shirakumo.txt"))))
+
+  (testing "resolve-ql-dist-sources works with implicit quicklisp dist"
+    ;; Scenario from README: ultralisp added, but use quicklisp for specific project
+    ;; Simulates: dist http://dist.ultralisp.org/
+    ;;            ql-dist quicklisp clack
+    (let* ((dist-quicklisp (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
+           (dist-ultralisp (make-source :dist "http://dist.ultralisp.org/"))
+           (ql-dist-source (make-source :ql-dist "quicklisp" "clack"))
+           (sources (list dist-quicklisp dist-ultralisp ql-dist-source)))
+      ;; quicklisp dist already has explicit name from make-source
+      (ok (equal (source-project-name dist-quicklisp) "quicklisp"))
+      ;; ultralisp needs name set (normally done by prepare-source)
+      (setf (source-project-name dist-ultralisp) "ultralisp")
+      (resolve-ql-dist-sources sources)
+      ;; Should resolve to quicklisp, not ultralisp
+      (ok (equal (source-distribution ql-dist-source)
+                 (quicklisp-distinfo-url))))))
 
 (deftest ql-dist-source=-tests
   (testing "source= compares dist-name, project-name, and version"

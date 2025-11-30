@@ -526,9 +526,10 @@ This is useful when you have multiple distributions and a project is available f
 
 ```
 dist http://dist.ultralisp.org/
-dist http://dist.shirakumo.org/shirakumo.txt
-ql-dist ultralisp cl-spark
+ql-dist quicklisp clack
 ```
+
+In this example, ultralisp is added as a distribution (and would normally take priority over the implicit quicklisp dist). However, `ql-dist quicklisp clack` explicitly specifies that clack should come from quicklisp instead.
 
 The `<dist name>` must match the name in the distinfo of a `dist` source declared in the same qlfile. If no matching distribution is found, Qlot will signal an error.
 
