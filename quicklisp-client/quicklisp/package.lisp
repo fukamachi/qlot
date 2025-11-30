@@ -161,7 +161,8 @@
            #:ensure-installed
            #:enabledp
            #:enable
-           #:disable)
+           #:disable
+           #:*install-release-hook*)
   ;; Preference protocol
   (:export #:preference
            #:preference-file
