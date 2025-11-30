@@ -17,6 +17,7 @@
                "qlot-tests/install/cache"
                "qlot-tests/install"
                "qlot-tests/cache"
+               "qlot-tests/cache-releases"
                "qlot-tests/cache-integration"
                "qlot-tests/quicklisp/clean"
                "qlot-tests/utils"

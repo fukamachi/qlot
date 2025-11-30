@@ -55,10 +55,15 @@
                 #:git-clone)
   (:import-from #:qlot/cache
                 #:*cache-enabled*
+                #:*cache-directory*
                 #:cache-exists-p
                 #:restore-from-cache
                 #:save-to-cache
-                #:validate-dist-installation)
+                #:validate-dist-installation
+                #:canonicalize-dist-url
+                #:release-cache-exists-p
+                #:restore-release-from-cache
+                #:save-release-to-cache)
   (:import-from #:qlot/color
                 #:color-text
                 #:*enable-color*)
@@ -77,7 +82,8 @@
            #:source-dist-path
            #:register-dist-with-quicklisp
            #:invalidate-broken-dist
-           #:format-cache-status))
+           #:format-cache-status
+           #:with-release-cache))
 (in-package #:qlot/install)
 
 (defmacro without-linewrap (() &body body)
@@ -87,6 +93,78 @@
      (unwind-protect (progn ,@body)
        (when *terminal*
          (format t "~C[?7h" #\Esc)))))
+
+;;;
+;;; Release-level caching hook
+;;;
+
+(defun create-release-install-markers (release)
+  "Create Quicklisp install markers for a release restored from cache.
+This makes Quicklisp recognize the release as installed."
+  (with-package-functions #:ql-dist (dist relative-to base-directory prefix
+                                     system-files install-metadata-file
+                                     provided-systems find-system-in-dist name)
+    (let ((dist (dist release))
+          (tracking (install-metadata-file release)))
+      ;; Write release tracking file
+      (ensure-directories-exist tracking)
+      (with-open-file (stream tracking
+                              :direction :output
+                              :if-exists :supersede)
+        (write-line (uiop:symbol-call '#:ql-setup '#:qenough (base-directory release)) stream))
+      ;; Write system tracking files
+      (let ((provided (provided-systems release)))
+        (dolist (file (system-files release))
+          (let ((system (find-system-in-dist (pathname-name file) dist)))
+            (when (member system provided)
+              (let ((system-tracking (install-metadata-file system))
+                    (system-file (merge-pathnames file (base-directory release))))
+                (ensure-directories-exist system-tracking)
+                (with-open-file (stream system-tracking
+                                        :direction :output
+                                        :if-exists :supersede)
+                  (write-line (uiop:symbol-call '#:ql-setup '#:qenough system-file)
+                              stream))))))))))
+
+(defun release-cache-install-hook (release default-fn)
+  "Hook for ql-dist:*install-release-hook* that adds release-level caching."
+  (with-package-functions #:ql-dist (archive-url dist canonical-distinfo-url name
+                                     archive-md5 prefix relative-to)
+    (let ((archive-url (archive-url release)))
+      ;; Skip caching for qlot:// sources (already handled by dist-level cache)
+      (when (uiop:string-prefix-p "qlot://" archive-url)
+        (return-from release-cache-install-hook (funcall default-fn release)))
+
+      (let* ((dist (dist release))
+             (dist-url (canonicalize-dist-url (canonical-distinfo-url dist)))
+             (release-name (name release))
+             (archive-md5 (archive-md5 release))
+             (prefix (prefix release))
+             (software-dir (relative-to dist
+                                        (make-pathname :directory '(:relative "software"))))
+             (qlhome (symbol-value (find-symbol "*QUICKLISP-HOME*" :ql-setup))))
+        ;; Check cache first
+        (if (release-cache-exists-p dist-url release-name archive-md5)
+            (progn
+              (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
+              (create-release-install-markers release)
+              release)
+            ;; Cache miss - install normally then cache
+            (progn
+              (funcall default-fn release)
+              (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
+              release))))))
+
+(defmacro with-release-cache (&body body)
+  "Execute BODY with release-level caching enabled via Quicklisp hook."
+  (let ((hook-var (gensym "HOOK-VAR")))
+    `(if *cache-enabled*
+         (let ((,hook-var (find-symbol "*INSTALL-RELEASE-HOOK*" :ql-dist)))
+           (if ,hook-var
+               (progv (list ,hook-var) (list #'release-cache-install-hook)
+                 ,@body)
+               (progn ,@body)))
+         (progn ,@body))))
 
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome
@@ -98,7 +176,8 @@
                          :key #'name
                          :test 'equal)))
           (message "Ensuring ~D ~:*dependenc~[ies~;y~:;ies~] installed." (length releases))
-          (mapc #'ensure-installed releases))))))
+          (with-release-cache
+            (mapc #'ensure-installed releases)))))))
 
 (defun install-qlfile (qlfile &key quicklisp-home
                                    (install-deps t)
@@ -198,7 +277,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (values))
 
 (defun install-release (release)
-  (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
+  (with-release-cache
+    (uiop:symbol-call '#:ql-dist '#:ensure-installed release))
   (install-release-roswell-scripts release)
   (values))
 
@@ -208,9 +288,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       (let ((dist (find-dist (source-dist-name source))))
         (progress "Getting the list of releases.")
         (let ((releases (provided-releases dist)))
-          (dolist (release releases)
-            (progress "Installing a new release ~S." (name release))
-            (install-release release)))))))
+          (with-release-cache
+            (dolist (release releases)
+              (progress "Installing a new release ~S." (name release))
+              (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
+              (install-release-roswell-scripts release))))))))
 
 (defun install-source (source)
   (with-package-functions #:ql-dist (install-dist version)
@@ -387,6 +469,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      (cache-exists-p source)
                                      (restore-from-cache source dist-path))
                             (register-dist-with-quicklisp source qlhome)
+                            ;; Install releases (needed when sources-cache is empty due to release-level caching)
+                            (install-all-releases source)
                             (report :hit (if dist :update :new))
                             (return-from install-source-block))
                           (cond

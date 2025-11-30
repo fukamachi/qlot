@@ -40,7 +40,15 @@
            #:validate-dist-installation
            #:clear-cache
            #:with-cache-lock
-           #:cache-lock-file))
+           #:cache-lock-file
+           ;; Release-level caching
+           #:releases-directory
+           #:canonicalize-dist-url
+           #:release-cache-key
+           #:release-cache-path
+           #:release-cache-exists-p
+           #:restore-release-from-cache
+           #:save-release-to-cache))
 (in-package #:qlot/cache)
 
 (defvar *cache-directory*
@@ -309,8 +317,45 @@ with trailing slashes are handled correctly."
       ;; Fallback to copy when symlink creation fails (e.g., restricted FS)
       (copy-directory-tree target link))))
 
+(defun symlink-p (path)
+  "Return T if PATH is a symbolic link."
+  (let ((clean-path (strip-trailing-slash path)))
+    #+sbcl
+    (handler-case
+        (let ((stat (sb-posix:lstat clean-path)))
+          (= (logand (sb-posix:stat-mode stat) #o170000)
+             #o120000))
+      (error () nil))
+    #+ccl
+    (handler-case
+        (eq (ccl::%file-kind clean-path nil) :symbolic-link)
+      (error () nil))
+    #+ecl
+    (handler-case
+        (eq (ext:file-kind clean-path :follow-symlinks nil) :link)
+      (error () nil))
+    #+abcl
+    (handler-case
+        (java:jstatic "isSymbolicLink"
+                      "java.nio.file.Files"
+                      (java:jstatic "get"
+                                    "java.nio.file.Paths"
+                                    clean-path
+                                    (java:jnew-array "java.lang.String" 0)))
+      (error () nil))
+    #-(or sbcl ccl ecl abcl)
+    ;; Fallback: use shell command (works on Unix-like systems)
+    (handler-case
+        (zerop (nth-value 2
+                 (uiop:run-program (list "test" "-L" clean-path)
+                                   :ignore-error-status t)))
+      (error () nil))))
+
 (defun remove-path (path)
   (cond
+    ;; Check for symlink first (before directory check, which follows symlinks)
+    ((symlink-p path)
+     (delete-file (parse-namestring (string-right-trim "/" (namestring path)))))
     ((uiop:directory-exists-p path)
      (uiop:delete-directory-tree path :validate t :if-does-not-exist :ignore))
     ((probe-file path)
@@ -411,15 +456,20 @@ with trailing slashes are handled correctly."
               (uiop:delete-file-if-exists dst)
               (uiop:copy-file src dst)))
           ;; link software dirs
-          (let ((software-dir (merge-pathnames "software/" dist-path)))
+          (let ((software-dir (merge-pathnames "software/" dist-path))
+                (restored-count 0))
             (ensure-directories-exist software-dir)
             (dolist (project-dir (uiop:subdirectories sources-cache))
               (let* ((dir-name (car (last (pathname-directory project-dir))))
                      (link-path (merge-pathnames
                                  (make-pathname :directory (list :relative dir-name))
                                  software-dir)))
-                (create-symlink project-dir link-path))))
-          (create-install-markers dist-path)
+                (create-symlink project-dir link-path)
+                (incf restored-count)))
+            ;; Only create markers if software was actually restored
+            ;; (Empty sources-cache means releases are in release-cache and will be installed later)
+            (when (< 0 restored-count)
+              (create-install-markers dist-path)))
           t))
     ((or file-error type-error) (e)
       (warn "Cache for ~A is unusable, will reinstall: ~A"
@@ -474,11 +524,13 @@ with trailing slashes are handled correctly."
                       (project-dirs (uiop:subdirectories software-dir)))
                  (ensure-directories-exist sources-staging)
                  (dolist (project-dir project-dirs)
-                   (let* ((dir-name (car (last (pathname-directory project-dir))))
-                          (staging-target (merge-pathnames
-                                           (make-pathname :directory (list :relative dir-name))
-                                           sources-staging)))
-                     (move-directory project-dir staging-target))))
+                   ;; Skip symlinks (already cached at release level)
+                   (unless (symlink-p project-dir)
+                     (let* ((dir-name (car (last (pathname-directory project-dir))))
+                            (staging-target (merge-pathnames
+                                             (make-pathname :directory (list :relative dir-name))
+                                             sources-staging)))
+                       (move-directory project-dir staging-target)))))
                ;; atomically publish
                (rename-file metadata-staging metadata-cache)
                (rename-file sources-staging sources-cache)
@@ -557,5 +609,82 @@ Returns T if the installation is valid, NIL otherwise."
                (loop for entry in entries
                      always (probe-file entry))))
         t)))
+
+;;;
+;;; Release-level caching
+;;;
+;;; Caches individual releases from standard Quicklisp distributions.
+;;;
+
+(defun releases-directory ()
+  "Return the directory where release caches are stored."
+  (merge-pathnames "releases/" *cache-directory*))
+
+(defun canonicalize-dist-url (url)
+  "Convert dist URL to filesystem-safe identifier.
+e.g., https://dist.quicklisp.org/dist/quicklisp.txt -> dist.quicklisp.org/quicklisp"
+  (when (and url (stringp url) (< 0 (length url)))
+    (let ((result url))
+      ;; Remove scheme
+      (when (uiop:string-prefix-p "https://" result)
+        (setf result (subseq result (length "https://"))))
+      (when (uiop:string-prefix-p "http://" result)
+        (setf result (subseq result (length "http://"))))
+      ;; Remove trailing .txt
+      (when (uiop:string-suffix-p result ".txt")
+        (setf result (subseq result 0 (- (length result) 4))))
+      ;; Remove /dist/ prefix if present
+      (setf result (uiop:split-string result :separator "/"))
+      (setf result (remove-if (lambda (s) (string= s "dist")) result))
+      (format nil "~{~A~^/~}" result))))
+
+(defun release-cache-key (dist-canonical-url release-name archive-md5)
+  "Generate cache key components for a release."
+  (append (split-path dist-canonical-url)
+          (list release-name archive-md5)))
+
+(defun release-cache-path (dist-canonical-url release-name archive-md5)
+  "Return the path to a cached release directory."
+  (reduce-cache-path (releases-directory)
+                     (release-cache-key dist-canonical-url release-name archive-md5)))
+
+(defun release-cache-exists-p (dist-canonical-url release-name archive-md5)
+  "Check if a release is cached and valid."
+  (when *cache-enabled*
+    (let ((path (release-cache-path dist-canonical-url release-name archive-md5)))
+      (and path
+           (uiop:directory-exists-p path)
+           ;; Must have at least one subdirectory (the prefix dir)
+           (uiop:subdirectories path)))))
+
+(defun restore-release-from-cache (dist-canonical-url release-name archive-md5 target-dir prefix)
+  "Create symlink at TARGET-DIR/PREFIX pointing to cached release.
+Returns T on success."
+  (with-cache-lock (:shared)
+    (let* ((cache-path (release-cache-path dist-canonical-url release-name archive-md5))
+           (cached-prefix-dir (merge-pathnames (make-pathname :directory (list :relative prefix))
+                                               cache-path))
+           (link-path (merge-pathnames (make-pathname :directory (list :relative prefix))
+                                       target-dir)))
+      (ensure-directories-exist target-dir)
+      (create-symlink cached-prefix-dir link-path)
+      t)))
+
+(defun save-release-to-cache (dist-canonical-url release-name archive-md5 source-dir prefix)
+  "Move installed release to cache and create symlink back."
+  (with-cache-lock (:exclusive)
+    (let* ((cache-path (release-cache-path dist-canonical-url release-name archive-md5))
+           (cached-prefix-dir (merge-pathnames (make-pathname :directory (list :relative prefix))
+                                               cache-path))
+           (source-prefix-dir (merge-pathnames (make-pathname :directory (list :relative prefix))
+                                               source-dir)))
+      ;; Check if already cached (maybe by concurrent process)
+      (unless (release-cache-exists-p dist-canonical-url release-name archive-md5)
+        (ensure-directories-exist cache-path)
+        (move-directory source-prefix-dir cached-prefix-dir)
+        (make-directory-read-only cached-prefix-dir))
+      ;; Create symlink back (whether we just cached or it already existed)
+      (remove-path source-prefix-dir)
+      (create-symlink cached-prefix-dir source-prefix-dir))))
 
 (initialize-cache)
