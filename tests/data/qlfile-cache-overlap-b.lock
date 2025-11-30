@@ -1,0 +1,12 @@
+("quicklisp" .
+ (:class qlot.source.dist:source-dist
+  :initargs (:project-name "quicklisp" :%version :latest :distribution "http://beta.quicklisp.org/dist/quicklisp.txt")
+  :version "2018-02-28"))
+("cl-ppcre" .
+ (:class qlot.source.ql:source-ql
+  :initargs (:project-name "cl-ppcre" :%version :latest)
+  :version "ql-2018-08-31"))
+("split-sequence" .
+ (:class qlot.source.ql:source-ql
+  :initargs (:project-name "split-sequence" :%version :latest)
+  :version "ql-2018-08-31"))

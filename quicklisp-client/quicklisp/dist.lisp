@@ -765,7 +765,13 @@ the given NAME."
   (and (probe-file (install-metadata-file release))
        (every #'installedp (provided-systems release))))
 
-(defmethod install ((release release))
+(defvar *install-release-hook* nil
+  "When set, called with (release default-fn) before installing a release.
+The hook can either call DEFAULT-FN to perform the standard installation,
+or handle the installation itself and return the release.")
+
+(defun %install-release (release)
+  "Internal function that performs the actual release installation."
   (let ((archive (ensure-local-archive-file release))
         (output (relative-to (dist release)
                              (make-pathname :directory
@@ -802,6 +808,11 @@ the given NAME."
               (write-line (qenough system-file)
                           stream))))))
     release))
+
+(defmethod install ((release release))
+  (if *install-release-hook*
+      (funcall *install-release-hook* release #'%install-release)
+      (%install-release release)))
 
 (defmethod uninstall ((release release))
   (when (installedp release)
@@ -1099,12 +1110,10 @@ FUN."
   (let* ((releases (provided-releases dist))
          (known-archives (mapcar 'local-archive-file releases))
          (known-directories (mapcar 'base-directory releases))
-         (present-archives (mapcar 'truename
-                                   (directory-entries
-                                    (relative-to dist "archives/"))))
-         (present-directories (mapcar 'truename
-                                      (directory-entries
-                                       (relative-to dist "software/"))))
+         (present-archives (directory-entries
+                            (relative-to dist "archives/")))
+         (present-directories (directory-entries
+                               (relative-to dist "software/")))
          (garbage-archives
           (set-difference present-archives known-archives
                           :test 'equalp))

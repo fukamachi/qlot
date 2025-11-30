@@ -15,10 +15,64 @@
                 #:ensure-package-loaded)
   (:import-from #:qlot/logger
                 #:message)
-  (:import-from #:qlot/errors
-                #:qlot-simple-error)
   (:export #:bundle-project))
 (in-package #:qlot/bundle)
+
+(defun release-installed-directory (release)
+  "Return the installed software directory for RELEASE."
+  (uiop:symbol-call '#:ql-dist '#:relative-to
+                    (uiop:symbol-call '#:ql-dist '#:dist release)
+                    (make-pathname :directory (list :relative "software"
+                                                    (uiop:symbol-call '#:ql-dist '#:prefix release)))))
+
+(defun copy-installed-release (release target)
+  "Copy the installed files for RELEASE to TARGET.
+Uses truename to follow symlinks, so cached symlinked releases are properly copied."
+  (let* ((installed-dir (release-installed-directory release))
+         (prefix (uiop:symbol-call '#:ql-dist '#:prefix release))
+         (target-dir (merge-pathnames (make-pathname :directory (list :relative "software" prefix))
+                                      (uiop:ensure-directory-pathname target))))
+    (when (uiop:directory-exists-p installed-dir)
+      (uiop:symbol-call '#:ql-bundle '#:copy-directory-tree installed-dir target-dir)
+      release)))
+
+(defvar *use-qlot-unpack-release* nil
+  "When T, unpack-release copies from installed directories instead of downloading archives.")
+
+(defvar *qlot-unpack-release-method-added* nil
+  "T if the :around method for unpack-release has been added.")
+
+(defun release-has-installed-files-p (release)
+  "Return T if the release's software directory exists and has files.
+This works even when installedp returns NIL (e.g., when symlinks are broken)."
+  (let ((dir (release-installed-directory release)))
+    (and (uiop:directory-exists-p dir)
+         ;; Check that truename works (not a broken symlink)
+         (ignore-errors (truename dir)))))
+
+(defun ensure-qlot-unpack-release-method ()
+  "Ensure the :around method on ql-bundle::unpack-release is defined.
+This is called at runtime when the ql-bundle package exists."
+  (unless *qlot-unpack-release-method-added*
+    ;; Use EVAL to define the method at runtime when the package exists
+    (eval
+     '(defmethod ql-bundle::unpack-release :around (release target)
+       "When *use-qlot-unpack-release* is T, copy from installed directories
+instead of downloading archives. This handles qlot:// URLs."
+       (if (and qlot/bundle::*use-qlot-unpack-release*
+                (qlot/bundle::release-has-installed-files-p release))
+           (qlot/bundle::copy-installed-release release target)
+           (call-next-method))))
+    (setf *qlot-unpack-release-method-added* t)))
+
+(defmacro with-qlot-unpack-release (&body body)
+  "Execute BODY with ql-bundle:unpack-release overridden to copy from
+installed locations for already-installed releases. This handles qlot:// URLs that
+would otherwise fail because the qlot server isn't running during bundle."
+  `(progn
+     (ensure-qlot-unpack-release-method)
+     (let ((*use-qlot-unpack-release* t))
+       ,@body)))
 
 (defvar *default-bundle-directory-name* ".bundle-libs")
 
@@ -63,15 +117,16 @@
                                          (:tree ,project-root)
                                          (:also-exclude ".qlot")
                                          (:also-exclude ,(uiop:native-namestring bundle-directory))))
-                  (handler-bind ((error
-                                   (lambda (e)
-                                     (when (eq (class-name (class-of e))
-                                               (uiop:intern* '#:system-not-found '#:ql-bundle))
-                                       (when (asdf:find-system (uiop:symbol-call '#:ql-bundle '#:system-not-found-system e) nil)
-                                         (invoke-restart (find-restart (uiop:intern* '#:omit '#:ql-bundle) e)))))))
-                    (bundle-systems dependency-names
-                                    :to bundle-directory
-                                    :overwrite t))))))
+                  (with-qlot-unpack-release
+                    (handler-bind ((error
+                                     (lambda (e)
+                                       (when (eq (class-name (class-of e))
+                                                 (uiop:intern* '#:system-not-found '#:ql-bundle))
+                                         (when (asdf:find-system (uiop:symbol-call '#:ql-bundle '#:system-not-found-system e) nil)
+                                           (invoke-restart (find-restart (uiop:intern* '#:omit '#:ql-bundle) e)))))))
+                      (bundle-systems dependency-names
+                                      :to bundle-directory
+                                      :overwrite t)))))))
           ;; Delete bundle-info.sexp.
           (let ((bundle-info.sexp (merge-pathnames #P"bundle-info.sexp" bundle-directory)))
             (when (uiop:file-exists-p bundle-info.sexp)
