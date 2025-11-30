@@ -180,3 +180,115 @@
             (let ((symlink-count (count-symlinks-in-software qlhome2)))
               (ok (< 0 symlink-count)
                   (format nil "Second project should use symlinks (found ~A)" symlink-count)))))))))
+
+;;; Helper functions for overlap tests
+
+(defun copy-overlap-qlfile (variant tmp-dir)
+  "Copy the overlap test qlfile VARIANT (a, b, or c) to TMP-DIR."
+  (let ((base-name (format nil "qlfile-cache-overlap-~A" variant)))
+    (uiop:copy-file (asdf:system-relative-pathname :qlot (format nil "tests/data/~A" base-name))
+                    (merge-pathnames #P"qlfile" tmp-dir))
+    (uiop:copy-file (asdf:system-relative-pathname :qlot (format nil "tests/data/~A.lock" base-name))
+                    (merge-pathnames #P"qlfile.lock" tmp-dir))))
+
+(deftest test-partially-overlapping-dependencies
+  "Projects with partially overlapping dependencies should share common deps.
+Project A: cl-ppcre
+Project B: cl-ppcre + split-sequence
+Both should share cl-ppcre from cache."
+  (with-tmp-directory (cache-dir)
+    (with-tmp-directory (project-a-dir)
+      (with-tmp-directory (project-b-dir)
+        (let ((*cache-directory* (uiop:ensure-directory-pathname cache-dir))
+              (*cache-enabled* t))
+          ;; Setup projects with different but overlapping deps
+          (copy-overlap-qlfile "a" project-a-dir)  ; cl-ppcre only
+          (copy-overlap-qlfile "b" project-b-dir)  ; cl-ppcre + split-sequence
+          (let ((qlhome-a (merge-pathnames #P".qlot/" project-a-dir))
+                (qlhome-b (merge-pathnames #P".qlot/" project-b-dir))
+                (qlfile-a (merge-pathnames #P"qlfile" project-a-dir))
+                (qlfile-b (merge-pathnames #P"qlfile" project-b-dir)))
+            ;; Install project A first - downloads cl-ppcre
+            (install-qlfile qlfile-a :quicklisp-home qlhome-a)
+            (ok (uiop:directory-exists-p (merge-pathnames "dists/cl-ppcre/" qlhome-a))
+                "Project A should have cl-ppcre installed")
+            ;; Install project B - should reuse cl-ppcre from cache, download split-sequence
+            (install-qlfile qlfile-b :quicklisp-home qlhome-b)
+            (ok (uiop:directory-exists-p (merge-pathnames "dists/cl-ppcre/" qlhome-b))
+                "Project B should have cl-ppcre installed")
+            (ok (uiop:directory-exists-p (merge-pathnames "dists/split-sequence/" qlhome-b))
+                "Project B should have split-sequence installed")
+            ;; Verify project B uses symlinks for shared dependency
+            (let ((symlink-count (count-symlinks-in-software qlhome-b)))
+              (ok (< 0 symlink-count)
+                  (format nil "Project B should use symlinks for cached deps (found ~A)" symlink-count)))))))))
+
+(deftest test-three-projects-chain-sharing
+  "Three projects with chain of overlapping dependencies.
+Project A: cl-ppcre
+Project B: cl-ppcre + split-sequence
+Project C: split-sequence + alexandria
+Each project shares some dependencies with its neighbor."
+  (with-tmp-directory (cache-dir)
+    (with-tmp-directory (project-a-dir)
+      (with-tmp-directory (project-b-dir)
+        (with-tmp-directory (project-c-dir)
+          (let ((*cache-directory* (uiop:ensure-directory-pathname cache-dir))
+                (*cache-enabled* t))
+            ;; Setup three projects with chain overlap
+            (copy-overlap-qlfile "a" project-a-dir)  ; cl-ppcre
+            (copy-overlap-qlfile "b" project-b-dir)  ; cl-ppcre + split-sequence
+            (copy-overlap-qlfile "c" project-c-dir)  ; split-sequence + alexandria
+            (let ((qlhome-a (merge-pathnames #P".qlot/" project-a-dir))
+                  (qlhome-b (merge-pathnames #P".qlot/" project-b-dir))
+                  (qlhome-c (merge-pathnames #P".qlot/" project-c-dir))
+                  (qlfile-a (merge-pathnames #P"qlfile" project-a-dir))
+                  (qlfile-b (merge-pathnames #P"qlfile" project-b-dir))
+                  (qlfile-c (merge-pathnames #P"qlfile" project-c-dir)))
+              ;; Install project A - downloads cl-ppcre
+              (install-qlfile qlfile-a :quicklisp-home qlhome-a)
+              (ok (uiop:directory-exists-p (merge-pathnames "dists/cl-ppcre/" qlhome-a))
+                  "Project A: cl-ppcre installed")
+              ;; Install project B - reuses cl-ppcre, downloads split-sequence
+              (install-qlfile qlfile-b :quicklisp-home qlhome-b)
+              (ok (uiop:directory-exists-p (merge-pathnames "dists/cl-ppcre/" qlhome-b))
+                  "Project B: cl-ppcre installed (from cache)")
+              (ok (uiop:directory-exists-p (merge-pathnames "dists/split-sequence/" qlhome-b))
+                  "Project B: split-sequence installed")
+              ;; Install project C - reuses split-sequence, downloads alexandria
+              (install-qlfile qlfile-c :quicklisp-home qlhome-c)
+              (ok (uiop:directory-exists-p (merge-pathnames "dists/split-sequence/" qlhome-c))
+                  "Project C: split-sequence installed (from cache)")
+              (ok (uiop:directory-exists-p (merge-pathnames "dists/alexandria/" qlhome-c))
+                  "Project C: alexandria installed")
+              ;; Verify projects B and C use symlinks
+              (let ((symlinks-b (count-symlinks-in-software qlhome-b))
+                    (symlinks-c (count-symlinks-in-software qlhome-c)))
+                (ok (< 0 symlinks-b)
+                    (format nil "Project B should use symlinks (found ~A)" symlinks-b))
+                (ok (< 0 symlinks-c)
+                    (format nil "Project C should use symlinks (found ~A)" symlinks-c))))))))))
+
+(deftest test-reinstall-preserves-symlinks
+  "Reinstalling a project should preserve symlinks to cached releases."
+  (with-tmp-directory (cache-dir)
+    (with-tmp-directory (project-dir)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname cache-dir))
+            (*cache-enabled* t))
+        (copy-cache-test-qlfile project-dir)
+        (let ((qlhome (merge-pathnames #P".qlot/" project-dir))
+              (qlfile (merge-pathnames #P"qlfile" project-dir)))
+          ;; First install - populates cache
+          (install-qlfile qlfile :quicklisp-home qlhome)
+          (let ((symlinks-before (count-symlinks-in-software qlhome)))
+            ;; Delete .qlot and reinstall
+            (uiop:delete-directory-tree qlhome :validate t)
+            (install-qlfile qlfile :quicklisp-home qlhome)
+            ;; Verify symlinks are used on reinstall
+            (let ((symlinks-after (count-symlinks-in-software qlhome)))
+              (ok (< 0 symlinks-after)
+                  (format nil "Reinstall should use symlinks (found ~A)" symlinks-after))
+              ;; Second install should have at least as many symlinks
+              (ok (<= symlinks-before symlinks-after)
+                  (format nil "Reinstall symlinks (~A) >= first install (~A)"
+                          symlinks-after symlinks-before)))))))))
