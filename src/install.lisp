@@ -56,6 +56,7 @@
   (:import-from #:qlot/cache
                 #:*cache-enabled*
                 #:*cache-directory*
+                #:initialize-cache
                 #:cache-exists-p
                 #:restore-from-cache
                 #:save-to-cache
@@ -579,7 +580,13 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
     (values)))
 
-(defun install-project (object &key (install-deps t) concurrency)
+(defun install-project (object &key (install-deps t) cache-directory concurrency)
+  (when cache-directory
+    (setf *cache-directory*
+          (uiop:ensure-absolute-pathname
+           (uiop:ensure-directory-pathname cache-directory)
+           *default-pathname-defaults*))
+    (initialize-cache))
   (handler-bind ((qlfile-not-found
                    (lambda (e)
                      (invoke-restart (find-restart 'create-qlfile e)))))
@@ -587,6 +594,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
       ((or symbol string)
        (install-project (asdf:find-system object)
                         :install-deps install-deps
+                        :cache-directory cache-directory
                         :concurrency concurrency))
       (asdf:system
        (install-qlfile (asdf:system-relative-pathname object *default-qlfile*)
@@ -601,12 +609,20 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun update-project (object &key projects
                                    (install-deps t)
+                                   cache-directory
                                    concurrency)
+  (when cache-directory
+    (setf *cache-directory*
+          (uiop:ensure-absolute-pathname
+           (uiop:ensure-directory-pathname cache-directory)
+           *default-pathname-defaults*))
+    (initialize-cache))
   (etypecase object
     ((or symbol string)
      (update-project (asdf:find-system object)
                      :projects projects
                      :install-deps install-deps
+                     :cache-directory cache-directory
                      :concurrency concurrency))
     (asdf:system
      (update-qlfile (asdf:system-relative-pathname object *default-qlfile*)

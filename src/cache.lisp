@@ -25,6 +25,7 @@
                 #:copy-directory)
   (:export #:*cache-directory*
            #:*cache-enabled*
+           #:initialize-cache
            #:cache-key
            #:cache-metadata-path
            #:cache-sources-path
