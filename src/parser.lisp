@@ -7,6 +7,8 @@
                 #:source-defrost-args
                 #:defrost-source
                 #:source=)
+  (:import-from #:qlot/source/ql-dist
+                #:resolve-ql-dist-sources)
   (:import-from #:qlot/logger
                 #:message)
   (:import-from #:qlot/errors
@@ -153,12 +155,13 @@
                   :key #'source-dist-name
                   :test #'string=)
       (push default-ql-source sources))
-    (if (uiop:file-exists-p qlfile-lock)
-        (merging-lock-sources sources
-                              (parse-qlfile-lock qlfile-lock
-                                                 :test (lambda (name)
-                                                         (not (find name projects :test 'equal)))))
-        sources)))
+    (resolve-ql-dist-sources
+     (if (uiop:file-exists-p qlfile-lock)
+         (merging-lock-sources sources
+                               (parse-qlfile-lock qlfile-lock
+                                                  :test (lambda (name)
+                                                          (not (find name projects :test 'equal)))))
+         sources))))
 
 (defun read-qlfile-for-outdated (qlfile)
   (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
@@ -167,4 +170,4 @@
                   :key #'source-dist-name
                   :test #'string=)
       (push default-ql-source sources))
-    sources))
+    (resolve-ql-dist-sources sources)))

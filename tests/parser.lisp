@@ -13,6 +13,8 @@
                 #:source-ql-upstream
                 #:source-dist
                 #:source-distribution
+                #:source-ql-dist
+                #:source-ql-dist-dist-name
                 #:freeze-source)
   (:import-from #:qlot/errors
                 #:qlfile-parse-failed
@@ -46,6 +48,18 @@
       (ok (typep source 'source-ql-upstream))
       (ok (equal (source-project-name source) "mito"))
       (ok (null (source-git-remote-url source)))))
+
+  (testing "ql-dist source"
+    (let ((source (parse-qlfile-line "ql-dist shirakumo trial")))
+      (ok (typep source 'source-ql-dist))
+      (ok (equal (source-ql-dist-dist-name source) "shirakumo"))
+      (ok (equal (source-project-name source) "trial"))
+      (ok (null (source-distribution source)))
+      "distribution URL is not set until resolution")
+    (let ((source (parse-qlfile-line "ql-dist shirakumo trial 2024-01-01")))
+      (ok (typep source 'source-ql-dist))
+      (ok (equal (source-ql-dist-dist-name source) "shirakumo"))
+      (ok (equal (source-project-name source) "trial"))))
 
   (ok (signals
         (parse-qlfile-line "source")
