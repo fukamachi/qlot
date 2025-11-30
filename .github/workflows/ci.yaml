@@ -28,13 +28,24 @@ jobs:
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
       - name: Install Ultralisp
         run: ros -e '(ql-dist:install-dist "http://dist.ultralisp.org/" :prompt nil)'
-      - name: Run setup.sh
-        run: scripts/setup.sh
+      - name: Install Rove
+        run: ros install rove
       - name: Run tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ros +Q -L sbcl-bin run -- --noinform --non-interactive --load .qlot/setup.lisp --eval "(ql:quickload :rove)" --eval "(or (rove:run :qlot-tests) (uiop:quit -1))"
+          PATH="~/.roswell/bin:$PATH"
+          rove qlot.asd
+      - name: Run setup.sh
+        run: scripts/setup.sh
+      - name: Run patched tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ros +Q -L sbcl-bin run -- --noinform --non-interactive \
+            --load .qlot/setup.lisp \
+            --eval "(ql:quickload :rove)" \
+            --eval "(or (rove:run :qlot-tests/patched) (uiop:quit -1))"
       - name: Run install.sh
         run: scripts/install.sh
       - name: Run qlot install for Lem

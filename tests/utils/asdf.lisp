@@ -15,5 +15,5 @@
                               '("qlot" "qlot/subcommands" "qlot/command" "qlot/tests")
                               :test 'equal)))
     (ok (null (set-difference (gethash (asdf:system-source-file :qlot-tests) system-hash)
-                              '("qlot-tests")
+                              '("qlot-tests" "qlot-tests/patched")
                               :test 'equal)))))
