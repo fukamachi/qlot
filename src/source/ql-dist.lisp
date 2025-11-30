@@ -44,6 +44,33 @@
        (equal (slot-value source1 'qlot/source/dist::%version)
               (slot-value source2 'qlot/source/dist::%version))))
 
+;; Unique identifier includes dist-name to avoid conflicts with same project from different dists
+(defmethod source-identifier ((source source-ql-dist))
+  (format nil "~A/~A"
+          (source-ql-dist-dist-name source)
+          (source-project-name source)))
+
+(defmethod print-object ((source source-ql-dist) stream)
+  (print-unreadable-object (source stream :type t :identity t)
+    (format stream "~A ~A ~A"
+            (source-ql-dist-dist-name source)
+            (source-project-name source)
+            (if (slot-boundp source 'qlot/source/base::version)
+                (source-version source)
+                (slot-value source 'qlot/source/dist::%version)))))
+
+;; Handle inherited slots from source-dist-project (in different package)
+;; The base defrost-source can't find these slots because it interns slot names
+;; in the class's package, not the parent's package
+(defmethod defrost-source :before ((source source-ql-dist))
+  (let ((args (source-defrost-args source)))
+    (let ((distribution (getf args :distribution)))
+      (when distribution
+        (setf (source-distribution source) distribution)))
+    (let ((distinfo (getf args :distinfo)))
+      (when distinfo
+        (setf (source-distinfo-url source) distinfo)))))
+
 ;; Freeze dist-name and distribution for qlfile.lock
 (defmethod source-frozen-slots ((source source-ql-dist))
   (append (call-next-method)
