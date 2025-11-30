@@ -1,0 +1,3 @@
+dist shirakumo http://dist.shirakumo.org/shirakumo.txt
+ql-dist shirakumo trial
+ql-dist shirakumo kandria 2024-01-01

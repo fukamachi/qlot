@@ -5,6 +5,7 @@
                  #:qlot/source/http
                  #:qlot/source/github
                  #:qlot/source/dist
+                 #:qlot/source/ql-dist
                  #:qlot/source/ultralisp
                  #:qlot/source/local
                  #:qlot/source/asdf))

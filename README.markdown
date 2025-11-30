@@ -384,7 +384,7 @@ After clearing the cache, run `qlot install` in your projects to reinstall depen
 <source> <project name> [arg1, arg2..]
 ```
 
-Currently, `<source>` must be one of `dist`, `ql`, `ultralisp`, `http`, `git`, `github`, `local` or `asdf`.
+Currently, `<source>` must be one of `dist`, `ql`, `ql-dist`, `ultralisp`, `http`, `git`, `github`, `local` or `asdf`.
 
 ### ql
 
@@ -513,6 +513,25 @@ dist <distribution URL> [<dist version>]
 dist http://beta.quicklisp.org/dist/quicklisp.txt
 dist http://dist.ultralisp.org/
 ```
+
+### ql-dist
+
+```
+ql-dist <dist name> <project name> [<version>]
+```
+
+`ql-dist` source will download a specific library from a custom Quicklisp distribution declared elsewhere in the qlfile with `dist`.
+
+This is useful when you have multiple distributions and a project is available from more than one. By default, the bottom distribution in the qlfile takes priority (see [Priorities of distributions](#priorities-of-distributions)). `ql-dist` allows you to explicitly specify which distribution a particular project should come from, overriding the default priority.
+
+```
+dist http://dist.ultralisp.org/
+ql-dist quicklisp clack
+```
+
+In this example, ultralisp is added as a distribution (and would normally take priority over the implicit quicklisp dist). However, `ql-dist quicklisp clack` explicitly specifies that clack should come from quicklisp instead.
+
+The `<dist name>` must match the name in the distinfo of a `dist` source declared in the same qlfile. If no matching distribution is found, Qlot will signal an error.
 
 ## Priorities of distributions
 

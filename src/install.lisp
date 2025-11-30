@@ -102,7 +102,7 @@
 (defun create-release-install-markers (release)
   "Create Quicklisp install markers for a release restored from cache.
 This makes Quicklisp recognize the release as installed."
-  (with-package-functions #:ql-dist (dist relative-to base-directory prefix
+  (with-package-functions #:ql-dist (dist base-directory
                                      system-files install-metadata-file
                                      provided-systems find-system-in-dist)
     (let ((dist (dist release))

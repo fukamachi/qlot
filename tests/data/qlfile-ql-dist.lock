@@ -1,0 +1,22 @@
+("quicklisp" .
+ (:class qlot/source/dist:source-dist
+  :initargs (:distribution "https://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
+  :version "2024-10-12"))
+("shirakumo" .
+ (:class qlot/source/dist:source-dist
+  :initargs (:distribution "http://dist.shirakumo.org/shirakumo.txt" :%version :latest)
+  :version "2024-10-01"))
+("trial" .
+ (:class qlot/source/ql-dist:source-ql-dist
+  :initargs (:dist-name "shirakumo" :project-name "trial" :%version :latest)
+  :version "ql-dist-2024-10-01"
+  :dist-name "shirakumo"
+  :distinfo "http://dist.shirakumo.org/shirakumo/2024-10-01/distinfo.txt"
+  :distribution "http://dist.shirakumo.org/shirakumo.txt"))
+("kandria" .
+ (:class qlot/source/ql-dist:source-ql-dist
+  :initargs (:dist-name "shirakumo" :project-name "kandria" :%version "2024-01-01")
+  :version "ql-dist-2024-01-01"
+  :dist-name "shirakumo"
+  :distinfo "http://dist.shirakumo.org/shirakumo/2024-01-01/distinfo.txt"
+  :distribution "http://dist.shirakumo.org/shirakumo.txt"))
