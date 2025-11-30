@@ -139,6 +139,12 @@
 (defgeneric cache-key (source)
   (:documentation "Return list components representing cache path for SOURCE."))
 
+(defun source-uses-release-level-cache-p (source)
+  "Return T if SOURCE relies on release-level caching for software.
+These sources download from standard Quicklisp/Ultralisp URLs, so the
+release hook handles caching. Only metadata needs source-level caching."
+  (typep source 'source-ql))
+
 (defmethod cache-key ((source source-ql))
   (when (slot-boundp source 'qlot/source/base::version)
     (list "ql" "quicklisp"
@@ -271,12 +277,14 @@
              (not (source-has-credentials-p source)))
     (let ((metadata (cache-metadata-path source))
           (sources (cache-sources-path source)))
-      (and metadata sources
+      (and metadata
            (uiop:directory-exists-p metadata)
-           (uiop:directory-exists-p sources)
            (uiop:file-exists-p (merge-pathnames "distinfo.txt" metadata))
            (uiop:file-exists-p (merge-pathnames "systems.txt" metadata))
-           (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))))))
+           (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))
+           ;; Sources directory required only for non-release-level-cache sources
+           (or (source-uses-release-level-cache-p source)
+               (and sources (uiop:directory-exists-p sources)))))))
 
 (defun move-directory (from to)
   (handler-case
@@ -458,21 +466,22 @@ with trailing slashes are handled correctly."
                   (dst (merge-pathnames file dist-path)))
               (uiop:delete-file-if-exists dst)
               (uiop:copy-file src dst)))
-          ;; link software dirs
-          (let ((software-dir (merge-pathnames "software/" dist-path))
-                (restored-count 0))
-            (ensure-directories-exist software-dir)
-            (dolist (project-dir (uiop:subdirectories sources-cache))
-              (let* ((dir-name (car (last (pathname-directory project-dir))))
-                     (link-path (merge-pathnames
-                                 (make-pathname :directory (list :relative dir-name))
-                                 software-dir)))
-                (create-symlink project-dir link-path)
-                (incf restored-count)))
-            ;; Only create markers if software was actually restored
-            ;; (Empty sources-cache means releases are in release-cache and will be installed later)
-            (when (< 0 restored-count)
-              (create-install-markers dist-path)))
+          ;; link software dirs (skip for sources that use release-level caching)
+          (unless (source-uses-release-level-cache-p source)
+            (let ((software-dir (merge-pathnames "software/" dist-path))
+                  (restored-count 0))
+              (ensure-directories-exist software-dir)
+              (when (and sources-cache (uiop:directory-exists-p sources-cache))
+                (dolist (project-dir (uiop:subdirectories sources-cache))
+                  (let* ((dir-name (car (last (pathname-directory project-dir))))
+                         (link-path (merge-pathnames
+                                     (make-pathname :directory (list :relative dir-name))
+                                     software-dir)))
+                    (create-symlink project-dir link-path)
+                    (incf restored-count))))
+              ;; Only create markers if software was actually restored
+              (when (< 0 restored-count)
+                (create-install-markers dist-path))))
           t))
     ((or file-error type-error) (e)
       (warn "Cache for ~A is unusable, will reinstall: ~A"
@@ -496,23 +505,28 @@ with trailing slashes are handled correctly."
 
 (defun save-to-cache-impl (source dist-path)
   (let ((metadata-cache (cache-metadata-path source))
-        (sources-cache (cache-sources-path source)))
+        (sources-cache (cache-sources-path source))
+        (uses-release-cache (source-uses-release-level-cache-p source)))
     (with-cache-lock (:exclusive)
       (when (cache-exists-p source)
         ;; ensure local software points at cache if someone else wrote it
-        (let ((software-dir (merge-pathnames "software/" dist-path)))
-          (dolist (project-dir (uiop:subdirectories software-dir))
-            (let* ((dir-name (car (last (pathname-directory project-dir))))
-                   (cache-target (merge-pathnames
-                                  (make-pathname :directory (list :relative dir-name))
-                                  sources-cache)))
-              (remove-path project-dir)
-              (create-symlink cache-target project-dir))))
+        ;; (skip for sources that use release-level caching)
+        (unless uses-release-cache
+          (let ((software-dir (merge-pathnames "software/" dist-path)))
+            (dolist (project-dir (uiop:subdirectories software-dir))
+              (let* ((dir-name (car (last (pathname-directory project-dir))))
+                     (cache-target (merge-pathnames
+                                    (make-pathname :directory (list :relative dir-name))
+                                    sources-cache)))
+                (remove-path project-dir)
+                (create-symlink cache-target project-dir)))))
         (return-from save-to-cache-impl))
       (let ((metadata-staging (staging-path metadata-cache))
-            (sources-staging (staging-path sources-cache)))
+            (sources-staging (unless uses-release-cache
+                               (staging-path sources-cache))))
         (ignore-errors (uiop:delete-directory-tree metadata-staging :validate t))
-        (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))
+        (when sources-staging
+          (ignore-errors (uiop:delete-directory-tree sources-staging :validate t)))
         (unwind-protect
              (progn
                ;; metadata
@@ -522,33 +536,36 @@ with trailing slashes are handled correctly."
                        (dst (merge-pathnames file metadata-staging)))
                    (uiop:delete-file-if-exists dst)
                    (uiop:copy-file src dst)))
-               ;; sources
-               (let* ((software-dir (merge-pathnames "software/" dist-path))
-                      (project-dirs (uiop:subdirectories software-dir)))
-                 (ensure-directories-exist sources-staging)
-                 (dolist (project-dir project-dirs)
-                   ;; Skip symlinks (already cached at release level)
-                   (unless (symlink-p project-dir)
-                     (let* ((dir-name (car (last (pathname-directory project-dir))))
-                            (staging-target (merge-pathnames
-                                             (make-pathname :directory (list :relative dir-name))
-                                             sources-staging)))
-                       (move-directory project-dir staging-target)))))
+               ;; sources (skip for sources that use release-level caching)
+               (unless uses-release-cache
+                 (let* ((software-dir (merge-pathnames "software/" dist-path))
+                        (project-dirs (uiop:subdirectories software-dir)))
+                   (ensure-directories-exist sources-staging)
+                   (dolist (project-dir project-dirs)
+                     ;; Skip symlinks (already cached at release level)
+                     (unless (symlink-p project-dir)
+                       (let* ((dir-name (car (last (pathname-directory project-dir))))
+                              (staging-target (merge-pathnames
+                                               (make-pathname :directory (list :relative dir-name))
+                                               sources-staging)))
+                         (move-directory project-dir staging-target))))))
                ;; atomically publish
                (rename-file metadata-staging metadata-cache)
-               (rename-file sources-staging sources-cache)
-               (make-directory-read-only sources-cache)
-               ;; recreate symlinks in project pointing to cache
-               (let ((software-dir (merge-pathnames "software/" dist-path)))
-                 (ensure-directories-exist software-dir)
-                 (dolist (project-dir (uiop:subdirectories sources-cache))
-                   (let* ((dir-name (car (last (pathname-directory project-dir))))
-                          (link-path (merge-pathnames
-                                      (make-pathname :directory (list :relative dir-name))
-                                      software-dir)))
-                     (create-symlink project-dir link-path))))))
+               (when sources-staging
+                 (rename-file sources-staging sources-cache)
+                 (make-directory-read-only sources-cache)
+                 ;; recreate symlinks in project pointing to cache
+                 (let ((software-dir (merge-pathnames "software/" dist-path)))
+                   (ensure-directories-exist software-dir)
+                   (dolist (project-dir (uiop:subdirectories sources-cache))
+                     (let* ((dir-name (car (last (pathname-directory project-dir))))
+                            (link-path (merge-pathnames
+                                        (make-pathname :directory (list :relative dir-name))
+                                        software-dir)))
+                       (create-symlink project-dir link-path))))))
           (ignore-errors (uiop:delete-directory-tree metadata-staging :validate t))
-          (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))))))
+          (when sources-staging
+            (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))))))))
 
 (defun parse-releases-txt (dist-path)
   "Parse releases.txt and return an alist mapping prefix to release-name."

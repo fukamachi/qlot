@@ -131,11 +131,13 @@
   (with-tmp-directory (cache-root)
     (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
           (*cache-enabled* t)
-          (source (make-source :ql "alexandria" :latest)))
-      (setf (source-version source) "20250622")
+          ;; Use source-git since source-ql uses release-level caching
+          (source (make-source :git "test-lib" "https://github.com/test/lib")))
+      (setf (qlot/source/git::source-git-ref source) "abc123")
+      (setf (source-version source) "git-abc123")
       (let* ((metadata (cache-metadata-path source))
              (sources (cache-sources-path source))
-             (project-dir (merge-pathnames "alexandria-20250622/" sources)))
+             (project-dir (merge-pathnames "lib-abc123/" sources)))
         (ensure-directories-exist metadata)
         (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
           (with-open-file (s (merge-pathnames file metadata)
@@ -143,7 +145,7 @@
                              :if-does-not-exist :create)
             (write-line "dummy" s)))
         (ensure-directories-exist project-dir)
-        (with-open-file (s (merge-pathnames "alexandria.asd" project-dir)
+        (with-open-file (s (merge-pathnames "lib.asd" project-dir)
                            :direction :output
                            :if-does-not-exist :create)
           (write-line ";; asd" s))
@@ -151,24 +153,26 @@
           (let ((result (restore-from-cache source dist-path)))
             (ok result)
             (ok (uiop:file-exists-p (merge-pathnames "distinfo.txt" dist-path)))
-            (let ((link (merge-pathnames "software/alexandria-20250622/" dist-path)))
+            (let ((link (merge-pathnames "software/lib-abc123/" dist-path)))
               (ok (uiop:directory-exists-p link))
               (ok (or (equal (truename link) (truename project-dir))
-                      (uiop:file-exists-p (merge-pathnames "alexandria.asd" link)))))
-            (ok (uiop:file-exists-p (merge-pathnames "installed/releases/alexandria-20250622.txt"
+                      (uiop:file-exists-p (merge-pathnames "lib.asd" link)))))
+            (ok (uiop:file-exists-p (merge-pathnames "installed/releases/lib-abc123.txt"
                                                      dist-path)))
-            (ok (uiop:file-exists-p (merge-pathnames "installed/systems/alexandria.txt"
+            (ok (uiop:file-exists-p (merge-pathnames "installed/systems/lib.txt"
                                                      dist-path)))))))))
 
 (deftest test-save-to-cache
   (with-tmp-directory (cache-root)
     (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
           (*cache-enabled* t)
-          (source (make-source :ql "serapeum" :latest)))
-      (setf (source-version source) "20240601")
+          ;; Use source-git since source-ql uses release-level caching
+          (source (make-source :git "serapeum" "https://github.com/test/serapeum")))
+      (setf (qlot/source/git::source-git-ref source) "abc123")
+      (setf (source-version source) "git-abc123")
       (with-tmp-directory (dist-path)
         (let ((metadata-dir dist-path)
-              (software-dir (merge-pathnames "software/serapeum-20240601/" dist-path)))
+              (software-dir (merge-pathnames "software/serapeum-abc123/" dist-path)))
           (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
             (with-open-file (s (merge-pathnames file metadata-dir)
                                :direction :output
@@ -183,8 +187,8 @@
           (save-to-cache source dist-path)
           (ok (cache-exists-p source))
           (let* ((cache-src (cache-sources-path source))
-                 (cache-project (merge-pathnames "serapeum-20240601/" cache-src))
-                 (link (merge-pathnames "software/serapeum-20240601/" dist-path)))
+                 (cache-project (merge-pathnames "serapeum-abc123/" cache-src))
+                 (link (merge-pathnames "software/serapeum-abc123/" dist-path)))
             (ok (uiop:directory-exists-p cache-project))
             (ok (uiop:directory-exists-p link))
             (ok (or (equal (truename link) (truename cache-project))
@@ -461,8 +465,10 @@
     (with-tmp-directory (cache-root)
       (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
             (*cache-enabled* t)
-            (source (make-source :ql "mylib" :latest)))
-        (setf (source-version source) "20240601")
+            ;; Use source-git since source-ql uses release-level caching
+            (source (make-source :git "mylib" "https://github.com/test/mylib")))
+        (setf (qlot/source/git::source-git-ref source) "abc123")
+        (setf (source-version source) "git-abc123")
         (with-tmp-directory (dist-path)
           ;; Create metadata files
           (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
@@ -471,7 +477,7 @@
                                :if-does-not-exist :create)
               (write-line file s)))
           ;; Create a real software directory
-          (let ((real-dir (merge-pathnames "software/real-lib-20240601/" dist-path)))
+          (let ((real-dir (merge-pathnames "software/real-lib-abc123/" dist-path)))
             (ensure-directories-exist real-dir)
             (with-open-file (s (merge-pathnames "real.asd" real-dir)
                                :direction :output
@@ -493,7 +499,74 @@
           (save-to-cache source dist-path)
           ;; Verify: real-lib should be in cache, symlinked-lib should NOT be
           (let ((cache-src (cache-sources-path source)))
-            (ok (uiop:directory-exists-p (merge-pathnames "real-lib-20240601/" cache-src))
+            (ok (uiop:directory-exists-p (merge-pathnames "real-lib-abc123/" cache-src))
                 "Real directory should be cached")
             (ng (uiop:directory-exists-p (merge-pathnames "symlinked-lib/" cache-src))
                 "Symlinked directory should NOT be cached")))))))
+
+;;; ==========================================================================
+;;; Tests for source-ql using release-level caching
+;;; ==========================================================================
+
+(deftest test-source-ql-metadata-only-cache
+  (testing "source-ql only caches metadata, not sources (uses release-level caching)"
+    (with-tmp-directory (cache-root)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
+            (*cache-enabled* t)
+            (source (make-source :ql "alexandria" :latest)))
+        (setf (source-version source) "ql-2024-10-12")
+        (with-tmp-directory (dist-path)
+          ;; Create metadata files
+          (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+            (with-open-file (s (merge-pathnames file dist-path)
+                               :direction :output
+                               :if-does-not-exist :create)
+              (write-line file s)))
+          ;; Create a software directory (which should NOT be cached for source-ql)
+          (let ((software-dir (merge-pathnames "software/alexandria-20241012-git/" dist-path)))
+            (ensure-directories-exist software-dir)
+            (with-open-file (s (merge-pathnames "alexandria.asd" software-dir)
+                               :direction :output
+                               :if-does-not-exist :create)
+              (write-line ";; asd" s)))
+          ;; Save to cache
+          (save-to-cache source dist-path)
+          ;; Verify: metadata should be cached
+          (ok (cache-exists-p source)
+              "Cache should exist for source-ql")
+          (let ((metadata (cache-metadata-path source)))
+            (ok (uiop:file-exists-p (merge-pathnames "distinfo.txt" metadata))
+                "Metadata should be cached"))
+          ;; Verify: sources should NOT be cached (release-level caching handles this)
+          (let ((sources (cache-sources-path source)))
+            (ng (and sources (uiop:directory-exists-p sources))
+                "Sources directory should NOT exist for source-ql")))))))
+
+(deftest test-source-ql-restore-metadata-only
+  (testing "source-ql restore only restores metadata, no software symlinks"
+    (with-tmp-directory (cache-root)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
+            (*cache-enabled* t)
+            (source (make-source :ql "alexandria" :latest)))
+        (setf (source-version source) "ql-2024-10-12")
+        ;; Setup cached metadata (no sources)
+        (let ((metadata (cache-metadata-path source)))
+          (ensure-directories-exist metadata)
+          (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+            (with-open-file (s (merge-pathnames file metadata)
+                               :direction :output
+                               :if-does-not-exist :create)
+              (write-line "dummy" s))))
+        ;; Verify cache exists (even without sources)
+        (ok (cache-exists-p source)
+            "Cache should exist with metadata only")
+        ;; Restore from cache
+        (with-tmp-directory (dist-path)
+          (let ((result (restore-from-cache source dist-path)))
+            (ok result
+                "Restore should succeed")
+            (ok (uiop:file-exists-p (merge-pathnames "distinfo.txt" dist-path))
+                "Metadata should be restored")
+            ;; No software directory should be created
+            (ng (uiop:subdirectories (merge-pathnames "software/" dist-path))
+                "No software symlinks should be created for source-ql")))))))
