@@ -125,7 +125,31 @@
         (ensure-directories-exist (merge-pathnames "software/" dist-path))
         (let ((link (merge-pathnames "software/broken" dist-path)))
           (make-symlink #P"/nonexistent/path" link))
-        (ng (validate-dist-installation dist-path))))))
+        (ng (validate-dist-installation dist-path)))))
+  (testing "Symlink becomes broken after cache deletion"
+    (with-tmp-directory (tmp-dir)
+      (let* ((cache-dir (merge-pathnames "cache/" tmp-dir))
+             (dist-path (merge-pathnames "dist/" tmp-dir))
+             (cached-lib (merge-pathnames "mylib-1.0/" cache-dir))
+             (software-dir (merge-pathnames "software/" dist-path))
+             (link-path (merge-pathnames "software/mylib-1.0" dist-path)))
+        ;; Create cache directory with content
+        (ensure-directories-exist cached-lib)
+        (with-open-file (out (merge-pathnames "main.lisp" cached-lib)
+                             :direction :output
+                             :if-does-not-exist :create)
+          (write-line "(defpackage :mylib)" out))
+        ;; Create symlink from project to cache
+        (ensure-directories-exist software-dir)
+        (make-symlink cached-lib link-path)
+        ;; Verify installation is valid while cache exists
+        (ok (validate-dist-installation dist-path)
+            "Installation should be valid with intact symlink")
+        ;; Simulate user deleting the cache
+        (uiop:delete-directory-tree cache-dir :validate t)
+        ;; Verify installation is now invalid (broken symlink)
+        (ng (validate-dist-installation dist-path)
+            "Installation should be invalid after cache deletion")))))
 
 (deftest test-restore-from-cache
   (with-tmp-directory (cache-root)
