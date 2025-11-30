@@ -191,7 +191,37 @@
   (testing "resolve-ql-dist-sources errors on unknown dist"
     (let* ((ql-dist-source (make-source :ql-dist "nonexistent" "trial"))
            (sources (list ql-dist-source)))
-      (ok (signals (resolve-ql-dist-sources sources) 'qlot-error)))))
+      (ok (signals (resolve-ql-dist-sources sources) 'qlot-error))))
+
+  (testing "resolve-ql-dist-sources selects correct dist from multiple dists"
+    ;; Scenario: multiple dists declared, ql-dist explicitly chooses one
+    (let* ((dist-ultralisp (make-source :dist "http://dist.ultralisp.org/"))
+           (dist-shirakumo (make-source :dist "http://dist.shirakumo.org/shirakumo.txt"))
+           (ql-dist-source (make-source :ql-dist "ultralisp" "cl-spark"))
+           (sources (list dist-ultralisp dist-shirakumo ql-dist-source)))
+      ;; Set names (normally done by prepare-source)
+      (setf (source-project-name dist-ultralisp) "ultralisp")
+      (setf (source-project-name dist-shirakumo) "shirakumo")
+      (resolve-ql-dist-sources sources)
+      ;; Should resolve to ultralisp, not shirakumo
+      (ok (equal (source-distribution ql-dist-source)
+                 "https://dist.ultralisp.org/"))))
+
+  (testing "resolve-ql-dist-sources with multiple ql-dist from different dists"
+    ;; Scenario: multiple ql-dist entries from different distributions
+    (let* ((dist-ultralisp (make-source :dist "http://dist.ultralisp.org/"))
+           (dist-shirakumo (make-source :dist "http://dist.shirakumo.org/shirakumo.txt"))
+           (ql-dist-1 (make-source :ql-dist "ultralisp" "cl-spark"))
+           (ql-dist-2 (make-source :ql-dist "shirakumo" "trial"))
+           (sources (list dist-ultralisp dist-shirakumo ql-dist-1 ql-dist-2)))
+      (setf (source-project-name dist-ultralisp) "ultralisp")
+      (setf (source-project-name dist-shirakumo) "shirakumo")
+      (resolve-ql-dist-sources sources)
+      ;; Each ql-dist should resolve to its respective distribution
+      (ok (equal (source-distribution ql-dist-1)
+                 "https://dist.ultralisp.org/"))
+      (ok (equal (source-distribution ql-dist-2)
+                 "https://dist.shirakumo.org/shirakumo.txt")))))
 
 (deftest ql-dist-source=-tests
   (testing "source= compares dist-name, project-name, and version"
