@@ -140,21 +140,24 @@
   (:documentation "Return list components representing cache path for SOURCE."))
 
 (defmethod cache-key ((source source-ql))
-  (list "ql" "quicklisp"
-        (format nil "~A-~A"
-                (source-project-name source)
-                (source-version source))))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (list "ql" "quicklisp"
+          (format nil "~A-~A"
+                  (source-project-name source)
+                  (source-version source)))))
 
 (defmethod cache-key ((source source-ultralisp))
-  (list "ql" "ultralisp"
-        (format nil "~A-~A"
-                (source-project-name source)
-                (source-version source))))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (list "ql" "ultralisp"
+          (format nil "~A-~A"
+                  (source-project-name source)
+                  (source-version source)))))
 
 (defmethod cache-key ((source source-dist))
-  (list "dist"
-        (source-dist-name source)
-        (source-version source)))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (list "dist"
+          (source-dist-name source)
+          (source-version source))))
 
 (defmethod cache-key ((source source-git))
   (let ((normalized (normalize-git-url (source-git-remote-url source))))
