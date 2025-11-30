@@ -505,6 +505,158 @@
                 "Symlinked directory should NOT be cached")))))))
 
 ;;; ==========================================================================
+;;; Tests for copy-directory-tree (symlink fallback)
+;;; ==========================================================================
+
+(deftest test-copy-directory-tree-basic
+  (testing "copy-directory-tree copies directory contents"
+    (with-tmp-directory (tmp)
+      (let ((source-dir (merge-pathnames "source/" tmp))
+            (dest-dir (merge-pathnames "dest/" tmp)))
+        ;; Create source structure
+        (ensure-directories-exist source-dir)
+        (with-open-file (s (merge-pathnames "file1.txt" source-dir)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "content1" s))
+        (with-open-file (s (merge-pathnames "file2.lisp" source-dir)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "(defun foo () 42)" s))
+        ;; Copy
+        (qlot/cache::copy-directory-tree source-dir dest-dir)
+        ;; Verify
+        (ok (uiop:directory-exists-p dest-dir)
+            "Destination directory should exist")
+        (ok (uiop:file-exists-p (merge-pathnames "file1.txt" dest-dir))
+            "file1.txt should be copied")
+        (ok (uiop:file-exists-p (merge-pathnames "file2.lisp" dest-dir))
+            "file2.lisp should be copied")
+        (ok (equal "content1"
+                   (with-open-file (s (merge-pathnames "file1.txt" dest-dir))
+                     (read-line s)))
+            "File content should be preserved")))))
+
+(deftest test-copy-directory-tree-nested
+  (testing "copy-directory-tree copies nested subdirectories"
+    (with-tmp-directory (tmp)
+      (let ((source-dir (merge-pathnames "source/" tmp))
+            (dest-dir (merge-pathnames "dest/" tmp)))
+        ;; Create nested structure
+        (ensure-directories-exist (merge-pathnames "subdir1/subdir2/" source-dir))
+        (with-open-file (s (merge-pathnames "root.txt" source-dir)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "root" s))
+        (with-open-file (s (merge-pathnames "subdir1/level1.txt" source-dir)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "level1" s))
+        (with-open-file (s (merge-pathnames "subdir1/subdir2/level2.txt" source-dir)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "level2" s))
+        ;; Copy
+        (qlot/cache::copy-directory-tree source-dir dest-dir)
+        ;; Verify
+        (ok (uiop:file-exists-p (merge-pathnames "root.txt" dest-dir))
+            "Root file should be copied")
+        (ok (uiop:file-exists-p (merge-pathnames "subdir1/level1.txt" dest-dir))
+            "Level 1 file should be copied")
+        (ok (uiop:file-exists-p (merge-pathnames "subdir1/subdir2/level2.txt" dest-dir))
+            "Level 2 file should be copied")
+        (ok (equal "level2"
+                   (with-open-file (s (merge-pathnames "subdir1/subdir2/level2.txt" dest-dir))
+                     (read-line s)))
+            "Nested file content should be preserved")))))
+
+(deftest test-copy-directory-tree-empty
+  (testing "copy-directory-tree handles empty directories"
+    (with-tmp-directory (tmp)
+      (let ((source-dir (merge-pathnames "source/" tmp))
+            (dest-dir (merge-pathnames "dest/" tmp)))
+        (ensure-directories-exist source-dir)
+        (qlot/cache::copy-directory-tree source-dir dest-dir)
+        (ok (uiop:directory-exists-p dest-dir)
+            "Empty destination directory should be created")))))
+
+;;; ==========================================================================
+;;; Tests for create-symlink fallback behavior
+;;; ==========================================================================
+
+(deftest test-copy-directory-tree-as-fallback
+  (testing "copy-directory-tree provides same functionality as symlink"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target/" tmp))
+            (link (merge-pathnames "link/" tmp)))
+        ;; Create target directory with content
+        (ensure-directories-exist target)
+        (with-open-file (s (merge-pathnames "test.lisp" target)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "(defun hello () \"world\")" s))
+        (with-open-file (s (merge-pathnames "README.md" target)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "# Test Project" s))
+        ;; Directly use copy-directory-tree (the fallback mechanism)
+        ;; This verifies that when symlink fails, copy provides equivalent access
+        (qlot/cache::copy-directory-tree target link)
+        ;; Verify the directory exists and contains expected files
+        (ok (uiop:directory-exists-p link)
+            "Copied directory should exist")
+        (ok (uiop:file-exists-p (merge-pathnames "test.lisp" link))
+            "test.lisp should be accessible")
+        (ok (uiop:file-exists-p (merge-pathnames "README.md" link))
+            "README.md should be accessible")
+        (ok (equal "(defun hello () \"world\")"
+                   (with-open-file (s (merge-pathnames "test.lisp" link))
+                     (read-line s)))
+            "File content should be accessible through copy")
+        ;; Verify it's NOT a symlink (it's a real directory copy)
+        (ng (qlot/cache::symlink-p link)
+            "Should be a real directory, not a symlink")))))
+
+(deftest test-copy-fallback-preserves-structure
+  (testing "Fallback copy preserves full directory structure"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "target/" tmp))
+            (link (merge-pathnames "link/" tmp)))
+        ;; Create complex target structure
+        (ensure-directories-exist (merge-pathnames "src/core/" target))
+        (ensure-directories-exist (merge-pathnames "tests/" target))
+        (with-open-file (s (merge-pathnames "package.lisp" target)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "(defpackage :test)" s))
+        (with-open-file (s (merge-pathnames "src/main.lisp" target)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "(in-package :test)" s))
+        (with-open-file (s (merge-pathnames "src/core/utils.lisp" target)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "(defun util () t)" s))
+        (with-open-file (s (merge-pathnames "tests/main-test.lisp" target)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "(deftest test-1)" s))
+        ;; Use copy-directory-tree directly (the fallback mechanism)
+        (qlot/cache::copy-directory-tree target link)
+        ;; Verify complete structure is preserved
+        (ok (uiop:file-exists-p (merge-pathnames "package.lisp" link))
+            "Root package.lisp should be copied")
+        (ok (uiop:file-exists-p (merge-pathnames "src/main.lisp" link))
+            "src/main.lisp should be copied")
+        (ok (uiop:file-exists-p (merge-pathnames "src/core/utils.lisp" link))
+            "Nested src/core/utils.lisp should be copied")
+        (ok (uiop:file-exists-p (merge-pathnames "tests/main-test.lisp" link))
+            "tests/main-test.lisp should be copied")
+        ;; Verify it's not a symlink
+        (ng (qlot/cache::symlink-p link)
+            "Should be a real directory, not a symlink")))))
+
+;;; ==========================================================================
 ;;; Tests for source-ql using release-level caching
 ;;; ==========================================================================
 
