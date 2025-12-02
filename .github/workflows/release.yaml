@@ -61,6 +61,10 @@ jobs:
           tar cvfz /tmp/qlot-${{ github.ref_name }}.tar.gz --exclude '.git' --exclude '.qlot' --exclude '.github' -C ../ qlot
           echo -e "#!/bin/sh\n\nset -eu\n\nVERSION=${{ github.ref }}\nQLOT_ARCHIVE=https://github.com/fukamachi/qlot/releases/download/${GITHUB_REF_NAME}/qlot-${GITHUB_REF_NAME}.tar.gz\n" > /tmp/qlot-installer-${{ github.ref_name }}.sh
           tail -n +7 scripts/qlot-installer.sh >> /tmp/qlot-installer-${{ github.ref_name }}.sh
+      - name: Test installation from tarball
+        run: |
+          docker run --rm -v /tmp:/tmp --entrypoint /bin/sh fukamachi/sbcl:latest \
+            -c "cd /tmp && tar xzf qlot-*.tar.gz && cd qlot && scripts/setup.sh"
       - name: Release and publish assets
         uses: softprops/action-gh-release@v1
         with:
