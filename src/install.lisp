@@ -120,14 +120,14 @@ This makes Quicklisp recognize the release as installed."
                   (write-line (uiop:symbol-call '#:ql-setup '#:qenough system-file)
                               stream))))))))))
 
-(defun release-cache-install-hook (release default-fn)
-  "Hook for ql-dist:*install-release-hook* that adds release-level caching."
+(defun release-cache-install-around (release next-method-fn)
+  "Handle caching logic for release installation via :around method."
   (with-package-functions #:ql-dist (archive-url dist canonical-distinfo-url name
                                      archive-md5 prefix relative-to)
     (let ((archive-url (archive-url release)))
       ;; Skip caching for qlot:// sources (already handled by dist-level cache)
       (when (uiop:string-prefix-p "qlot://" archive-url)
-        (return-from release-cache-install-hook (funcall default-fn release)))
+        (return-from release-cache-install-around (funcall next-method-fn)))
 
       (let* ((dist (dist release))
              (dist-url (canonicalize-dist-url (canonical-distinfo-url dist)))
@@ -144,20 +144,35 @@ This makes Quicklisp recognize the release as installed."
               release)
             ;; Cache miss - install normally then cache
             (progn
-              (funcall default-fn release)
+              (funcall next-method-fn)
               (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
               release))))))
 
+(defvar *release-cache-active* nil
+  "When T, the release-level cache :around method performs caching.")
+
+(defvar *release-cache-method-loaded* nil
+  "Flag to track if the release cache :around method has been loaded.")
+
+(defun load-release-cache-method ()
+  "Define the :around method for release-level caching.
+Should be called after Quicklisp is loaded."
+  (unless *release-cache-method-loaded*
+    (let ((install-sym (uiop:intern* '#:install '#:ql-dist))
+          (release-sym (uiop:intern* '#:release '#:ql-dist)))
+      (eval
+       `(defmethod ,install-sym :around ((release ,release-sym))
+          (if (and *release-cache-active* qlot/cache:*cache-enabled*)
+              (release-cache-install-around release (lambda () (call-next-method)))
+              (call-next-method)))))
+    (setf *release-cache-method-loaded* t)))
+
 (defmacro with-release-cache (&body body)
-  "Execute BODY with release-level caching enabled via Quicklisp hook."
-  (let ((hook-var (gensym "HOOK-VAR")))
-    `(if *cache-enabled*
-         (let ((,hook-var (find-symbol "*INSTALL-RELEASE-HOOK*" :ql-dist)))
-           (if ,hook-var
-               (progv (list ,hook-var) (list #'release-cache-install-hook)
-                 ,@body)
-               (progn ,@body)))
-         (progn ,@body))))
+  "Execute BODY with release-level caching enabled."
+  `(if *cache-enabled*
+       (let ((*release-cache-active* t))
+         ,@body)
+       (progn ,@body)))
 
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome
@@ -198,6 +213,9 @@ This makes Quicklisp recognize the release as installed."
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
 
+    (when *cache-enabled*
+      (load-release-cache-method))
+
     (without-linewrap ()
       (with-secure-installer ()
         (apply-qlfile-to-qlhome qlfile quicklisp-home
@@ -225,6 +243,9 @@ This makes Quicklisp recognize the release as installed."
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" quicklisp-home)))
+
+    (when *cache-enabled*
+      (load-release-cache-method))
 
     (without-linewrap ()
       (with-secure-installer ()
