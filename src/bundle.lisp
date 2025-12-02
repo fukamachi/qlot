@@ -54,15 +54,18 @@ This works even when installedp returns NIL (e.g., when symlinks are broken)."
   "Ensure the :around method on ql-bundle::unpack-release is defined.
 This is called at runtime when the ql-bundle package exists."
   (unless *qlot-unpack-release-method-added*
-    ;; Use EVAL to define the method at runtime when the package exists
+    ;; Use EVAL with backquote to define the method at runtime when the package exists.
+    ;; We use uiop:intern* for ql-bundle symbols to avoid read-time package lookup,
+    ;; since ql-bundle may not exist when this file is compiled (e.g., during installation
+    ;; from the release tarball which uses .bundle-libs/ instead of .qlot/).
     (eval
-     '(defmethod ql-bundle::unpack-release :around (release target)
-       "When *use-qlot-unpack-release* is T, copy from installed directories
+     `(defmethod ,(uiop:intern* '#:unpack-release '#:ql-bundle) :around (release target)
+        "When *use-qlot-unpack-release* is T, copy from installed directories
 instead of downloading archives. This handles qlot:// URLs."
-       (if (and qlot/bundle::*use-qlot-unpack-release*
-                (qlot/bundle::release-has-installed-files-p release))
-           (qlot/bundle::copy-installed-release release target)
-           (call-next-method))))
+        (if (and qlot/bundle::*use-qlot-unpack-release*
+                 (qlot/bundle::release-has-installed-files-p release))
+            (qlot/bundle::copy-installed-release release target)
+            (call-next-method))))
     (setf *qlot-unpack-release-method-added* t)))
 
 (defmacro with-qlot-unpack-release (&body body)
