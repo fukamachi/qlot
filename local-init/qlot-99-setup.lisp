@@ -83,9 +83,7 @@
              (return system-file))))))))
 
 (defun add-system-definition-search-function ()
-  (setf asdf:*system-definition-search-functions*
-        (append asdf:*system-definition-search-functions*
-                (list 'project-system-searcher))))
+  (push 'project-system-searcher asdf:*system-definition-search-functions*))
 
 (setup-source-registry)
 (add-system-definition-search-function)
