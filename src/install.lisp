@@ -159,12 +159,22 @@ This makes Quicklisp recognize the release as installed."
 Should be called after Quicklisp is loaded."
   (unless *release-cache-method-loaded*
     (let ((install-sym (uiop:intern* '#:install '#:ql-dist))
-          (release-sym (uiop:intern* '#:release '#:ql-dist)))
+          (uninstall-sym (uiop:intern* '#:uninstall '#:ql-dist))
+          (release-sym (uiop:intern* '#:release '#:ql-dist))
+          (local-archive-file-sym (uiop:intern* '#:local-archive-file '#:ql-dist)))
       (eval
        `(defmethod ,install-sym :around ((release ,release-sym))
           (if (and *release-cache-active* qlot/cache:*cache-enabled*)
               (release-cache-install-around release (lambda () (call-next-method)))
-              (call-next-method)))))
+              (call-next-method))))
+      ;; Patch uninstall to handle missing archive files (from cache restoration)
+      (eval
+       `(defmethod ,uninstall-sym :around ((release ,release-sym))
+          (let ((archive-file (,local-archive-file-sym release)))
+            (unless (probe-file archive-file)
+              (ensure-directories-exist archive-file)
+              (with-open-file (out archive-file :direction :output :if-does-not-exist :create))))
+          (call-next-method))))
     (setf *release-cache-method-loaded* t)))
 
 (defmacro with-release-cache (&body body)
