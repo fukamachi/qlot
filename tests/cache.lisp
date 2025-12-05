@@ -163,11 +163,17 @@
              (sources (cache-sources-path source))
              (project-dir (merge-pathnames "lib-abc123/" sources)))
         (ensure-directories-exist metadata)
-        (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+        ;; Create metadata files with proper format
+        (dolist (file '("distinfo.txt" "systems.txt"))
           (with-open-file (s (merge-pathnames file metadata)
                              :direction :output
                              :if-does-not-exist :create)
             (write-line "dummy" s)))
+        ;; releases.txt needs proper format: project url size md5 sha1 prefix [asd-files..]
+        (with-open-file (s (merge-pathnames "releases.txt" metadata)
+                           :direction :output
+                           :if-does-not-exist :create)
+          (write-line "test-lib qlot://localhost/test-lib/git-abc123/archive.tar.gz 1234 abc123 sha1 lib-abc123 lib.asd" s))
         (ensure-directories-exist project-dir)
         (with-open-file (s (merge-pathnames "lib.asd" project-dir)
                            :direction :output
@@ -181,7 +187,8 @@
               (ok (uiop:directory-exists-p link))
               (ok (or (equal (truename link) (truename project-dir))
                       (uiop:file-exists-p (merge-pathnames "lib.asd" link)))))
-            (ok (uiop:file-exists-p (merge-pathnames "installed/releases/lib-abc123.txt"
+            ;; Install marker uses release-name from releases.txt ("test-lib"), not prefix
+            (ok (uiop:file-exists-p (merge-pathnames "installed/releases/test-lib.txt"
                                                      dist-path)))
             (ok (uiop:file-exists-p (merge-pathnames "installed/systems/lib.txt"
                                                      dist-path)))))))))
@@ -197,12 +204,19 @@
       (with-tmp-directory (dist-path)
         (let ((metadata-dir dist-path)
               (software-dir (merge-pathnames "software/serapeum-abc123/" dist-path)))
-          (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+          ;; Create metadata files with proper format
+          (dolist (file '("distinfo.txt" "systems.txt"))
             (with-open-file (s (merge-pathnames file metadata-dir)
                                :direction :output
                                :if-does-not-exist :create
                                :if-exists :supersede)
               (write-line file s)))
+          ;; releases.txt needs proper format: project url size md5 sha1 prefix [asd-files..]
+          (with-open-file (s (merge-pathnames "releases.txt" metadata-dir)
+                             :direction :output
+                             :if-does-not-exist :create
+                             :if-exists :supersede)
+            (write-line "serapeum qlot://localhost/serapeum/git-abc123/archive.tar.gz 1234 abc123 sha1 serapeum-abc123 serapeum.asd" s))
           (ensure-directories-exist software-dir)
           (with-open-file (s (merge-pathnames "serapeum.asd" software-dir)
                              :direction :output
@@ -494,12 +508,17 @@
         (setf (qlot/source/git::source-git-ref source) "abc123")
         (setf (source-version source) "git-abc123")
         (with-tmp-directory (dist-path)
-          ;; Create metadata files
-          (dolist (file '("distinfo.txt" "systems.txt" "releases.txt"))
+          ;; Create metadata files with proper format
+          (dolist (file '("distinfo.txt" "systems.txt"))
             (with-open-file (s (merge-pathnames file dist-path)
                                :direction :output
                                :if-does-not-exist :create)
               (write-line file s)))
+          ;; releases.txt needs proper format: project url size md5 sha1 prefix [asd-files..]
+          (with-open-file (s (merge-pathnames "releases.txt" dist-path)
+                             :direction :output
+                             :if-does-not-exist :create)
+            (write-line "mylib qlot://localhost/mylib/git-abc123/archive.tar.gz 1234 abc123 sha1 real-lib-abc123 real.asd" s))
           ;; Create a real software directory
           (let ((real-dir (merge-pathnames "software/real-lib-abc123/" dist-path)))
             (ensure-directories-exist real-dir)

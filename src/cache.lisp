@@ -283,7 +283,7 @@ release hook handles caching. Only metadata needs source-level caching."
            (uiop:file-exists-p (merge-pathnames "distinfo.txt" metadata))
            (uiop:file-exists-p (merge-pathnames "systems.txt" metadata))
            (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))
-           ;; Sources directory required only for non-release-level-cache sources
+           ;; Sources directory required only for non-release-level-cache sources.
            (or (source-uses-release-level-cache-p source)
                (and sources (uiop:directory-exists-p sources)))))))
 
@@ -569,7 +569,7 @@ with trailing slashes are handled correctly."
             (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))))))))
 
 (defun parse-releases-txt (dist-path)
-  "Parse releases.txt and return an alist mapping prefix to release-name."
+  "Parse releases.txt and return an alist mapping prefix to (release-name . system-files)."
   (let ((releases-file (merge-pathnames "releases.txt" dist-path))
         (result nil))
     (when (uiop:file-exists-p releases-file)
@@ -581,9 +581,10 @@ with trailing slashes are handled correctly."
                    ;; Format: project url size file-md5 content-sha1 prefix [system-file1..]
                    (let* ((parts (uiop:split-string line :separator " "))
                           (release-name (first parts))
-                          (prefix (sixth parts)))
+                          (prefix (sixth parts))
+                          (system-files (nthcdr 6 parts)))
                      (when (and release-name prefix)
-                       (push (cons prefix release-name) result)))))))
+                       (push (cons prefix (cons release-name system-files)) result)))))))
     result))
 
 (defun create-install-markers (dist-path)
@@ -597,23 +598,29 @@ Paths in marker files are stored relative to qlhome (parent of dists/)."
          ;; dist-path: .qlot/dists/<distname>/ -> qlhome: .qlot/
          (qlhome (uiop:pathname-parent-directory-pathname
                   (uiop:pathname-parent-directory-pathname dist-path)))
-         ;; Get prefix -> release-name mapping
-         (prefix-to-name (parse-releases-txt dist-path)))
+         ;; Get prefix -> (release-name . system-files) mapping
+         (prefix-to-info (parse-releases-txt dist-path)))
     (ensure-directories-exist releases-dir)
     (ensure-directories-exist systems-dir)
     (dolist (project-path (uiop:subdirectories software-dir))
       (let* ((prefix (car (last (pathname-directory project-path))))
-             ;; Use the release name from releases.txt, fall back to prefix if not found
-             (release-name (or (cdr (assoc prefix prefix-to-name :test #'string=))
-                               prefix)))
+             ;; Get release info from releases.txt
+             (release-info (cdr (assoc prefix prefix-to-info :test #'string=)))
+             (release-name (or (car release-info) prefix))
+             (system-files (cdr release-info)))
+        ;; Create release marker
         (with-open-file (s (merge-pathnames (format nil "~A.txt" release-name) releases-dir)
                            :direction :output :if-exists :supersede)
           (write-line (enough-namestring project-path qlhome) s))
-        (dolist (asd-file (uiop:directory-files project-path "*.asd"))
-          (let ((system-name (pathname-name asd-file)))
-            (with-open-file (s (merge-pathnames (format nil "~A.txt" system-name) systems-dir)
-                               :direction :output :if-exists :supersede)
-              (write-line (enough-namestring asd-file qlhome) s))))))))
+        ;; Create system markers using paths from releases.txt
+        ;; This handles .asd files in subdirectories (e.g., src/foo.asd)
+        (dolist (system-file system-files)
+          (when (and system-file (string/= system-file ""))
+            (let* ((asd-path (merge-pathnames system-file project-path))
+                   (system-name (pathname-name asd-path)))
+              (with-open-file (s (merge-pathnames (format nil "~A.txt" system-name) systems-dir)
+                                 :direction :output :if-exists :supersede)
+                (write-line (enough-namestring asd-path qlhome) s)))))))))
 
 (defun list-directory-entries (directory)
   "List all entries (files and subdirectories) in DIRECTORY without resolving symlinks."
