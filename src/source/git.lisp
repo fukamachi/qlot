@@ -64,7 +64,7 @@
        (equal (source-git-branch source1)
               (source-git-branch source2))
        (equal (source-git-tag source1)
-              (source-git-tag source1))))
+              (source-git-tag source2))))
 
 (defmethod print-object ((source source-git) stream)
   (print-unreadable-object (source stream :type t :identity t)

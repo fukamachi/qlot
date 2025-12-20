@@ -471,10 +471,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                             (start-time (get-internal-real-time))
                             (dist (find-dist (source-dist-name source)))
                             (cache-restore-allowed (and *cache-enabled* (not ignore-lock))))
-                        (when (and dist
-                                   (not ignore-lock)
-                                   (not (slot-boundp source 'qlot/source/base::version)))
-                          (setf (source-version source) (version dist)))
                         (labels ((elapsed ()
                                    (/ (- (get-internal-real-time) start-time)
                                       internal-time-units-per-second))
