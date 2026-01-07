@@ -8,6 +8,9 @@
   (:import-from #:qlot/source/ql
                 #:source-ql
                 #:source-ql-upstream)
+  (:import-from #:qlot/source/ql-dist
+                #:source-ql-dist
+                #:source-ql-dist-dist-name)
   (:import-from #:qlot/source/ultralisp
                 #:source-ultralisp)
   (:import-from #:qlot/source/dist
@@ -149,6 +152,13 @@ release hook handles caching. Only metadata needs source-level caching."
 (defmethod cache-key ((source source-ql))
   (when (slot-boundp source 'qlot/source/base::version)
     (list "ql" "quicklisp"
+          (format nil "~A-~A"
+                  (source-project-name source)
+                  (source-version source)))))
+
+(defmethod cache-key ((source source-ql-dist))
+  (when (slot-boundp source 'qlot/source/base::version)
+    (list "ql" (source-ql-dist-dist-name source)
           (format nil "~A-~A"
                   (source-project-name source)
                   (source-version source)))))
