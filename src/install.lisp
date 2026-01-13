@@ -138,14 +138,20 @@ This makes Quicklisp recognize the release as installed."
                                         (make-pathname :directory '(:relative "software")))))
         ;; Check cache first
         (if (release-cache-exists-p dist-url release-name archive-md5)
-            (progn
-              (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
-              (create-release-install-markers release)
-              release)
-            ;; Cache miss - install normally then cache
+            ;; Cache hit - try to restore, fall back to normal install on failure
+            (handler-case
+                (progn
+                  (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
+                  (create-release-install-markers release)
+                  release)
+              (error ()
+                ;; Cache restoration failed, fall back to normal install
+                (funcall next-method-fn)))
+            ;; Cache miss - install normally then try to cache (ignore cache errors)
             (progn
               (funcall next-method-fn)
-              (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
+              (ignore-errors
+                (save-release-to-cache dist-url release-name archive-md5 software-dir prefix))
               release))))))
 
 (defvar *release-cache-active* nil
