@@ -84,10 +84,6 @@
     (handler-case
         (eq (ccl::%file-kind clean-path nil) :symbolic-link)
       (error () nil))
-    #+ecl
-    (handler-case
-        (eq (ext:file-kind clean-path :follow-symlinks nil) :link)
-      (error () nil))
     #+abcl
     (handler-case
         (java:jstatic "isSymbolicLink"
@@ -97,7 +93,7 @@
                                     clean-path
                                     (java:jnew-array "java.lang.String" 0)))
       (error () nil))
-    #-(or sbcl ccl ecl abcl)
+    #-(or sbcl ccl abcl)
     ;; Fallback: use shell command (works on Unix-like systems)
     (handler-case
         (zerop (nth-value 2
@@ -202,12 +198,7 @@
     (ecase mode
       (:shared (ccl::%flock fd 1))
       (:exclusive (ccl::%flock fd 2))))
-  #+ecl
-  (let ((fd (ext:file-stream-fd stream)))
-    (ecase mode
-      (:shared (ext:flock fd :shared :wait t))
-      (:exclusive (ext:flock fd :exclusive :wait t))))
-  #-(or sbcl ccl ecl)
+  #-(or sbcl ccl)
   (declare (ignore stream mode)))
 
 (defun release-lock (stream)
@@ -222,10 +213,7 @@
   #+ccl
   (let ((fd (ccl::stream-device stream :input)))
     (ccl::%flock fd 8))
-  #+ecl
-  (let ((fd (ext:file-stream-fd stream)))
-    (ext:flock fd :unlock))
-  #-(or sbcl ccl ecl)
+  #-(or sbcl ccl)
   (declare (ignore stream)))
 
 (defmacro with-cache-lock ((mode) &body body)
