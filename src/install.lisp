@@ -182,7 +182,7 @@ Should be called after Quicklisp is loaded."
           (release-sym (uiop:intern* '#:release '#:ql-dist))
           (dist-class-sym (uiop:intern* '#:dist '#:ql-dist))
           (base-directory-sym (uiop:intern* '#:base-directory '#:ql-dist))
-          (installed-releases-sym (uiop:intern* '#:installed-releases '#:ql-dist))
+          (provided-releases-sym (uiop:intern* '#:provided-releases '#:ql-dist))
           (local-archive-file-sym (uiop:intern* '#:local-archive-file '#:ql-dist)))
       (eval
        `(defmethod ,install-sym :around ((release ,release-sym))
@@ -217,7 +217,7 @@ Should be called after Quicklisp is loaded."
       ;; and would also follow symlinks into the shared cache directory.
       (eval
        `(defmethod ,uninstall-sym :around ((dist ,dist-class-sym))
-          (dolist (release (handler-case (,installed-releases-sym dist)
+          (dolist (release (handler-case (,provided-releases-sym dist)
                              (error (e)
                                (warn "Failed to enumerate releases for dist uninstall: ~A" e)
                                nil)))
