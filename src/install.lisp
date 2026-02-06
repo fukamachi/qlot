@@ -326,7 +326,11 @@ ROOT=$(pwd)
 export QUICKLISP_HOME=\"$CURRENT/../\"
 exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 "
-                    (subseq (namestring script)
+                    ;; Use ros-dir (the symlink path under qlhome) to construct the relative path,
+                    ;; not (namestring script) which may resolve through symlinks to the cache directory
+                    (subseq (namestring (make-pathname :name (pathname-name script)
+                                                      :type (pathname-type script)
+                                                      :defaults ros-dir))
                             (length (namestring qlhome)))))
           #+sbcl (sb-posix:chmod to #o700)))))
   (values))
