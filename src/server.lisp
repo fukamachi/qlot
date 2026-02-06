@@ -14,9 +14,16 @@
 (defun qlot-fetch (url file &key follow-redirects quietly maximum-redirects)
   (declare (ignore follow-redirects quietly maximum-redirects))
   (let ((result (funcall *handler* url)))
+    (format *error-output* "~&[DEBUG qlot-fetch] url=~A result=~A~%" url result)
     (etypecase result
-      (pathname (uiop:copy-file result file))
-      (null)))
+      (pathname
+       (let ((src-size (with-open-file (in result :element-type '(unsigned-byte 8)) (file-length in))))
+         (uiop:copy-file result file)
+         (let ((dst-size (with-open-file (in file :element-type '(unsigned-byte 8)) (file-length in))))
+           (format *error-output* "~&[DEBUG qlot-fetch] copied ~A -> ~A (src=~A bytes, dst=~A bytes)~%"
+                   result file src-size dst-size))))
+      (null
+       (format *error-output* "~&[DEBUG qlot-fetch] handler returned NIL for ~A~%" url))))
   (values (make-instance (intern (string '#:header) '#:ql-http) :status 200)
           (probe-file file)))
 

@@ -343,12 +343,26 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun install-all-releases (source)
   (unless (typep source 'source-dist)
-    (with-package-functions #:ql-dist (find-dist provided-releases name)
+    (with-package-functions #:ql-dist (find-dist provided-releases name archive-url archive-size
+                                       local-archive-file version release-index-url)
       (let ((dist (find-dist (source-dist-name source))))
         (progress "Getting the list of releases.")
+        (format *error-output* "~&[DEBUG install-all-releases] dist=~A version=~A~%"
+                (name dist) (version dist))
+        (format *error-output* "~&[DEBUG install-all-releases] release-index-url=~A~%"
+                (release-index-url dist))
         (let ((releases (provided-releases dist)))
           (with-release-cache
             (dolist (release releases)
+              (let ((local-file (local-archive-file release)))
+                (format *error-output* "~&[DEBUG install-all-releases] release=~A archive-url=~A expected-size=~A~%"
+                        (name release) (archive-url release) (archive-size release))
+                (format *error-output* "~&[DEBUG install-all-releases] local-archive-file=~A exists=~A~A~%"
+                        local-file
+                        (not (not (probe-file local-file)))
+                        (if (probe-file local-file)
+                            (format nil " size=~A" (with-open-file (in local-file :element-type '(unsigned-byte 8)) (file-length in)))
+                            "")))
               (progress "Installing a new release ~S." (name release))
               (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
               (install-release-roswell-scripts release))))))))
@@ -367,16 +381,45 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 (defun update-source (source tmp-dir)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
+      (format *error-output* "~&[DEBUG update-source] source=~A current-version=~A~%"
+              (source-project-name source) (ignore-errors (source-version source)))
+      (format *error-output* "~&[DEBUG update-source] dist-version=~A~%" (version dist))
       (let ((new-dist (available-update dist)))
+        (format *error-output* "~&[DEBUG update-source] available-update=~A~%"
+                (when new-dist (version new-dist)))
         (if new-dist
             (progn
-              (map nil #'uninstall (installed-releases dist))
+              (let ((installed (installed-releases dist)))
+                (format *error-output* "~&[DEBUG update-source] installed-releases count=~A~%" (length installed))
+                (map nil #'uninstall installed))
+              (format *error-output* "~&[DEBUG update-source] calling distify, source-version=~A~%"
+                      (ignore-errors (source-version source)))
               (distify source tmp-dir)
+              (format *error-output* "~&[DEBUG update-source] after distify, source-version=~A~%"
+                      (ignore-errors (source-version source)))
+              ;; Log what files exist in tmp-dir for this source
+              (let ((source-dir (merge-pathnames
+                                 (make-pathname :directory
+                                                `(:relative ,(source-project-name source)))
+                                 tmp-dir)))
+                (when (uiop:directory-exists-p source-dir)
+                  (format *error-output* "~&[DEBUG update-source] tmp-dir contents for ~A:~%"
+                          (source-project-name source))
+                  (dolist (d (uiop:subdirectories source-dir))
+                    (format *error-output* "~&[DEBUG update-source]   ~A/~%" (car (last (pathname-directory d))))
+                    (dolist (f (uiop:directory-files d))
+                      (format *error-output* "~&[DEBUG update-source]     ~A (~A bytes)~%"
+                              (file-namestring f)
+                              (with-open-file (in f :element-type '(unsigned-byte 8))
+                                (file-length in)))))))
               (setf dist (find-dist (source-dist-name source))
                     new-dist (available-update dist))
+              (format *error-output* "~&[DEBUG update-source] before update-in-place: dist-version=~A new-version=~A~%"
+                      (version dist) (version new-dist))
               (let ((*trace-output* (make-broadcast-stream)))
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
+              (format *error-output* "~&[DEBUG update-source] after update-in-place, calling install-all-releases~%")
               (install-all-releases source)
               (progress :done "Updated dist ~S to version ~S."
                         (source-project-name source)
