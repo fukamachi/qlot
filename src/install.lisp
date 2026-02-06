@@ -182,26 +182,22 @@ Should be called after Quicklisp is loaded."
       (eval
        `(defmethod ,uninstall-sym :around ((release ,release-sym))
           (let ((archive-file (,local-archive-file-sym release)))
-            (format *error-output* "~&[DEBUG uninstall :around] release=~A archive-file=~A exists=~A~%"
-                    (,local-archive-file-sym release) archive-file (not (not (probe-file archive-file))))
             (unless (probe-file archive-file)
-              (format *error-output* "~&[DEBUG uninstall :around] creating stub archive~%")
               (ensure-directories-exist archive-file)
               (with-open-file (out archive-file :direction :output :if-does-not-exist :create))))
           ;; Replace symlinked release directory with an empty real directory
-          ;; so that Quicklisp's delete-directory-tree can rmdir it normally
+          ;; so that Quicklisp's delete-directory-tree can rmdir it normally.
+          ;; NOTE: We must delete the archive file BEFORE replacing the symlink,
+          ;; because once the symlink is replaced with an empty directory,
+          ;; installedp returns NIL (system files are gone), and the primary
+          ;; uninstall method skips deletion entirely.
           (let* ((base-dir (,base-directory-sym release))
                  (path (string-right-trim "/" (namestring base-dir))))
-            (format *error-output* "~&[DEBUG uninstall :around] base-dir=~A symlink=~A~%"
-                    base-dir (qlot/cache:symlink-p path))
             (when (qlot/cache:symlink-p path)
+              (uiop:delete-file-if-exists (,local-archive-file-sym release))
               (delete-file (parse-namestring path))
               (ensure-directories-exist base-dir)))
-          (format *error-output* "~&[DEBUG uninstall :around] calling call-next-method~%")
-          (call-next-method)
-          (let ((archive-file (,local-archive-file-sym release)))
-            (format *error-output* "~&[DEBUG uninstall :around] after call-next-method, archive exists=~A~%"
-                    (not (not (probe-file archive-file)))))))
+          (call-next-method)))
       ;; Patch dist-level uninstall to handle symlinked release directories.
       ;; When a dist is uninstalled, delete-directory-tree is called on the entire
       ;; dist directory. Symlinks in software/ would cause rmdir to fail with ENOTDIR
@@ -352,26 +348,12 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun install-all-releases (source)
   (unless (typep source 'source-dist)
-    (with-package-functions #:ql-dist (find-dist provided-releases name archive-url archive-size
-                                       local-archive-file version release-index-url)
+    (with-package-functions #:ql-dist (find-dist provided-releases name)
       (let ((dist (find-dist (source-dist-name source))))
         (progress "Getting the list of releases.")
-        (format *error-output* "~&[DEBUG install-all-releases] dist=~A version=~A~%"
-                (name dist) (version dist))
-        (format *error-output* "~&[DEBUG install-all-releases] release-index-url=~A~%"
-                (release-index-url dist))
         (let ((releases (provided-releases dist)))
           (with-release-cache
             (dolist (release releases)
-              (let ((local-file (local-archive-file release)))
-                (format *error-output* "~&[DEBUG install-all-releases] release=~A archive-url=~A expected-size=~A~%"
-                        (name release) (archive-url release) (archive-size release))
-                (format *error-output* "~&[DEBUG install-all-releases] local-archive-file=~A exists=~A~A~%"
-                        local-file
-                        (not (not (probe-file local-file)))
-                        (if (probe-file local-file)
-                            (format nil " size=~A" (with-open-file (in local-file :element-type '(unsigned-byte 8)) (file-length in)))
-                            "")))
               (progress "Installing a new release ~S." (name release))
               (uiop:symbol-call '#:ql-dist '#:ensure-installed release)
               (install-release-roswell-scripts release))))))))
@@ -390,55 +372,16 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 (defun update-source (source tmp-dir)
   (with-package-functions #:ql-dist (find-dist update-in-place available-update version uninstall installed-releases)
     (let ((dist (find-dist (source-dist-name source))))
-      (format *error-output* "~&[DEBUG update-source] source=~A current-version=~A~%"
-              (source-project-name source) (ignore-errors (source-version source)))
-      (format *error-output* "~&[DEBUG update-source] dist-version=~A~%" (version dist))
       (let ((new-dist (available-update dist)))
-        (format *error-output* "~&[DEBUG update-source] available-update=~A~%"
-                (when new-dist (version new-dist)))
         (if new-dist
             (progn
-              (let ((installed (installed-releases dist)))
-                (format *error-output* "~&[DEBUG update-source] installed-releases count=~A~%" (length installed))
-                (map nil #'uninstall installed))
-              ;; Check archive state after uninstall
-              (let ((archive-path (merge-pathnames
-                                   (make-pathname :directory '(:relative "dists" "lsx" "archives")
-                                                  :name "archive" :type "tar.gz")
-                                   (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
-                (format *error-output* "~&[DEBUG update-source] after uninstall, lsx archive exists=~A~A~%"
-                        (not (not (probe-file archive-path)))
-                        (if (probe-file archive-path)
-                            (format nil " size=~A" (with-open-file (in archive-path :element-type '(unsigned-byte 8)) (file-length in)))
-                            "")))
-              (format *error-output* "~&[DEBUG update-source] calling distify, source-version=~A~%"
-                      (ignore-errors (source-version source)))
+              (map nil #'uninstall (installed-releases dist))
               (distify source tmp-dir)
-              (format *error-output* "~&[DEBUG update-source] after distify, source-version=~A~%"
-                      (ignore-errors (source-version source)))
-              ;; Log what files exist in tmp-dir for this source
-              (let ((source-dir (merge-pathnames
-                                 (make-pathname :directory
-                                                `(:relative ,(source-project-name source)))
-                                 tmp-dir)))
-                (when (uiop:directory-exists-p source-dir)
-                  (format *error-output* "~&[DEBUG update-source] tmp-dir contents for ~A:~%"
-                          (source-project-name source))
-                  (dolist (d (uiop:subdirectories source-dir))
-                    (format *error-output* "~&[DEBUG update-source]   ~A/~%" (car (last (pathname-directory d))))
-                    (dolist (f (uiop:directory-files d))
-                      (format *error-output* "~&[DEBUG update-source]     ~A (~A bytes)~%"
-                              (file-namestring f)
-                              (with-open-file (in f :element-type '(unsigned-byte 8))
-                                (file-length in)))))))
               (setf dist (find-dist (source-dist-name source))
                     new-dist (available-update dist))
-              (format *error-output* "~&[DEBUG update-source] before update-in-place: dist-version=~A new-version=~A~%"
-                      (version dist) (version new-dist))
               (let ((*trace-output* (make-broadcast-stream)))
                 (update-in-place dist new-dist))
               (setf (source-version source) (version new-dist))
-              (format *error-output* "~&[DEBUG update-source] after update-in-place, calling install-all-releases~%")
               (install-all-releases source)
               (progress :done "Updated dist ~S to version ~S."
                         (source-project-name source)

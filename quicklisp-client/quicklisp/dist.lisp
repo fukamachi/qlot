@@ -725,10 +725,6 @@ the given NAME."
              :release release))
     (let ((actual-size (file-size file))
           (expected-size (archive-size release)))
-      (format *error-output* "~&[DEBUG check-local-archive-file] release=~A archive-url=~A~%"
-              (name release) (archive-url release))
-      (format *error-output* "~&[DEBUG check-local-archive-file] file=~A actual=~A expected=~A~%"
-              file actual-size expected-size)
       (unless (= actual-size expected-size)
         (error 'badly-sized-local-archive
                :file file
@@ -744,11 +740,6 @@ the given NAME."
 
 (defmethod ensure-local-archive-file ((release release))
   (let ((pathname (local-archive-file release)))
-    (format *error-output* "~&[DEBUG ensure-local-archive-file] release=~A pathname=~A exists=~A~%"
-            (name release) pathname (not (not (probe-file pathname))))
-    (when (probe-file pathname)
-      (format *error-output* "~&[DEBUG ensure-local-archive-file] existing file size=~A~%"
-              (file-size pathname)))
     (tagbody
      :retry
        (or (probe-file pathname)
@@ -824,22 +815,14 @@ or handle the installation itself and return the release.")
       (%install-release release)))
 
 (defmethod uninstall ((release release))
-  (let ((installed-p (installedp release)))
-    (format *error-output* "~&[DEBUG uninstall primary] release=~A installedp=~A~%"
-            (name release) installed-p)
-    (when installed-p
-      (dolist (system (installed-systems release))
-        (asdf:clear-system (name system))
-        (delete-file (install-metadata-file system)))
-      (delete-file (install-metadata-file release))
-      (let ((archive (local-archive-file release)))
-        (format *error-output* "~&[DEBUG uninstall primary] deleting archive=~A exists=~A~%"
-                archive (not (not (probe-file archive))))
-        (delete-file archive)
-        (format *error-output* "~&[DEBUG uninstall primary] after delete, exists=~A~%"
-                (not (not (probe-file archive)))))
-      (ql-impl-util:delete-directory-tree (base-directory release))
-      t)))
+  (when (installedp release)
+    (dolist (system (installed-systems release))
+      (asdf:clear-system (name system))
+      (delete-file (install-metadata-file system)))
+    (delete-file (install-metadata-file release))
+    (delete-file (local-archive-file release))
+    (ql-impl-util:delete-directory-tree (base-directory release))
+    t))
 
 
 (defun call-for-each-index-entry (file fun)
