@@ -167,19 +167,44 @@ Should be called after Quicklisp is loaded."
     (let ((install-sym (uiop:intern* '#:install '#:ql-dist))
           (uninstall-sym (uiop:intern* '#:uninstall '#:ql-dist))
           (release-sym (uiop:intern* '#:release '#:ql-dist))
+          (dist-class-sym (uiop:intern* '#:dist '#:ql-dist))
+          (base-directory-sym (uiop:intern* '#:base-directory '#:ql-dist))
+          (installed-releases-sym (uiop:intern* '#:installed-releases '#:ql-dist))
           (local-archive-file-sym (uiop:intern* '#:local-archive-file '#:ql-dist)))
       (eval
        `(defmethod ,install-sym :around ((release ,release-sym))
           (if (and *release-cache-active* qlot/cache:*cache-enabled*)
               (release-cache-install-around release (lambda () (call-next-method)))
               (call-next-method))))
-      ;; Patch uninstall to handle missing archive files (from cache restoration)
+      ;; Patch release-level uninstall to handle cache artifacts:
+      ;; - Missing archive files (from cache restoration)
+      ;; - Symlinked release directories (from release-level cache)
       (eval
        `(defmethod ,uninstall-sym :around ((release ,release-sym))
           (let ((archive-file (,local-archive-file-sym release)))
             (unless (probe-file archive-file)
               (ensure-directories-exist archive-file)
               (with-open-file (out archive-file :direction :output :if-does-not-exist :create))))
+          ;; Replace symlinked release directory with an empty real directory
+          ;; so that Quicklisp's delete-directory-tree can rmdir it normally
+          (let* ((base-dir (,base-directory-sym release))
+                 (path (string-right-trim "/" (namestring base-dir))))
+            (when (qlot/cache:symlink-p path)
+              (delete-file (parse-namestring path))
+              (ensure-directories-exist base-dir)))
+          (call-next-method)))
+      ;; Patch dist-level uninstall to handle symlinked release directories.
+      ;; When a dist is uninstalled, delete-directory-tree is called on the entire
+      ;; dist directory. Symlinks in software/ would cause rmdir to fail with ENOTDIR
+      ;; and would also follow symlinks into the shared cache directory.
+      (eval
+       `(defmethod ,uninstall-sym :around ((dist ,dist-class-sym))
+          (dolist (release (ignore-errors (,installed-releases-sym dist)))
+            (let* ((base-dir (,base-directory-sym release))
+                   (path (string-right-trim "/" (namestring base-dir))))
+              (when (qlot/cache:symlink-p path)
+                (delete-file (parse-namestring path))
+                (ensure-directories-exist base-dir))))
           (call-next-method))))
     (setf *release-cache-method-loaded* t)))
 

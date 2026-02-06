@@ -49,7 +49,8 @@
            #:release-cache-path
            #:release-cache-exists-p
            #:restore-release-from-cache
-           #:save-release-to-cache))
+           #:save-release-to-cache
+           #:symlink-p))
 (in-package #:qlot/cache)
 
 (defvar *cache-directory*
