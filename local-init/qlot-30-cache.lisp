@@ -390,7 +390,7 @@ This makes Quicklisp recognize the release as installed."
               release))))))
 
 ;;;
-;;; Hook setup
+;;; Method setup
 ;;;
 
 (defun qlot-install-mode-p ()
@@ -399,26 +399,28 @@ This makes Quicklisp recognize the release as installed."
        (let ((sym (find-symbol (string '#:*release-cache-active*) '#:qlot/install)))
          (and sym (boundp sym) (symbol-value sym)))))
 
-(defun release-cache-hook (release default-fn)
-  "Hook for ql-dist:*install-release-hook* to enable caching."
-  (cond
-    ;; During qlot install, the :around method handles caching - just call default
-    ((qlot-install-mode-p)
-     (funcall default-fn release))
-    ;; Normal ql:quickload - use cache
-    (*cache-enabled*
-     (release-cache-install-impl release default-fn))
-    ;; Cache disabled
-    (t
-     (funcall default-fn release))))
-
-(defun setup-release-cache-hook ()
+(defun setup-release-cache-method ()
+  "Define an :around method on ql-dist:install to enable release-level caching.
+Uses eval to avoid read-time symbol resolution errors on environments
+where ql-dist symbols are not yet available."
   (when (and *cache-enabled* (find-package '#:ql-dist))
-    (setf ql-dist:*install-release-hook* #'release-cache-hook)))
+    (let ((install-sym (intern (string '#:install) '#:ql-dist))
+          (release-sym (intern (string '#:release) '#:ql-dist)))
+      (eval
+       `(defmethod ,install-sym :around ((release ,release-sym))
+          (cond
+            ((qlot-install-mode-p)
+             (call-next-method))
+            (*cache-enabled*
+             (release-cache-install-impl release (lambda (r)
+                                                   (declare (ignore r))
+                                                   (call-next-method))))
+            (t
+             (call-next-method))))))))
 
 ;;;
 ;;; Initialize on load
 ;;;
 
 (initialize-cache)
-(setup-release-cache-hook)
+(setup-release-cache-method)
