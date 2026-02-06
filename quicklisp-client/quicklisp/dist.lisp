@@ -824,14 +824,22 @@ or handle the installation itself and return the release.")
       (%install-release release)))
 
 (defmethod uninstall ((release release))
-  (when (installedp release)
-    (dolist (system (installed-systems release))
-      (asdf:clear-system (name system))
-      (delete-file (install-metadata-file system)))
-    (delete-file (install-metadata-file release))
-    (delete-file (local-archive-file release))
-    (ql-impl-util:delete-directory-tree (base-directory release))
-    t))
+  (let ((installed-p (installedp release)))
+    (format *error-output* "~&[DEBUG uninstall primary] release=~A installedp=~A~%"
+            (name release) installed-p)
+    (when installed-p
+      (dolist (system (installed-systems release))
+        (asdf:clear-system (name system))
+        (delete-file (install-metadata-file system)))
+      (delete-file (install-metadata-file release))
+      (let ((archive (local-archive-file release)))
+        (format *error-output* "~&[DEBUG uninstall primary] deleting archive=~A exists=~A~%"
+                archive (not (not (probe-file archive))))
+        (delete-file archive)
+        (format *error-output* "~&[DEBUG uninstall primary] after delete, exists=~A~%"
+                (not (not (probe-file archive)))))
+      (ql-impl-util:delete-directory-tree (base-directory release))
+      t)))
 
 
 (defun call-for-each-index-entry (file fun)

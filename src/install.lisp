@@ -182,17 +182,26 @@ Should be called after Quicklisp is loaded."
       (eval
        `(defmethod ,uninstall-sym :around ((release ,release-sym))
           (let ((archive-file (,local-archive-file-sym release)))
+            (format *error-output* "~&[DEBUG uninstall :around] release=~A archive-file=~A exists=~A~%"
+                    (,local-archive-file-sym release) archive-file (not (not (probe-file archive-file))))
             (unless (probe-file archive-file)
+              (format *error-output* "~&[DEBUG uninstall :around] creating stub archive~%")
               (ensure-directories-exist archive-file)
               (with-open-file (out archive-file :direction :output :if-does-not-exist :create))))
           ;; Replace symlinked release directory with an empty real directory
           ;; so that Quicklisp's delete-directory-tree can rmdir it normally
           (let* ((base-dir (,base-directory-sym release))
                  (path (string-right-trim "/" (namestring base-dir))))
+            (format *error-output* "~&[DEBUG uninstall :around] base-dir=~A symlink=~A~%"
+                    base-dir (qlot/cache:symlink-p path))
             (when (qlot/cache:symlink-p path)
               (delete-file (parse-namestring path))
               (ensure-directories-exist base-dir)))
-          (call-next-method)))
+          (format *error-output* "~&[DEBUG uninstall :around] calling call-next-method~%")
+          (call-next-method)
+          (let ((archive-file (,local-archive-file-sym release)))
+            (format *error-output* "~&[DEBUG uninstall :around] after call-next-method, archive exists=~A~%"
+                    (not (not (probe-file archive-file)))))))
       ;; Patch dist-level uninstall to handle symlinked release directories.
       ;; When a dist is uninstalled, delete-directory-tree is called on the entire
       ;; dist directory. Symlinks in software/ would cause rmdir to fail with ENOTDIR
@@ -392,6 +401,16 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
               (let ((installed (installed-releases dist)))
                 (format *error-output* "~&[DEBUG update-source] installed-releases count=~A~%" (length installed))
                 (map nil #'uninstall installed))
+              ;; Check archive state after uninstall
+              (let ((archive-path (merge-pathnames
+                                   (make-pathname :directory '(:relative "dists" "lsx" "archives")
+                                                  :name "archive" :type "tar.gz")
+                                   (symbol-value (intern (string '#:*quicklisp-home*) '#:ql)))))
+                (format *error-output* "~&[DEBUG update-source] after uninstall, lsx archive exists=~A~A~%"
+                        (not (not (probe-file archive-path)))
+                        (if (probe-file archive-path)
+                            (format nil " size=~A" (with-open-file (in archive-path :element-type '(unsigned-byte 8)) (file-length in)))
+                            "")))
               (format *error-output* "~&[DEBUG update-source] calling distify, source-version=~A~%"
                       (ignore-errors (source-version source)))
               (distify source tmp-dir)
