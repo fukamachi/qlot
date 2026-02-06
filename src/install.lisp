@@ -91,6 +91,16 @@
 ;;;
 ;;; Release-level caching hook
 ;;;
+;;; NOTE ON DOWNGRADE RISK:
+;;; Release-level caching creates symlinks in .qlot/dists/*/software/ pointing
+;;; to ~/.cache/qlot/releases/. Older Qlot versions do not have the :around
+;;; methods on uninstall that replace symlinks before deletion. If a user
+;;; downgrades Qlot after using this version, the old delete-directory-tree
+;;; (which calls truename, resolving symlinks) could follow symlinks into the
+;;; shared cache. The read-only permissions on cached files (set by
+;;; make-directory-read-only) prevent actual data loss but may cause uninstall
+;;; errors. Users downgrading should rm -rf .qlot/ and re-run qlot install.
+;;;
 
 (defun create-release-install-markers (release)
   "Create Quicklisp install markers for a release restored from cache.
@@ -137,22 +147,25 @@ This makes Quicklisp recognize the release as installed."
              (software-dir (relative-to dist
                                         (make-pathname :directory '(:relative "software")))))
         ;; Check cache first
-        (if (release-cache-exists-p dist-url release-name archive-md5)
-            ;; Cache hit - try to restore, fall back to normal install on failure
-            (handler-case
-                (progn
-                  (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
-                  (create-release-install-markers release)
-                  release)
-              (error ()
-                ;; Cache restoration failed, fall back to normal install
-                (funcall next-method-fn)))
-            ;; Cache miss - install normally then try to cache (ignore cache errors)
-            (progn
-              (funcall next-method-fn)
-              (ignore-errors
-                (save-release-to-cache dist-url release-name archive-md5 software-dir prefix))
-              release))))))
+        (cond
+          ((release-cache-exists-p dist-url release-name archive-md5)
+           ;; Cache hit - try to restore, fall back to normal install on failure
+           (handler-case
+               (progn
+                 (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
+                 (create-release-install-markers release)
+                 release)
+             (error ()
+               ;; Cache restoration failed, fall back to normal install
+               (funcall next-method-fn))))
+          (t
+           ;; Cache miss - install normally then try to cache
+           (funcall next-method-fn)
+           (handler-case
+               (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
+             (error (e)
+               (warn "Failed to cache release ~A: ~A" release-name e)))
+           release))))))
 
 (defvar *release-cache-active* nil
   "When T, the release-level cache :around method performs caching.")
@@ -204,7 +217,10 @@ Should be called after Quicklisp is loaded."
       ;; and would also follow symlinks into the shared cache directory.
       (eval
        `(defmethod ,uninstall-sym :around ((dist ,dist-class-sym))
-          (dolist (release (ignore-errors (,installed-releases-sym dist)))
+          (dolist (release (handler-case (,installed-releases-sym dist)
+                             (error (e)
+                               (warn "Failed to enumerate releases for dist uninstall: ~A" e)
+                               nil)))
             (let* ((base-dir (,base-directory-sym release))
                    (path (string-right-trim "/" (namestring base-dir))))
               (when (qlot/cache:symlink-p path)
@@ -215,10 +231,12 @@ Should be called after Quicklisp is loaded."
 
 (defmacro with-release-cache (&body body)
   "Execute BODY with release-level caching enabled."
-  `(if *cache-enabled*
-       (let ((*release-cache-active* t))
-         ,@body)
-       (progn ,@body)))
+  `(cond
+     (*cache-enabled*
+      (let ((*release-cache-active* t))
+        ,@body))
+     (t
+      ,@body)))
 
 (defun install-dependencies (project-root qlhome)
   (with-quicklisp-home qlhome

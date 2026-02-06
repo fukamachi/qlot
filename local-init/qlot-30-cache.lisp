@@ -3,6 +3,34 @@
 ;;; This file is self-contained and sets up release-level caching
 ;;; so that ql:quickload can use the global cache after qlot install.
 ;;;
+;;; SYNC POLICY:
+;;; Many functions here are duplicated from src/cache.lisp because local-init
+;;; files must be self-contained (they run in the user's Quicklisp environment
+;;; where qlot's own ASDF systems are not loaded).
+;;;
+;;; Duplicated from src/cache.lisp:
+;;;   reduce-cache-path, split-path, strip-trailing-slash, symlink-p,
+;;;   remove-path, copy-directory-tree, create-symlink, move-directory,
+;;;   make-directory-read-only, cache-lock-file, acquire-lock, release-lock,
+;;;   with-cache-lock, releases-directory, canonicalize-dist-url,
+;;;   release-cache-key, release-cache-path, release-cache-exists-p,
+;;;   restore-release-from-cache, save-release-to-cache
+;;;
+;;; Duplicated from src/utils.lisp:
+;;;   with-package-functions
+;;;
+;;; Duplicated from src/utils/file.lisp:
+;;;   copy-directory
+;;;
+;;; Intentional divergences from src/cache.lisp:
+;;;   - symlink-p, acquire-lock, release-lock: ECL-specific branches are
+;;;     omitted because ext:flock is unavailable in the local-init context.
+;;;     Falls back to shell commands / no-op (same as other non-SBCL/CCL).
+;;;   - initialize-cache: Simpler version without ensure-cache-writable,
+;;;     check-cache-version, or cleanup-orphaned-staging (handled by qlot install).
+;;;
+;;; When modifying src/cache.lisp, check if changes should be propagated here.
+;;;
 
 (defpackage #:qlot/local-init/cache
   (:use #:cl))
@@ -350,7 +378,7 @@ This makes Quicklisp recognize the release as installed."
     (let ((archive-url (archive-url release)))
       ;; Skip caching for qlot:// sources (already handled by dist-level cache)
       (when (uiop:string-prefix-p "qlot://" archive-url)
-        (return-from release-cache-install-impl (funcall default-fn release)))
+        (return-from release-cache-install-impl (funcall default-fn)))
 
       (let* ((dist (dist release))
              (dist-url (canonicalize-dist-url (canonical-distinfo-url dist)))
@@ -360,22 +388,25 @@ This makes Quicklisp recognize the release as installed."
              (software-dir (relative-to dist
                                         (make-pathname :directory '(:relative "software")))))
         ;; Check cache first
-        (if (release-cache-exists-p dist-url release-name archive-md5)
-            ;; Cache hit - try to restore, fall back to normal install on failure
-            (handler-case
-                (progn
-                  (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
-                  (create-release-install-markers release)
-                  release)
-              (error ()
-                ;; Cache restoration failed, fall back to normal install
-                (funcall default-fn release)))
-            ;; Cache miss - install normally then try to cache (ignore cache errors)
-            (progn
-              (funcall default-fn release)
-              (ignore-errors
-                (save-release-to-cache dist-url release-name archive-md5 software-dir prefix))
-              release))))))
+        (cond
+          ((release-cache-exists-p dist-url release-name archive-md5)
+           ;; Cache hit - try to restore, fall back to normal install on failure
+           (handler-case
+               (progn
+                 (restore-release-from-cache dist-url release-name archive-md5 software-dir prefix)
+                 (create-release-install-markers release)
+                 release)
+             (error ()
+               ;; Cache restoration failed, fall back to normal install
+               (funcall default-fn))))
+          (t
+           ;; Cache miss - install normally then try to cache
+           (funcall default-fn)
+           (handler-case
+               (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
+             (error (e)
+               (warn "Failed to cache release ~A: ~A" release-name e)))
+           release))))))
 
 ;;;
 ;;; Method setup
@@ -400,9 +431,7 @@ where ql-dist symbols are not yet available."
             ((qlot-install-mode-p)
              (call-next-method))
             (*cache-enabled*
-             (release-cache-install-impl release (lambda (r)
-                                                   (declare (ignore r))
-                                                   (call-next-method))))
+             (release-cache-install-impl release (lambda () (call-next-method))))
             (t
              (call-next-method))))))))
 
