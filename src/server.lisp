@@ -15,8 +15,9 @@
   (declare (ignore follow-redirects quietly maximum-redirects))
   (let ((result (funcall *handler* url)))
     (etypecase result
-      (pathname (uiop:copy-file result file))
-      (null)))
+      (pathname
+       (uiop:copy-file result file))
+      (null nil)))
   (values (make-instance (intern (string '#:header) '#:ql-http) :status 200)
           (probe-file file)))
 

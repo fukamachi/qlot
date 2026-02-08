@@ -49,7 +49,8 @@
            #:release-cache-path
            #:release-cache-exists-p
            #:restore-release-from-cache
-           #:save-release-to-cache))
+           #:save-release-to-cache
+           #:symlink-p))
 (in-package #:qlot/cache)
 
 (defvar *cache-directory*
@@ -70,10 +71,10 @@
   (merge-pathnames "sources/" *cache-directory*))
 
 (defun initialize-cache ()
-  (let ((env-dir (uiop:getenv "QLOT_CACHE_DIRECTORY")))
+  (let ((env-dir (uiop:getenvp "QLOT_CACHE_DIRECTORY")))
     (when env-dir
       (setf *cache-directory* (uiop:ensure-directory-pathname env-dir))))
-  (when (uiop:getenv "QLOT_NO_CACHE")
+  (when (uiop:getenvp "QLOT_NO_CACHE")
     (setf *cache-enabled* nil))
   (when *cache-enabled*
     (ensure-cache-writable)
