@@ -95,15 +95,11 @@ mkdir -p "$QLOT_TMP_DIR"
 #
 # Download
 
-if [ -f "$QLOT_TMP_DIR/qlot.tar.gz" ]; then
-  echo "Already have an archive: $QLOT_TMP_DIR/qlot.tar.gz"
+printf "Downloading an archive from '%s'..." "$QLOT_ARCHIVE"
+if [ "$(which curl 2>/dev/null)" != "" ]; then
+  curl -sL "$QLOT_ARCHIVE" -o "$QLOT_TMP_DIR/qlot.tar.gz"
 else
-  printf "Downloading an archive from '%s'..." "$QLOT_ARCHIVE"
-  if [ "$(which curl 2>/dev/null)" != "" ]; then
-    curl -sL "$QLOT_ARCHIVE" -o "$QLOT_TMP_DIR/qlot.tar.gz"
-  else
-    wget -q "$QLOT_ARCHIVE" -O "$QLOT_TMP_DIR/qlot.tar.gz"
-  fi
+  wget -q "$QLOT_ARCHIVE" -O "$QLOT_TMP_DIR/qlot.tar.gz"
 fi
 
 tar zxf "$QLOT_TMP_DIR/qlot.tar.gz" -C "$QLOT_TMP_DIR"
@@ -140,6 +136,8 @@ if [ "$install_success" -ne 0 ]; then
   errmsg "If it can be a bug, please report an issue at https://github.com/fukamachi/qlot/issues."
   exit "$install_success"
 fi
+
+rm -rf "$QLOT_TMP_DIR"
 
 echo ''
 success "Qlot v$(qlot_version) has been successfully installed under '$QLOT_HOME'."
