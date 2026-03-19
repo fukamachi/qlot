@@ -725,5 +725,3 @@ Returns T on success."
       ;; Create symlink back (whether we just cached or it already existed)
       (remove-path source-prefix-dir)
       (create-symlink cached-prefix-dir source-prefix-dir))))
-
-(initialize-cache)
