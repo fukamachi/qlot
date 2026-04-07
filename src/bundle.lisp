@@ -10,13 +10,16 @@
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
                 #:with-source-registry)
+  (:import-from #:qlot/cache
+                #:create-symlink)
   (:import-from #:qlot/utils
                 #:with-package-functions
                 #:ensure-package-loaded)
   (:import-from #:qlot/logger
                 #:message)
   (:export #:bundle-project
-           #:local-project-paths-from-registry-conf))
+           #:local-project-paths-from-registry-conf
+           #:create-local-project-symlinks))
 (in-package #:qlot/bundle)
 
 (defun release-installed-directory (release)
@@ -106,6 +109,19 @@ Returns nil if the file does not exist or cannot be parsed."
                   into paths
                 finally (return (remove nil paths))))))))
 
+(defun create-local-project-symlinks (local-project-paths bundle-directory)
+  "Create symlinks in BUNDLE-DIRECTORY/local-projects/ for each path in LOCAL-PROJECT-PATHS.
+Each symlink is named after the directory basename of the project path.
+Non-existent paths are skipped."
+  (ensure-directories-exist (merge-pathnames #P"local-projects/" bundle-directory))
+  (dolist (path local-project-paths)
+    (when (uiop:directory-exists-p path)
+      (let* ((name (car (last (pathname-directory path))))
+             (link (merge-pathnames (format nil "local-projects/~A" name)
+                                    bundle-directory)))
+        (create-symlink (uiop:native-namestring path)
+                        (uiop:native-namestring link))))))
+
 (defun %bundle-project (project-root &key exclude output)
   (assert (uiop:absolute-pathname-p project-root))
 
@@ -180,6 +196,7 @@ Returns nil if the file does not exist or cannot be parsed."
                                :if-exists :overwrite
                                :if-does-not-exist :create
                                :direction :output))
+          (create-local-project-symlinks local-project-paths bundle-directory)
           (message "Successfully bundled at '~A'." bundle-directory))))))
 
 (defun bundle-project (object &key exclude output)
