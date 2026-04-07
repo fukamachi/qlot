@@ -10,6 +10,11 @@
                 #:with-quicklisp-home)
   (:import-from #:qlot/utils/asdf
                 #:with-source-registry)
+  (:import-from #:qlot/parser
+                #:parse-qlfile)
+  (:import-from #:qlot/source
+                #:source-local
+                #:source-local-path)
   (:import-from #:qlot/cache
                 #:create-symlink)
   (:import-from #:qlot/utils
@@ -18,7 +23,7 @@
   (:import-from #:qlot/logger
                 #:message)
   (:export #:bundle-project
-           #:local-project-paths-from-registry-conf
+           #:local-project-paths
            #:create-local-project-symlinks))
 (in-package #:qlot/bundle)
 
@@ -83,31 +88,30 @@ would otherwise fail because the qlot server isn't running during bundle."
 
 (defvar *default-bundle-directory-name* ".bundle-libs")
 
-(defun resolve-registry-tree-directive (dir-spec quicklisp-home)
-  "Resolve a single source-registry :tree directive to a pathname."
-  (cond
-    ((and (consp dir-spec) (eq :here (first dir-spec)))
-     (uiop:ensure-directory-pathname
-      (merge-pathnames (second dir-spec) quicklisp-home)))
-    ((and (consp dir-spec) (eq :home (first dir-spec)))
-     (uiop:ensure-directory-pathname
-      (merge-pathnames (second dir-spec) (user-homedir-pathname))))
-    ((pathnamep dir-spec)
-     dir-spec)
-    (t nil)))
+(defun resolve-local-path (path project-root)
+  "Resolve a local project PATH relative to PROJECT-ROOT.
+PATH may be a relative path, absolute path, or ~/prefixed path."
+  (let ((path (etypecase path
+                (string path)
+                (pathname (namestring path)))))
+    (uiop:ensure-directory-pathname
+     (cond
+       ((uiop:absolute-pathname-p path)
+        (pathname path))
+       ((and (<= 2 (length path))
+             (string= path "~/" :end1 2))
+        (merge-pathnames (subseq path 2) (user-homedir-pathname)))
+       (t
+        (uiop:subpathname project-root path))))))
 
-(defun local-project-paths-from-registry-conf (quicklisp-home)
-  "Return local project paths declared in QUICKLISP-HOME/source-registry.conf.
-Returns nil if the file does not exist or cannot be parsed."
-  (let ((conf-file (merge-pathnames #P"source-registry.conf" quicklisp-home)))
-    (when (uiop:file-exists-p conf-file)
-      (let ((registry (ignore-errors (uiop:read-file-form conf-file))))
-        (when (and (consp registry) (eq :source-registry (first registry)))
-          (loop for entry in (rest registry)
-                when (and (consp entry) (eq :tree (first entry)))
-                  collect (resolve-registry-tree-directive (second entry) quicklisp-home)
-                  into paths
-                finally (return (remove nil paths))))))))
+(defun local-project-paths (project-root)
+  "Return absolute directory pathnames for local projects declared in the qlfile."
+  (let ((qlfile (merge-pathnames #P"qlfile" project-root)))
+    (when (uiop:file-exists-p qlfile)
+      (loop for source in (parse-qlfile qlfile)
+            when (typep source 'source-local)
+              collect (resolve-local-path (source-local-path source)
+                                          project-root)))))
 
 (defun create-local-project-symlinks (local-project-paths bundle-directory)
   "Create symlinks in BUNDLE-DIRECTORY/local-projects/ for each path in LOCAL-PROJECT-PATHS.
@@ -141,7 +145,7 @@ Non-existent paths are skipped."
       (let* ((bundle-directory (uiop:ensure-directory-pathname
                                  (merge-pathnames (or output *default-bundle-directory-name*)
                                                   project-root)))
-             (local-project-paths (local-project-paths-from-registry-conf quicklisp-home))
+             (local-project-paths (local-project-paths project-root))
              (dependencies (with-package-functions #:ql-dist (find-system)
                              (mapcar #'find-system
                                      (project-dependencies-in-child-process project-root quicklisp-home

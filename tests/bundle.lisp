@@ -2,7 +2,7 @@
   (:use #:cl
         #:rove)
   (:import-from #:qlot/bundle
-                #:local-project-paths-from-registry-conf
+                #:local-project-paths
                 #:create-local-project-symlinks)
   (:import-from #:qlot/cache
                 #:symlink-p)
@@ -10,108 +10,64 @@
                 #:with-tmp-directory))
 (in-package #:qlot-tests/bundle)
 
-(defun write-registry-conf (dir &rest tree-entries)
-  "Write a source-registry.conf to DIR with the given :tree entries."
-  (let ((conf-file (merge-pathnames #P"source-registry.conf" dir)))
-    (with-open-file (out conf-file
+(defun write-qlfile (dir &rest lines)
+  "Write a qlfile to DIR with the given lines."
+  (let ((qlfile (merge-pathnames #P"qlfile" dir)))
+    (with-open-file (out qlfile
                          :direction :output
                          :if-exists :supersede
                          :if-does-not-exist :create)
-      (let ((*print-pretty* nil) (*print-case* :downcase))
-        (prin1 `(:source-registry
-                 :ignore-inherited-configuration
-                 (:also-exclude ".qlot")
-                 (:also-exclude ".bundle-libs")
-                 (:directory "/some/qlot/src/")
-                 ,@tree-entries)
-               out)))
-    conf-file))
+      (dolist (line lines)
+        (write-line line out)))
+    qlfile))
 
-(deftest local-project-paths-from-registry-conf-tests
-  (testing "returns nil when source-registry.conf does not exist"
+(deftest local-project-paths-tests
+  (testing "returns nil when qlfile does not exist"
     (with-tmp-directory (tmp)
-      (ok (null (local-project-paths-from-registry-conf tmp)))))
+      (ok (null (local-project-paths tmp)))))
 
-  (testing "returns nil when source-registry.conf has no :tree entries"
+  (testing "returns nil when qlfile has no local entries"
     (with-tmp-directory (tmp)
-      (write-registry-conf tmp)
-      (ok (null (local-project-paths-from-registry-conf tmp)))))
+      (write-qlfile tmp "github foo/bar")
+      (ok (null (local-project-paths tmp)))))
 
-  (testing "extracts :here relative path"
+  (testing "extracts local project path"
     (with-tmp-directory (tmp)
-      ;; (:here #P"../mylib/") is relative to the .qlot dir (tmp)
-      (let ((resolved (uiop:ensure-directory-pathname
-                       (merge-pathnames #P"../mylib/" tmp))))
-        (write-registry-conf tmp `(:tree (:here #P"../mylib/")))
-        (let ((paths (local-project-paths-from-registry-conf tmp)))
+      (let ((lib-dir (merge-pathnames #P"libs/mylib/" tmp)))
+        (ensure-directories-exist lib-dir)
+        (write-qlfile tmp "local mylib ./libs/mylib/")
+        (let ((paths (local-project-paths tmp)))
           (ok (= 1 (length paths)))
-          (ok (uiop:pathname-equal resolved (first paths)))))))
+          (ok (uiop:pathname-equal lib-dir (first paths)))))))
 
-  (testing "extracts absolute pathname"
+  (testing "extracts absolute path"
     (with-tmp-directory (tmp)
-      (with-tmp-directory (local-proj)
-        (write-registry-conf tmp `(:tree ,local-proj))
-        (let ((paths (local-project-paths-from-registry-conf tmp)))
+      (with-tmp-directory (lib-dir)
+        (write-qlfile tmp (format nil "local mylib ~A" (namestring lib-dir)))
+        (let ((paths (local-project-paths tmp)))
           (ok (= 1 (length paths)))
-          (ok (uiop:pathname-equal local-proj (first paths)))))))
+          (ok (uiop:pathname-equal lib-dir (first paths)))))))
 
-  (testing "extracts multiple :tree entries"
+  (testing "extracts multiple local entries"
     (with-tmp-directory (tmp)
-      (with-tmp-directory (proj-a)
-        (with-tmp-directory (proj-b)
-          (write-registry-conf tmp
-                               `(:tree ,proj-a)
-                               `(:tree ,proj-b))
-          (let ((paths (local-project-paths-from-registry-conf tmp)))
-            (ok (= 2 (length paths))))))))
-
-  (testing "skips :directory entries (not local projects)"
-    (with-tmp-directory (tmp)
-      ;; Only :tree entries should be returned; :directory (qlot src) is skipped
-      (write-registry-conf tmp)
-      (let ((paths (local-project-paths-from-registry-conf tmp)))
-        (ok (null paths)))))
-
-  (testing "extracts :home directive path"
-    (with-tmp-directory (tmp)
-      ;; (:home #P"mylib/") represents ~/mylib/ - should be resolved
-      (write-registry-conf tmp `(:tree (:home #P"mylib/")))
-      (let ((paths (local-project-paths-from-registry-conf tmp)))
-        (ok (= 1 (length paths)))
-        ;; The resolved path should end in mylib/ under the user home
-        (ok (uiop:pathname-equal
-             (merge-pathnames #P"mylib/" (user-homedir-pathname))
-             (first paths))))))
-
-  (testing "returns nil for malformed source-registry.conf"
-    (with-tmp-directory (tmp)
-      ;; Write garbage that is not valid s-expression
-      (let ((conf-file (merge-pathnames #P"source-registry.conf" tmp)))
-        (with-open-file (out conf-file
-                             :direction :output
-                             :if-exists :supersede
-                             :if-does-not-exist :create)
-          (write-string "this is not valid ( lisp" out)))
-      (ok (null (local-project-paths-from-registry-conf tmp)))))
-
-  (testing "returns nil for empty source-registry.conf"
-    (with-tmp-directory (tmp)
-      (let ((conf-file (merge-pathnames #P"source-registry.conf" tmp)))
-        (with-open-file (out conf-file
-                             :direction :output
-                             :if-exists :supersede
-                             :if-does-not-exist :create)
-          ;; Write empty file
-          ))
-      (ok (null (local-project-paths-from-registry-conf tmp)))))
+      (let ((lib-a (merge-pathnames #P"libs/a/" tmp))
+            (lib-b (merge-pathnames #P"libs/b/" tmp)))
+        (ensure-directories-exist lib-a)
+        (ensure-directories-exist lib-b)
+        (write-qlfile tmp
+                      "local a ./libs/a/"
+                      "github foo/bar"
+                      "local b ./libs/b/")
+        (let ((paths (local-project-paths tmp)))
+          (ok (= 2 (length paths)))))))
 
   (testing "returned paths are directory pathnames"
     (with-tmp-directory (tmp)
-      (with-tmp-directory (local-proj)
-        (write-registry-conf tmp `(:tree ,local-proj))
-        (let ((paths (local-project-paths-from-registry-conf tmp)))
+      (let ((lib-dir (merge-pathnames #P"libs/mylib/" tmp)))
+        (ensure-directories-exist lib-dir)
+        (write-qlfile tmp "local mylib ./libs/mylib/")
+        (let ((paths (local-project-paths tmp)))
           (ok (= 1 (length paths)))
-          ;; Must be a directory pathname (trailing slash)
           (ok (uiop:directory-pathname-p (first paths))))))))
 
 (deftest create-local-project-symlinks-tests
