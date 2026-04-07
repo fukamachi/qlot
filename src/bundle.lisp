@@ -15,7 +15,8 @@
                 #:ensure-package-loaded)
   (:import-from #:qlot/logger
                 #:message)
-  (:export #:bundle-project))
+  (:export #:bundle-project
+           #:local-project-paths-from-registry-conf))
 (in-package #:qlot/bundle)
 
 (defun release-installed-directory (release)
@@ -79,6 +80,32 @@ would otherwise fail because the qlot server isn't running during bundle."
 
 (defvar *default-bundle-directory-name* ".bundle-libs")
 
+(defun resolve-registry-tree-directive (dir-spec quicklisp-home)
+  "Resolve a single source-registry :tree directive to a pathname."
+  (cond
+    ((and (consp dir-spec) (eq :here (first dir-spec)))
+     (uiop:ensure-directory-pathname
+      (merge-pathnames (second dir-spec) quicklisp-home)))
+    ((and (consp dir-spec) (eq :home (first dir-spec)))
+     (uiop:ensure-directory-pathname
+      (merge-pathnames (second dir-spec) (user-homedir-pathname))))
+    ((pathnamep dir-spec)
+     dir-spec)
+    (t nil)))
+
+(defun local-project-paths-from-registry-conf (quicklisp-home)
+  "Return local project paths declared in QUICKLISP-HOME/source-registry.conf.
+Returns nil if the file does not exist or cannot be parsed."
+  (let ((conf-file (merge-pathnames #P"source-registry.conf" quicklisp-home)))
+    (when (uiop:file-exists-p conf-file)
+      (let ((registry (ignore-errors (uiop:read-file-form conf-file))))
+        (when (and (consp registry) (eq :source-registry (first registry)))
+          (loop for entry in (rest registry)
+                when (and (consp entry) (eq :tree (first entry)))
+                  collect (resolve-registry-tree-directive (second entry) quicklisp-home)
+                  into paths
+                finally (return (remove nil paths))))))))
+
 (defun %bundle-project (project-root &key exclude output)
   (assert (uiop:absolute-pathname-p project-root))
 
@@ -98,12 +125,15 @@ would otherwise fail because the qlot server isn't running during bundle."
       (let* ((bundle-directory (uiop:ensure-directory-pathname
                                  (merge-pathnames (or output *default-bundle-directory-name*)
                                                   project-root)))
+             (local-project-paths (local-project-paths-from-registry-conf quicklisp-home))
              (dependencies (with-package-functions #:ql-dist (find-system)
                              (mapcar #'find-system
                                      (project-dependencies-in-child-process project-root quicklisp-home
                                                                             :exclude exclude
                                                                             :ignore-directories
-                                                                            (list bundle-directory)))))
+                                                                            (list bundle-directory)
+                                                                            :local-project-paths
+                                                                            local-project-paths))))
              (dep-releases (with-package-functions #:ql-dist (release name)
                              (delete-duplicates
                               (mapcar #'release dependencies)
@@ -118,6 +148,7 @@ would otherwise fail because the qlot server isn't running during bundle."
               (with-package-functions #:ql (bundle-systems)
                 (with-source-registry (`(:source-registry :ignore-inherited-configuration
                                          (:tree ,project-root)
+                                         ,@(mapcar (lambda (path) `(:tree ,path)) local-project-paths)
                                          (:also-exclude ".qlot")
                                          (:also-exclude ,(uiop:native-namestring bundle-directory))))
                   (with-qlot-unpack-release
