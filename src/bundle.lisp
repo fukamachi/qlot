@@ -14,7 +14,7 @@
                 #:parse-qlfile)
   (:import-from #:qlot/source
                 #:source-local
-                #:source-local-path)
+                #:source-local-absolute-path)
   (:import-from #:qlot/cache
                 #:create-symlink)
   (:import-from #:qlot/utils
@@ -88,30 +88,13 @@ would otherwise fail because the qlot server isn't running during bundle."
 
 (defvar *default-bundle-directory-name* ".bundle-libs")
 
-(defun resolve-local-path (path project-root)
-  "Resolve a local project PATH relative to PROJECT-ROOT.
-PATH may be a relative path, absolute path, or ~/prefixed path."
-  (let ((path (etypecase path
-                (string path)
-                (pathname (namestring path)))))
-    (uiop:ensure-directory-pathname
-     (cond
-       ((uiop:absolute-pathname-p path)
-        (pathname path))
-       ((and (<= 2 (length path))
-             (string= path "~/" :end1 2))
-        (merge-pathnames (subseq path 2) (user-homedir-pathname)))
-       (t
-        (uiop:subpathname project-root path))))))
-
 (defun local-project-paths (project-root)
   "Return absolute directory pathnames for local projects declared in the qlfile."
   (let ((qlfile (merge-pathnames #P"qlfile" project-root)))
     (when (uiop:file-exists-p qlfile)
       (loop for source in (parse-qlfile qlfile)
             when (typep source 'source-local)
-              collect (resolve-local-path (source-local-path source)
-                                          project-root)))))
+              collect (source-local-absolute-path source project-root)))))
 
 (defun create-local-project-symlinks (local-project-paths bundle-directory)
   "Create symlinks in BUNDLE-DIRECTORY/local-projects/ for each path in LOCAL-PROJECT-PATHS.
