@@ -7,7 +7,8 @@
                 #:starts-with)
   (:export #:source-local
            #:source-local-path
-           #:source-local-registry-directive))
+           #:source-local-registry-directive
+           #:source-local-absolute-path))
 (in-package #:qlot/source/local)
 
 (defclass source-local (source)
@@ -35,6 +36,21 @@
 (defun source-local-registry-directive (source)
   (check-type source source-local)
   (convert-local-path (source-local-path source)))
+
+(defun source-local-absolute-path (source project-root)
+  "Return the absolute directory pathname for SOURCE resolved relative to PROJECT-ROOT."
+  (check-type source source-local)
+  (let ((path (source-local-path source)))
+    (uiop:ensure-directory-pathname
+     (etypecase path
+       (pathname path)
+       (string
+        (cond
+          ((uiop:absolute-pathname-p path) (pathname path))
+          ((starts-with "~/" path)
+           (merge-pathnames (subseq path 2) (user-homedir-pathname)))
+          (t
+           (uiop:subpathname project-root path))))))))
 
 (defmethod usage-of-source ((source (eql :local)))
   "local <project name> <directory path>")

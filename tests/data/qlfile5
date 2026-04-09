@@ -2,5 +2,5 @@ dist ultralisp http://dist.ultralisp.org/ultralisp.txt
 git ironclad https://github.com/sharplispers/ironclad
 ql cl-ppcre :latest
 github fukamachi/lsx
-ultralisp fukamachi-lack :latest
+ultralisp fukamachi-quri :latest
 ql mito :upstream
