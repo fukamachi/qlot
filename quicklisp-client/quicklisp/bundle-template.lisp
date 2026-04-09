@@ -34,8 +34,19 @@
                                    (file-lines data-source))))
 
            (local-projects-system-pathnames (data-source)
-             (let ((files (directory (merge-pathnames "**/*.asd"
-                                                      data-source))))
+             (let ((files '()))
+               (labels ((dotdir-p (dir)
+                          (let ((name (first (last (pathname-directory dir)))))
+                            (and (stringp name)
+                                 (< 0 (length name))
+                                 (char= (aref name 0) #\.))))
+                        (walk (dir)
+                          (unless (dotdir-p dir)
+                            (dolist (file (uiop:directory-files dir "*.asd"))
+                              (push file files))
+                            (dolist (subdir (uiop:subdirectories dir))
+                              (walk subdir)))))
+                 (walk data-source))
                (stable-sort (sort files #'string< :key #'namestring)
                             #'<
                             :key (lambda (file)
