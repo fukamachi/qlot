@@ -329,6 +329,9 @@ release hook handles caching. Only metadata needs source-level caching."
 TARGET and LINK can be pathnames or strings. Directory pathnames
 with trailing slashes are handled correctly."
   (remove-path link)
+  #+win32
+  (copy-directory-tree target link)
+  #-win32
   (handler-case
       (let ((target-str (strip-trailing-slash target))
             (link-str (strip-trailing-slash link)))
@@ -402,7 +405,7 @@ with trailing slashes are handled correctly."
   (merge-pathnames "cache.lock" *cache-directory*))
 
 (defun acquire-lock (stream mode)
-  #+sbcl
+  #+(and sbcl (not win32))
   (let ((fd (sb-sys:fd-stream-fd stream)))
     (ecase mode
       (:shared
@@ -429,11 +432,11 @@ with trailing slashes are handled correctly."
     (ecase mode
       (:shared (ext:flock fd :shared :wait t))
       (:exclusive (ext:flock fd :exclusive :wait t))))
-  #-(or sbcl ccl ecl)
+  #-(or (and sbcl (not win32)) ccl ecl)
   (declare (ignore stream mode)))
 
 (defun release-lock (stream)
-  #+sbcl
+  #+(and sbcl (not win32))
   (let ((fd (sb-sys:fd-stream-fd stream)))
     (sb-posix:fcntl fd sb-posix:f-setlk
                     (make-instance 'sb-posix:flock
@@ -447,7 +450,7 @@ with trailing slashes are handled correctly."
   #+ecl
   (let ((fd (ext:file-stream-fd stream)))
     (ext:flock fd :unlock))
-  #-(or sbcl ccl ecl)
+  #-(or (and sbcl (not win32)) ccl ecl)
   (declare (ignore stream)))
 
 (defmacro with-cache-lock ((mode) &body body)
