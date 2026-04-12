@@ -355,7 +355,7 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                       :type (pathname-type script)
                                                       :defaults ros-dir))
                             (length (namestring qlhome)))))
-          #+sbcl (sb-posix:chmod to #o700)))))
+          #+(and sbcl (not win32)) (sb-posix:chmod to #o700)))))
   (values))
 
 (defun install-release (release)

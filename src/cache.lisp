@@ -390,14 +390,15 @@ with trailing slashes are handled correctly."
     (t nil)))
 
 (defun make-directory-read-only (path)
-  #+sbcl
+  #+win32 (declare (ignore path))
+  #+(and sbcl (not win32))
   (progn
     (dolist (file (uiop:directory-files path))
       (sb-posix:chmod (namestring file) #o444))
     (dolist (subdir (uiop:subdirectories path))
       (make-directory-read-only subdir))
     (sb-posix:chmod (namestring path) #o755))
-  #-sbcl
+  #+(and (not sbcl) (not win32))
   (uiop:run-program (list "chmod" "-R" "a-w,a+r" (uiop:native-namestring path))
                     :ignore-error-status t))
 
