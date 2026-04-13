@@ -390,7 +390,7 @@ with trailing slashes are handled correctly."
     (t nil)))
 
 (defun make-directory-read-only (path)
-  #+win32 (declare (ignore path))
+  #+(and sbcl win32) (declare (ignore path))
   #+(and sbcl (not win32))
   (progn
     (dolist (file (uiop:directory-files path))
