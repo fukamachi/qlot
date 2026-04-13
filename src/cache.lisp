@@ -329,9 +329,9 @@ release hook handles caching. Only metadata needs source-level caching."
 TARGET and LINK can be pathnames or strings. Directory pathnames
 with trailing slashes are handled correctly."
   (remove-path link)
-  #+win32
+  #+(and sbcl win32)
   (copy-directory-tree target link)
-  #-win32
+  #-(and sbcl win32)
   (handler-case
       (let ((target-str (strip-trailing-slash target))
             (link-str (strip-trailing-slash link)))
