@@ -346,8 +346,11 @@ with trailing slashes are handled correctly."
 
 (defun symlink-p (path)
   "Return T if PATH is a symbolic link."
+  #+(and sbcl win32)
+  (declare (ignore path))
+  #-(and sbcl win32)
   (let ((clean-path (strip-trailing-slash path)))
-    #+sbcl
+    #+(and sbcl (not win32))
     (handler-case
         (let ((stat (sb-posix:lstat clean-path)))
           (= (logand (sb-posix:stat-mode stat) #o170000)
@@ -370,7 +373,7 @@ with trailing slashes are handled correctly."
                                     clean-path
                                     (java:jnew-array "java.lang.String" 0)))
       (error () nil))
-    #-(or sbcl ccl ecl abcl)
+    #-(or (and sbcl (not win32)) ccl ecl abcl)
     ;; Fallback: use shell command (works on Unix-like systems)
     (handler-case
         (zerop (nth-value 2
@@ -398,9 +401,9 @@ with trailing slashes are handled correctly."
     (dolist (subdir (uiop:subdirectories path))
       (make-directory-read-only subdir))
     (sb-posix:chmod (namestring path) #o755))
-  #+(and (not sbcl) (not win32))
-  (uiop:run-program (list "chmod" "-R" "a-w,a+r" (uiop:native-namestring path))
-                    :ignore-error-status t))
+  #-sbcl
+  (unless (uiop:os-windows-p)
+    (uiop:run-program (list "chmod" "-R" "a-w,a+r" (uiop:native-namestring path)))))
 
 (defun cache-lock-file ()
   (merge-pathnames "cache.lock" *cache-directory*))
