@@ -127,16 +127,18 @@
             (whisper "Loading '~A'..." system-file)
             (incf file-counts)
             (let ((errout *error-output*))
-              (handler-bind ((error
-                               (lambda (e)
-                                 (uiop:print-condition-backtrace e :stream errout))))
-                (let ((*standard-output* (make-broadcast-stream))
-                      (*trace-output* (make-broadcast-stream))
-                      (*error-output* (if *debug*
-                                          *error-output*
-                                          (make-broadcast-stream))))
-                  (with-autoload-on-missing
-                    (asdf:load-asd system-file))))))
+              (block nil
+                (handler-bind ((error
+                                 (lambda (e)
+                                   (uiop:print-condition-backtrace e :stream errout)
+                                   (return))))
+                  (let ((*standard-output* (make-broadcast-stream))
+                        (*trace-output* (make-broadcast-stream))
+                        (*error-output* (if *debug*
+                                            *error-output*
+                                            (make-broadcast-stream))))
+                    (with-autoload-on-missing
+                      (asdf:load-asd system-file)))))))
           (block nil
             (let ((system-class-name (system-class-name system-name)))
               (when system-class-name
