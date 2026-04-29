@@ -329,6 +329,9 @@ release hook handles caching. Only metadata needs source-level caching."
 TARGET and LINK can be pathnames or strings. Directory pathnames
 with trailing slashes are handled correctly."
   (remove-path link)
+  #+(and sbcl win32)
+  (copy-directory-tree target link)
+  #-(and sbcl win32)
   (handler-case
       (let ((target-str (strip-trailing-slash target))
             (link-str (strip-trailing-slash link)))
@@ -343,8 +346,11 @@ with trailing slashes are handled correctly."
 
 (defun symlink-p (path)
   "Return T if PATH is a symbolic link."
+  #+(and sbcl win32)
+  (declare (ignore path))
+  #-(and sbcl win32)
   (let ((clean-path (strip-trailing-slash path)))
-    #+sbcl
+    #+(and sbcl (not win32))
     (handler-case
         (let ((stat (sb-posix:lstat clean-path)))
           (= (logand (sb-posix:stat-mode stat) #o170000)
@@ -367,7 +373,7 @@ with trailing slashes are handled correctly."
                                     clean-path
                                     (java:jnew-array "java.lang.String" 0)))
       (error () nil))
-    #-(or sbcl ccl ecl abcl)
+    #-(or (and sbcl (not win32)) ccl ecl abcl)
     ;; Fallback: use shell command (works on Unix-like systems)
     (handler-case
         (zerop (nth-value 2
@@ -387,7 +393,8 @@ with trailing slashes are handled correctly."
     (t nil)))
 
 (defun make-directory-read-only (path)
-  #+sbcl
+  #+(and sbcl win32) (declare (ignore path))
+  #+(and sbcl (not win32))
   (progn
     (dolist (file (uiop:directory-files path))
       (sb-posix:chmod (namestring file) #o444))
@@ -395,14 +402,14 @@ with trailing slashes are handled correctly."
       (make-directory-read-only subdir))
     (sb-posix:chmod (namestring path) #o755))
   #-sbcl
-  (uiop:run-program (list "chmod" "-R" "a-w,a+r" (uiop:native-namestring path))
-                    :ignore-error-status t))
+  (unless (uiop:os-windows-p)
+    (uiop:run-program (list "chmod" "-R" "a-w,a+r" (uiop:native-namestring path)))))
 
 (defun cache-lock-file ()
   (merge-pathnames "cache.lock" *cache-directory*))
 
 (defun acquire-lock (stream mode)
-  #+sbcl
+  #+(and sbcl (not win32))
   (let ((fd (sb-sys:fd-stream-fd stream)))
     (ecase mode
       (:shared
@@ -429,11 +436,11 @@ with trailing slashes are handled correctly."
     (ecase mode
       (:shared (ext:flock fd :shared :wait t))
       (:exclusive (ext:flock fd :exclusive :wait t))))
-  #-(or sbcl ccl ecl)
+  #-(or (and sbcl (not win32)) ccl ecl)
   (declare (ignore stream mode)))
 
 (defun release-lock (stream)
-  #+sbcl
+  #+(and sbcl (not win32))
   (let ((fd (sb-sys:fd-stream-fd stream)))
     (sb-posix:fcntl fd sb-posix:f-setlk
                     (make-instance 'sb-posix:flock
@@ -447,7 +454,7 @@ with trailing slashes are handled correctly."
   #+ecl
   (let ((fd (ext:file-stream-fd stream)))
     (ext:flock fd :unlock))
-  #-(or sbcl ccl ecl)
+  #-(or (and sbcl (not win32)) ccl ecl)
   (declare (ignore stream)))
 
 (defmacro with-cache-lock ((mode) &body body)
