@@ -182,7 +182,6 @@ Should be called after Quicklisp is loaded."
           (release-sym (uiop:intern* '#:release '#:ql-dist))
           (dist-class-sym (uiop:intern* '#:dist '#:ql-dist))
           (base-directory-sym (uiop:intern* '#:base-directory '#:ql-dist))
-          (provided-releases-sym (uiop:intern* '#:provided-releases '#:ql-dist))
           (local-archive-file-sym (uiop:intern* '#:local-archive-file '#:ql-dist)))
       (eval
        `(defmethod ,install-sym :around ((release ,release-sym))
@@ -213,19 +212,18 @@ Should be called after Quicklisp is loaded."
           (call-next-method)))
       ;; Patch dist-level uninstall to handle symlinked release directories.
       ;; When a dist is uninstalled, delete-directory-tree is called on the entire
-      ;; dist directory. Symlinks in software/ would cause rmdir to fail with ENOTDIR
-      ;; and would also follow symlinks into the shared cache directory.
+      ;; dist directory. Symlinks in software/ would otherwise cause rmdir to fail
+      ;; with ENOTEMPTY (SBCL's (directory ... :resolve-symlinks nil) does not
+      ;; enumerate symlinks-to-directories on macOS) and would have followed
+      ;; symlinks into the shared cache directory via truename.
+      ;;
+      ;; We unconditionally sweep software/ for symlinks (including orphans not
+      ;; tracked in provided-releases, which accumulate when the dist metadata
+      ;; gets out of sync with the on-disk state).
       (eval
        `(defmethod ,uninstall-sym :around ((dist ,dist-class-sym))
-          (dolist (release (handler-case (,provided-releases-sym dist)
-                             (error (e)
-                               (warn "Failed to enumerate releases for dist uninstall: ~A" e)
-                               nil)))
-            (let* ((base-dir (,base-directory-sym release))
-                   (path (string-right-trim "/" (namestring base-dir))))
-              (when (qlot/cache:symlink-p path)
-                (delete-file (parse-namestring path))
-                (ensure-directories-exist base-dir))))
+          (let ((software-dir (merge-pathnames "software/" (,base-directory-sym dist))))
+            (qlot/cache:remove-symlinks-in-directory software-dir))
           (call-next-method))))
     (setf *release-cache-method-loaded* t)))
 
