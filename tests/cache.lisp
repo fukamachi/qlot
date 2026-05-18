@@ -495,6 +495,110 @@
             "remove-path should return NIL for nonexistent paths")))))
 
 ;;; ==========================================================================
+;;; Tests for remove-symlinks-in-directory
+;;; ==========================================================================
+
+(deftest test-remove-symlinks-in-directory-removes-symlinks
+  (testing "removes symlinks-to-directories that SBCL's directory misses"
+    (with-tmp-directory (tmp)
+      (let ((target1 (merge-pathnames "cache/target1/" tmp))
+            (target2 (merge-pathnames "cache/target2/" tmp))
+            (software (merge-pathnames "software/" tmp)))
+        (ensure-directories-exist (merge-pathnames "file.txt" target1))
+        (ensure-directories-exist (merge-pathnames "file.txt" target2))
+        (with-open-file (s (merge-pathnames "file.txt" target1)
+                           :direction :output :if-does-not-exist :create)
+          (write-line "t1" s))
+        (with-open-file (s (merge-pathnames "file.txt" target2)
+                           :direction :output :if-does-not-exist :create)
+          (write-line "t2" s))
+        (ensure-directories-exist software)
+        (make-symlink target1 (merge-pathnames "link1" software))
+        (make-symlink target2 (merge-pathnames "link2" software))
+        (ok (qlot/cache::symlink-p (merge-pathnames "link1" software))
+            "link1 should be a symlink before removal")
+        (ok (qlot/cache::symlink-p (merge-pathnames "link2" software))
+            "link2 should be a symlink before removal")
+        (qlot/cache::remove-symlinks-in-directory software)
+        (ng (probe-file (merge-pathnames "link1" software))
+            "link1 should be removed")
+        (ng (probe-file (merge-pathnames "link2" software))
+            "link2 should be removed")
+        ;; After removal, rmdir on software/ must succeed — this is the
+        ;; concrete reproducer for the ENOTEMPTY (errno 66) failure mode.
+        (uiop:delete-empty-directory software)
+        (ng (uiop:directory-exists-p software)
+            "software/ should be removable once symlinks are gone")
+        ;; Cache targets must remain untouched (no symlink-following deletion).
+        (ok (uiop:file-exists-p (merge-pathnames "file.txt" target1))
+            "Cache target1 file must NOT be deleted")
+        (ok (uiop:file-exists-p (merge-pathnames "file.txt" target2))
+            "Cache target2 file must NOT be deleted")))))
+
+(deftest test-remove-symlinks-in-directory-preserves-non-symlinks
+  (testing "preserves regular files and real subdirectories"
+    (with-tmp-directory (tmp)
+      (let ((target (merge-pathnames "cache/target/" tmp))
+            (software (merge-pathnames "software/" tmp)))
+        (ensure-directories-exist target)
+        (ensure-directories-exist (merge-pathnames "real-subdir/" software))
+        (with-open-file (s (merge-pathnames "regular.txt" software)
+                           :direction :output :if-does-not-exist :create)
+          (write-line "keep me" s))
+        (make-symlink target (merge-pathnames "stale-link" software))
+        (qlot/cache::remove-symlinks-in-directory software)
+        (ng (probe-file (merge-pathnames "stale-link" software))
+            "Symlink should be removed")
+        (ok (uiop:file-exists-p (merge-pathnames "regular.txt" software))
+            "Regular file should be preserved")
+        (ok (uiop:directory-exists-p (merge-pathnames "real-subdir/" software))
+            "Real subdirectory should be preserved")))))
+
+(deftest test-remove-symlinks-in-directory-nonexistent
+  (testing "silently succeeds when directory does not exist"
+    (with-tmp-directory (tmp)
+      (let ((missing (merge-pathnames "does-not-exist/" tmp)))
+        ;; Must not signal — orphan dists may have been partially deleted already.
+        (ok (null (qlot/cache::remove-symlinks-in-directory missing))
+            "Should return NIL without erroring on missing directory")))))
+
+(deftest test-remove-symlinks-in-directory-empty
+  (testing "no-op on empty directory"
+    (with-tmp-directory (tmp)
+      (let ((empty (merge-pathnames "empty/" tmp)))
+        (ensure-directories-exist empty)
+        (qlot/cache::remove-symlinks-in-directory empty)
+        (ok (uiop:directory-exists-p empty)
+            "Empty directory should still exist")))))
+
+(deftest test-remove-symlinks-in-directory-broken-symlinks
+  (testing "removes broken symlinks (the actual SBCL+macOS reproducer)"
+    ;; The user-reported failure mode was an orphan dist whose software/ contained
+    ;; symlinks whose targets had been wiped from ~/.cache/qlot/. On SBCL+macOS,
+    ;; (uiop:subdirectories software/) returns NIL for that state, so Quicklisp's
+    ;; delete-directory-tree silently leaves the broken symlinks and rmdir fails
+    ;; with ENOTEMPTY. This test locks down the workaround for that exact state.
+    (with-tmp-directory (tmp)
+      (let ((software (merge-pathnames "software/" tmp))
+            (gone (merge-pathnames "cache-was-wiped/" tmp)))
+        (ensure-directories-exist software)
+        (make-symlink gone (merge-pathnames "broken1" software))
+        (make-symlink gone (merge-pathnames "broken2" software))
+        ;; Sanity-check the bug we are working around: SBCL's standard
+        ;; enumeration sees nothing here even though `ls` would.
+        #+sbcl
+        (ok (null (uiop:subdirectories software))
+            "Sanity: SBCL uiop:subdirectories misses broken symlinks")
+        (qlot/cache::remove-symlinks-in-directory software)
+        (ng (probe-file (merge-pathnames "broken1" software))
+            "broken1 should be removed")
+        (ng (probe-file (merge-pathnames "broken2" software))
+            "broken2 should be removed")
+        (uiop:delete-empty-directory software)
+        (ng (uiop:directory-exists-p software)
+            "software/ should be removable once broken symlinks are gone")))))
+
+;;; ==========================================================================
 ;;; Tests for save-to-cache with symlinks
 ;;; ==========================================================================
 

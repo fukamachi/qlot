@@ -54,7 +54,8 @@
            #:restore-release-from-cache
            #:save-release-to-cache
            #:symlink-p
-           #:create-symlink))
+           #:create-symlink
+           #:remove-symlinks-in-directory))
 (in-package #:qlot/cache)
 
 (defvar *cache-directory*
@@ -385,6 +386,30 @@ with trailing slashes are handled correctly."
     ((probe-file path)
      (uiop:delete-file-if-exists path))
     (t nil)))
+
+(defun remove-symlinks-in-directory (directory)
+  "Remove all top-level symbolic links in DIRECTORY.
+
+Some Lisp/OS combinations (notably SBCL on macOS) silently drop
+symlinks-to-directories and dangling symlinks from `(directory ...
+:resolve-symlinks nil)`, so Quicklisp's delete-directory-tree leaves
+them behind and rmdir then fails with ENOTEMPTY. Enumerate via `find`
+with -print0 instead, which sees them reliably and handles paths with
+embedded newlines."
+  (when (uiop:directory-exists-p directory)
+    (let* ((dir (uiop:native-namestring directory))
+           (output (handler-case
+                       (uiop:run-program
+                        (list "find" dir "-maxdepth" "1" "-type" "l" "-print0")
+                        :output :string
+                        :error-output nil
+                        :ignore-error-status t)
+                     (error () ""))))
+      (dolist (path (uiop:split-string output :separator (string (code-char 0))))
+        (when (and (string/= path "") (string/= path dir))
+          (handler-case (delete-file path)
+            (error (e)
+              (warn "Failed to remove symlink ~S: ~A" path e))))))))
 
 (defun make-directory-read-only (path)
   #+sbcl
