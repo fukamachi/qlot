@@ -206,6 +206,6 @@ export QLOT_SETUP_FILE=~A
 exec ~Ascripts/run.sh \"$@\"~%"
                 setup-file
                 *qlot-source-directory*))
-      #+sbcl (sb-posix:chmod qlot-path #o755)
+      #+(and sbcl (not win32)) (sb-posix:chmod qlot-path #o755)
       (message "Successfully installed!")))
   (values))
