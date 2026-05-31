@@ -14,6 +14,7 @@
            #:qlfile-lock-not-found
            #:qlot-directory-not-found
            #:qlot-directory-invalid
+           #:network-unreachable
            #:github-ratelimit-error
            #:ros-command-error
            #:command-not-found
@@ -119,6 +120,16 @@
   (:report (lambda (condition stream)
              (with-slots (path) condition
                (format stream "Directory '~A' is not valid." path)))))
+
+(define-condition network-unreachable (qlot-error)
+  ((url :initarg :url
+        :initform nil)
+   (condition :initarg :condition
+              :initform nil))
+  (:report (lambda (condition stream)
+             (with-slots (url) condition
+               (format stream "Network unreachable~@[: ~A~]. Check network connectivity or use --offline with a warm cache."
+                       url)))))
 
 (define-condition github-ratelimit-error (qlot-error)
   ((repos :type string

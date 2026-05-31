@@ -4,6 +4,7 @@
   :depends-on ("rove"
                "qlot"
                "qlot-tests/main"
+               "qlot-tests/http"
                "qlot-tests/parser"
                "qlot-tests/distify/ql"
                "qlot-tests/distify/git"
