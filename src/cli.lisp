@@ -11,6 +11,8 @@
                 #:missing-projects
                 #:unnecessary-projects
                 #:outdated-projects
+                #:qlfile-not-found
+                #:qlfile-lock-not-found
                 #:qlot-directory-not-found
                 #:qlot-directory-invalid)
   (:import-from #:qlot/color
@@ -450,39 +452,45 @@ NOTE:
 
   (check-local-quicklisp *default-pathname-defaults*)
 
-  (ensure-package-loaded :qlot/check)
-  (handler-case
-      (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*
-                        :quiet t)
-    ((or missing-projects unnecessary-projects) ()
-      (qlot/errors:ros-command-warn "Some installed libraries are different from specified versions.~%Run 'qlot install' to fix this problem.")))
-
-  (use-local-quicklisp)
-
-  (let ((command (first argv)))
-    (when (starts-with ".qlot/bin/" command)
-      (qlot/errors:ros-command-warn "No need to exec scripts in .qlot/bin/."))
-    #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
-
-    (setf (rest argv)
-          (case-equal (pathname-name command)
-            ("sbcl"
-             (append-load-setup-to-sbcl-argv (rest argv)))
-            (("ccl" "ecl" "abcl" "clasp")
-             (append (list "--load" ".qlot/setup.lisp")
-                     (rest argv)))
-            ("clisp"
-             (append (list "-i" ".qlot/setup.lisp")
-                     (rest argv)))
-            (("allegro" "alisp")
-             (append-load-setup-to-allegro-argv (rest argv)))
-            (otherwise (rest argv))))
-
+  (flet ((exec-warn (control &rest args)
+           (handler-bind ((qlot/errors:qlot-warning
+                           (lambda (c)
+                             (warn-message "WARNING: ~A" c)
+                             (invoke-restart (find-restart 'continue c)))))
+             (apply #'qlot/errors:ros-command-warn control args))))
+    (ensure-package-loaded :qlot/check)
     (handler-case
-        (exec argv)
-      (no-such-program (e)
-        (error-message (princ-to-string e))
-        (uiop:quit -1)))))
+        (uiop:symbol-call '#:qlot/check '#:check-project *default-pathname-defaults*
+                          :quiet t)
+      ((or missing-projects unnecessary-projects qlfile-not-found qlfile-lock-not-found) ()
+        (exec-warn "Some installed libraries are different from specified versions.~%Run 'qlot install' to fix this problem.")))
+
+    (use-local-quicklisp)
+
+    (let ((command (first argv)))
+      (when (starts-with ".qlot/bin/" command)
+        (exec-warn "No need to exec scripts in .qlot/bin/."))
+      #+ros.init (setf (uiop:getenv "SBCL_HOME") "")
+
+      (setf (rest argv)
+            (case-equal (pathname-name command)
+                        ("sbcl"
+                         (append-load-setup-to-sbcl-argv (rest argv)))
+                        (("ccl" "ecl" "abcl" "clasp")
+                         (append (list "--load" ".qlot/setup.lisp")
+                                 (rest argv)))
+                        ("clisp"
+                         (append (list "-i" ".qlot/setup.lisp")
+                                 (rest argv)))
+                        (("allegro" "alisp")
+                         (append-load-setup-to-allegro-argv (rest argv)))
+                        (otherwise (rest argv))))
+
+      (handler-case
+          (exec argv)
+        (no-such-program (e)
+          (error-message (princ-to-string e))
+          (uiop:quit -1))))))
 
 (defun qlot-command-add (argv)
   (flet ((print-add-usage ()
