@@ -15,6 +15,7 @@
            #:qlot-directory-not-found
            #:qlot-directory-invalid
            #:network-unreachable
+           #:offline-cache-conflict
            #:github-ratelimit-error
            #:ros-command-error
            #:command-not-found
@@ -130,6 +131,12 @@
              (with-slots (url) condition
                (format stream "Network unreachable~@[: ~A~]. Check network connectivity or use --offline with a warm cache."
                        url)))))
+
+(define-condition offline-cache-conflict (qlot-error)
+  ()
+  (:report (lambda (condition stream)
+             (declare (ignore condition))
+             (format stream "Offline mode cannot be used with cache disabled."))))
 
 (define-condition github-ratelimit-error (qlot-error)
   ((repos :type string

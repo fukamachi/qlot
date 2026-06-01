@@ -1,0 +1,99 @@
+(defpackage #:qlot-tests/modes
+  (:use #:cl #:rove)
+  (:import-from #:qlot/modes
+                #:*offline*
+                #:*locked*
+                #:initialize-modes)
+  (:import-from #:qlot/errors
+                #:offline-cache-conflict))
+(in-package #:qlot-tests/modes)
+
+;;; Save/restore env vars around a test body.
+;;; A nil value is written as "" so uiop:getenvp treats it as unset.
+(defmacro with-env ((&rest pairs) &body body)
+  (let ((saved (gensym "SAVED")))
+    `(let ((,saved
+             (list ,@(mapcar (lambda (p)
+                               `(cons ,(first p) (uiop:getenv ,(first p))))
+                             pairs))))
+       (unwind-protect
+            (progn
+              ,@(mapcar (lambda (p)
+                          `(setf (uiop:getenv ,(first p))
+                                 ,(or (second p) "")))
+                        pairs)
+              ,@body)
+         (loop for (name . old) in ,saved
+               do (setf (uiop:getenv name) (or old "")))))))
+
+;;; --- Gate 1: QLOT_OFFLINE -> *offline* ---
+
+(deftest offline-mode-reads-from-env
+  (testing "QLOT_OFFLINE=1 makes *offline* true after initialize-modes"
+    (with-env (("QLOT_OFFLINE" "1") ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
+      (let ((*offline* nil) (*locked* nil))
+        (initialize-modes)
+        (ok *offline*
+            "*offline* must be true when QLOT_OFFLINE=1"))))
+  (testing "unset QLOT_OFFLINE makes *offline* nil after initialize-modes"
+    (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
+      (let ((*offline* t) (*locked* nil))
+        (initialize-modes)
+        (ng *offline*
+            "*offline* must be nil when QLOT_OFFLINE is unset")))))
+
+;;; --- Gate 2: QLOT_LOCKED -> *locked* ---
+
+(deftest locked-mode-reads-from-env
+  (testing "QLOT_LOCKED=1 makes *locked* true after initialize-modes"
+    (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" "1") ("QLOT_NO_CACHE" nil))
+      (let ((*offline* nil) (*locked* nil))
+        (initialize-modes)
+        (ok *locked*
+            "*locked* must be true when QLOT_LOCKED=1"))))
+  (testing "unset QLOT_LOCKED makes *locked* nil after initialize-modes"
+    (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
+      (let ((*offline* nil) (*locked* t))
+        (initialize-modes)
+        (ng *locked*
+            "*locked* must be nil when QLOT_LOCKED is unset")))))
+
+;;; --- Gate 3: QLOT_OFFLINE + QLOT_NO_CACHE conflict ---
+
+(deftest offline-cache-conflict-detection
+  (testing "QLOT_OFFLINE + QLOT_NO_CACHE signals offline-cache-conflict"
+    (with-env (("QLOT_OFFLINE" "1") ("QLOT_NO_CACHE" "1") ("QLOT_LOCKED" nil))
+      (let ((*offline* nil) (*locked* nil))
+        (ok (signals (initialize-modes) 'offline-cache-conflict)
+            "initialize-modes must signal offline-cache-conflict when both QLOT_OFFLINE and QLOT_NO_CACHE are set"))))
+  (testing "QLOT_OFFLINE alone does not signal and *offline* becomes true"
+    (with-env (("QLOT_OFFLINE" "1") ("QLOT_NO_CACHE" nil) ("QLOT_LOCKED" nil))
+      (let ((*offline* nil) (*locked* nil))
+        (initialize-modes)
+        (ok *offline*
+            "*offline* must be true when QLOT_OFFLINE is set without QLOT_NO_CACHE")))))
+
+;;; --- Gate 4: qlot-command-install flag->env bridge ---
+;;;
+;;; The implementation must factor the flag->env mapping into a function
+;;; apply-install-mode-flags (offline-p locked-p) that is callable from tests.
+;;; --offline -> (apply-install-mode-flags t nil)
+;;; --locked  -> (apply-install-mode-flags nil t)
+;;; --frozen  -> (apply-install-mode-flags t t)
+
+(deftest install-flag-env-bridge
+  (testing "--frozen (t t) sets both QLOT_OFFLINE and QLOT_LOCKED"
+    (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
+      (qlot/cli::apply-install-mode-flags t t)
+      (ok (uiop:getenvp "QLOT_OFFLINE") "--frozen: QLOT_OFFLINE must be set")
+      (ok (uiop:getenvp "QLOT_LOCKED")  "--frozen: QLOT_LOCKED must be set")))
+  (testing "--offline (t nil) sets only QLOT_OFFLINE"
+    (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
+      (qlot/cli::apply-install-mode-flags t nil)
+      (ok (uiop:getenvp "QLOT_OFFLINE")  "--offline: QLOT_OFFLINE must be set")
+      (ng (uiop:getenvp "QLOT_LOCKED")   "--offline: QLOT_LOCKED must NOT be set")))
+  (testing "--locked (nil t) sets only QLOT_LOCKED"
+    (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
+      (qlot/cli::apply-install-mode-flags nil t)
+      (ng (uiop:getenvp "QLOT_OFFLINE")  "--locked: QLOT_OFFLINE must NOT be set")
+      (ok (uiop:getenvp "QLOT_LOCKED")   "--locked: QLOT_LOCKED must be set"))))

@@ -15,6 +15,8 @@
                 #:qlfile-lock-not-found
                 #:qlot-directory-not-found
                 #:qlot-directory-invalid)
+  (:import-from #:qlot/modes
+                #:initialize-modes)
   (:import-from #:qlot/color
                 #:*enable-color*
                 #:color-text)
@@ -248,9 +250,18 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
       (qlot/errors:ros-command-error "'~A' is an unknown option" option)
       (qlot/errors:ros-command-error "'~A' is an extra argument" option)))
 
+(defun apply-install-mode-flags (offline-p locked-p)
+  (when offline-p
+    (setf (uiop:getenv "QLOT_OFFLINE") "1"))
+  (when locked-p
+    (setf (uiop:getenv "QLOT_LOCKED") "1"))
+  (values))
+
 (defun qlot-command-install (argv)
   (let ((install-deps t)
         (cache nil)
+        (offline nil)
+        (locked nil)
         concurrency)
     (do-options (option argv)
       ("--no-deps"
@@ -267,12 +278,19 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
        (qlot-option-debug))
       ("--no-cache"
        (setf (uiop:getenv "QLOT_NO_CACHE") "1"))
+      ("--offline"
+       (setf offline t))
+      ("--locked"
+       (setf locked t))
+      ("--frozen"
+       (setf offline t
+             locked t))
       ("--help"
        (format *error-output*
                "~&qlot install - Install libraries to './.qlot'.
 
 SYNOPSIS:
-    qlot install [--no-deps] [--cache DIRECTORY] [--no-cache]
+    qlot install [--no-deps] [--cache DIRECTORY] [--no-cache] [--offline] [--locked] [--frozen]
 
 OPTIONS:
     --no-deps
@@ -281,6 +299,12 @@ OPTIONS:
         Keep intermediate files for fast reinstallation.
     --no-cache
         Disable shared cache usage for this invocation.
+    --offline
+        Use cached artifacts only and do not access the network.
+    --locked
+        Require qlfile.lock to already match qlfile.
+    --frozen
+        Enable both --offline and --locked.
     --jobs [concurrency]
         The number of threads to install simultaneously. (Default: 4)
     --debug
@@ -292,6 +316,8 @@ OPTIONS:
        (unless (starts-with "--" option)
          (message (color-text :yellow "Did you mean:~%    qlot add ~A" option)))
        (uiop:quit -1)))
+    (apply-install-mode-flags offline locked)
+    (initialize-modes)
     (ensure-package-loaded :qlot/install)
     (when cache
       (setf (uiop:getenv "QLOT_CACHE_DIRECTORY")

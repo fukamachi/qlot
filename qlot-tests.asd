@@ -25,7 +25,8 @@
                "qlot-tests/utils/asdf"
                "qlot-tests/shell"
                "qlot-tests/bundle"
-               "qlot-tests/cli")
+               "qlot-tests/cli"
+               "qlot-tests/modes")
   :perform (test-op (op c) (symbol-call :rove :run c)))
 
 ;; Tests that require patched quicklisp-client (with *install-release-hook*).
