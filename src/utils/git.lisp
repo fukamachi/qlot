@@ -4,6 +4,8 @@
                 #:safety-shell-command
                 #:shell-command-error
                 #:shell-command-error-output)
+  (:import-from #:qlot/modes
+                #:*offline*)
   (:import-from #:qlot/utils
                 #:split-with
                 #:starts-with)
@@ -16,7 +18,7 @@
 
 (defun git-fetch (directory ref &rest args)
   (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
-                                "fetch" "--depth" "1" "origin" ,ref "--quiet" ,@args))
+                                "fetch" "--depth" "1" "origin" ,ref ,@args "--quiet"))
   (values))
 
 (defun git-checkout (directory ref)
@@ -25,8 +27,8 @@
   (values))
 
 (defun git-switch-tag (directory tag)
-  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
-                                "fetch" "--depth" "1" "origin" "tag" ,tag "--quiet"))
+  (unless *offline*
+    (git-fetch directory "tag" tag))
   (git-checkout directory tag)
   (values))
 

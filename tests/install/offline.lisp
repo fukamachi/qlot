@@ -15,6 +15,8 @@
   (:import-from #:qlot/utils/git
                 #:git-clone
                 #:git-switch-tag)
+  (:import-from #:qlot/utils/shell
+                #:safety-shell-command)
   (:import-from #:qlot/utils/tmp
                 #:with-tmp-directory))
 (in-package #:qlot-tests/install/offline)
@@ -26,6 +28,40 @@
                        :if-does-not-exist :create
                        :if-exists :supersede)
     (write-string content out)))
+
+(defun write-git-asdf-checkout (directory)
+  (ensure-directories-exist directory)
+  (safety-shell-command "git" `("init" ,(uiop:native-namestring directory) "--quiet"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "config" "user.email" "qlot-tests@example.invalid"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "config" "user.name" "Qlot Tests"))
+  (write-text-file (merge-pathnames "version.txt" directory) "3.3.6")
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "add" "version.txt"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "commit" "--quiet" "-m" "Add ASDF 3.3.6"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "tag" "3.3.6"))
+  (write-text-file (merge-pathnames "version.txt" directory) "3.3.7")
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "commit" "--quiet" "-am" "Add ASDF 3.3.7"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "tag" "3.3.7"))
+  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                "checkout" "3.3.6" "--quiet"))
+  (values))
+
+(defun git-head-at-tag-p (directory tag)
+  (let ((head (string-right-trim
+               '(#\Newline #\Return)
+               (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                             "rev-parse" "HEAD"))))
+        (tag-ref (string-right-trim
+                  '(#\Newline #\Return)
+                  (safety-shell-command "git" `("-C" ,(uiop:native-namestring directory)
+                                                "rev-parse" ,tag)))))
+    (string= head tag-ref)))
 
 ;;; Compute the expected sources cache directory for the ASDF source at VERSION.
 ;;; Mirrors the cache-key structure for source-git (git + normalized URL parts +
@@ -250,11 +286,14 @@ version: offline-warm-cache-test-v1
 
 ;;; With *offline* true, ASDF cache pre-populated for the pinned version, and no
 ;;; local-projects/asdf/, install must restore ASDF into local-projects/asdf/
-;;; and complete without signaling, calling git-clone zero times.
+;;; and complete without signaling.  git-clone must not be invoked (warm cache
+;;; takes the restore path) and git fetch must not be invoked (offline guard in
+;;; git-switch-tag must suppress the network call).
 ;;;
-;;; git-switch-tag is stubbed because the restored directory is not a real git
-;;; repository; the key assertion is that the cache restore path fires (no error,
-;;; no git-clone) and local-projects/asdf/ exists afterward.
+;;; The cache-restored directory is a real local git repository with the pinned
+;;; tag already present, so git-switch-tag itself is exercised without stubbing
+;;; checkout.  This replaces a prior version that stubbed git-switch-tag to
+;;; (values), which masked the missing guard.
 (deftest offline-asdf-warm-cache
   (with-tmp-directory (tmp)
     (let* ((qlfile (merge-pathnames #P"qlfile" tmp))
@@ -264,22 +303,31 @@ version: offline-warm-cache-test-v1
                        (merge-pathnames #P"cache/" tmp)))
            (asdf-cache-dir (asdf-expected-cache-path cache-dir "3.3.7"))
            (git-clone-trap-triggered nil)
+           (git-fetch-trap-triggered nil)
            (original-git-clone (symbol-function 'git-clone))
-           (original-git-switch-tag (symbol-function 'git-switch-tag)))
+           (original-ssc (symbol-function 'safety-shell-command)))
       (write-text-file qlfile "asdf 3.3.7")
       (write-text-file lockfile
                        "(\"asdf\" . (:class qlot/source/asdf:source-asdf :initargs (:version \"3.3.7\") :version \"3.3.7\"))")
-      ;; Pre-populate the expected ASDF cache entry.
-      (ensure-directories-exist asdf-cache-dir)
-      (write-text-file (merge-pathnames "asdf.lisp" asdf-cache-dir)
-                       "; stub asdf checkout for cache test")
+      ;; Pre-populate the expected ASDF cache entry with a real local git repo.
+      ;; The pinned tag is already present locally, so offline checkout can
+      ;; succeed without fetching from origin.
+      (write-git-asdf-checkout asdf-cache-dir)
       (ng (uiop:directory-exists-p (merge-pathnames #P"local-projects/asdf/" qlhome))
           "asdf-dir must be absent before the test")
       (unwind-protect
            (progn
-             ;; Stub git-switch-tag: restored dir is not a real git repo.
-             (setf (symbol-function 'git-switch-tag)
-                   (lambda (&rest args) (declare (ignore args)) (values)))
+             ;; Trap safety-shell-command for git fetch: offline mode must never
+             ;; perform a network fetch.  Before the fix git-switch-tag calls this
+             ;; unconditionally; after the fix the *offline* guard skips it.
+             (setf (symbol-function 'safety-shell-command)
+                   (lambda (program args &rest rest)
+                     (when (and (string= program "git")
+                                (listp args)
+                                (member "fetch" args :test #'string=))
+                       (setf git-fetch-trap-triggered t)
+                       (error "git fetch invoked in offline mode (test trap)"))
+                     (apply original-ssc program args rest)))
              ;; Trap git-clone: warm cache must make the clone path unreachable.
              (setf (symbol-function 'git-clone)
                    (lambda (&rest args)
@@ -295,11 +343,16 @@ version: offline-warm-cache-test-v1
                    "offline install with warm ASDF cache completes without error")
                (ng git-clone-trap-triggered
                    "git-clone was not invoked — ASDF was restored from cache")
+               (ng git-fetch-trap-triggered
+                   "git fetch was not invoked in offline mode — offline guard in git-switch-tag")
                (ok (uiop:directory-exists-p
                     (merge-pathnames #P"local-projects/asdf/" qlhome))
-                   "local-projects/asdf/ exists after warm-cache restore")))
+                   "local-projects/asdf/ exists after warm-cache restore")
+               (ok (git-head-at-tag-p (merge-pathnames #P"local-projects/asdf/" qlhome)
+                                      "3.3.7")
+                   "local-projects/asdf/ is checked out at the pinned tag 3.3.7")))
         (setf (symbol-function 'git-clone) original-git-clone)
-        (setf (symbol-function 'git-switch-tag) original-git-switch-tag)))))
+        (setf (symbol-function 'safety-shell-command) original-ssc)))))
 
 ;;; With *offline* nil and empty cache, after install the ASDF source's cache
 ;;; entry must exist — the online clone warms the cache for future offline use.
@@ -400,9 +453,13 @@ version: offline-warm-cache-test-v1
           (setf (symbol-function 'git-switch-tag) original-git-switch-tag))))))
 
 ;;; When local-projects/asdf/ already exists, offline install must switch to the
-;;; pinned version via git-switch-tag without signaling and without calling
-;;; git-clone.  Regression: ensures the new cache layer does not displace the
-;;; existing-dir code path.
+;;; pinned version without calling git-clone and without performing a git fetch.
+;;; Regression: ensures the new cache layer does not displace the existing-dir
+;;; code path, and that git-switch-tag's offline guard suppresses the fetch.
+;;;
+;;; git-switch-tag itself is NOT stubbed so the offline guard inside it is
+;;; exercised against a real local git repository whose pinned tag is already
+;;; present.
 (deftest offline-asdf-existing-local-dir
   (with-tmp-directory (tmp)
     (let* ((qlfile (merge-pathnames #P"qlfile" tmp))
@@ -412,26 +469,30 @@ version: offline-warm-cache-test-v1
                        (merge-pathnames #P"cache/" tmp)))
            (asdf-dir (merge-pathnames #P"local-projects/asdf/" qlhome))
            (git-clone-trap-triggered nil)
-           (git-switch-tag-called nil)
+           (git-fetch-trap-triggered nil)
            (original-git-clone (symbol-function 'git-clone))
-           (original-git-switch-tag (symbol-function 'git-switch-tag)))
+           (original-ssc (symbol-function 'safety-shell-command)))
       (write-text-file qlfile "asdf 3.3.7")
       (write-text-file lockfile
                        "(\"asdf\" . (:class qlot/source/asdf:source-asdf :initargs (:version \"3.3.7\") :version \"3.3.7\"))")
       (ensure-directories-exist cache-dir)
-      ;; Pre-create the local ASDF checkout directory (simulates a prior install).
-      (ensure-directories-exist asdf-dir)
-      (write-text-file (merge-pathnames "asdf.lisp" asdf-dir) "; stub pre-existing checkout")
+      ;; Pre-create a local ASDF checkout at a different tag (simulates a prior install).
+      (write-git-asdf-checkout asdf-dir)
       (ok (uiop:directory-exists-p asdf-dir)
           "asdf-dir exists before the test (regression precondition)")
+      (ok (git-head-at-tag-p asdf-dir "3.3.6")
+          "asdf-dir starts checked out at a different tag")
       (unwind-protect
            (progn
-             ;; Stub git-switch-tag: pre-existing dir is not a real git repo.
-             (setf (symbol-function 'git-switch-tag)
-                   (lambda (dir tag)
-                     (declare (ignore dir tag))
-                     (setf git-switch-tag-called t)
-                     (values)))
+             ;; Trap safety-shell-command for git fetch: offline mode must not fetch.
+             (setf (symbol-function 'safety-shell-command)
+                   (lambda (program args &rest rest)
+                     (when (and (string= program "git")
+                                (listp args)
+                                (member "fetch" args :test #'string=))
+                       (setf git-fetch-trap-triggered t)
+                       (error "git fetch invoked in offline mode (test trap)"))
+                     (apply original-ssc program args rest)))
              ;; Trap git-clone: existing-dir path must not clone.
              (setf (symbol-function 'git-clone)
                    (lambda (&rest args)
@@ -447,7 +508,72 @@ version: offline-warm-cache-test-v1
                    "offline install with existing asdf-dir completes without error")
                (ng git-clone-trap-triggered
                    "git-clone was not invoked — existing-dir path was taken")
-               (ok git-switch-tag-called
-                   "git-switch-tag was called to switch to the pinned version")))
+               (ng git-fetch-trap-triggered
+                   "git fetch was not invoked — offline guard prevents network access")
+               (ok (git-head-at-tag-p asdf-dir "3.3.7")
+                   "local-projects/asdf/ is checked out at the pinned tag 3.3.7")))
         (setf (symbol-function 'git-clone) original-git-clone)
-        (setf (symbol-function 'git-switch-tag) original-git-switch-tag)))))
+        (setf (symbol-function 'safety-shell-command) original-ssc)))))
+
+;;; With *offline* nil (the default), git-switch-tag must still perform a git
+;;; fetch before checking out the tag.  This is a regression guard: the offline
+;;; guard added by the fix must be conditional on *offline*, not unconditional.
+;;;
+;;; safety-shell-command is intercepted to record the fetch call and return
+;;; success without running real git (the fake directory is not a repository).
+;;; git-checkout is stubbed for the same reason.
+(deftest online-asdf-tag-switch-fetches
+  (with-tmp-directory (tmp)
+    (let* ((fake-dir (uiop:ensure-directory-pathname
+                      (merge-pathnames #P"fake-asdf/" tmp)))
+           (git-fetch-called nil)
+           (original-ssc (symbol-function 'safety-shell-command))
+           (original-git-checkout (symbol-function 'qlot/utils/git::git-checkout)))
+      (ensure-directories-exist fake-dir)
+      (unwind-protect
+           (progn
+             (setf (symbol-function 'safety-shell-command)
+                   (lambda (program args &rest rest)
+                     (if (and (string= program "git")
+                              (listp args)
+                              (member "fetch" args :test #'string=))
+                         (progn
+                           (setf git-fetch-called t)
+                           "")
+                         (apply original-ssc program args rest))))
+             (setf (symbol-function 'qlot/utils/git::git-checkout)
+                   (lambda (dir tag) (declare (ignore dir tag)) (values)))
+             (let ((err (nth-value 1
+                          (ignore-errors
+                            (let ((*offline* nil))
+                              (git-switch-tag fake-dir "3.3.7"))))))
+               (ok (null err)
+                   "git-switch-tag with *offline* nil completes without error")
+               (ok git-fetch-called
+                   "git fetch is invoked when *offline* is nil (online path preserved)")))
+        (setf (symbol-function 'safety-shell-command) original-ssc)
+        (setf (symbol-function 'qlot/utils/git::git-checkout) original-git-checkout)))))
+
+;;; The README.markdown must no longer claim that git and asdf sources cannot be
+;;; cache-restored offline.  After the fix, only local (and credential-bearing)
+;;; sources retain that limitation.  The old stale sentence is verified absent.
+(deftest readme-offline-limitation-scoped
+  (let* ((readme-path (merge-pathnames #P"README.markdown"
+                                       (asdf:system-source-directory :qlot)))
+         (readme-text (uiop:read-file-string readme-path)))
+    (ng (search "git` and `asdf` sources must already be present" readme-text
+                :test #'char-equal)
+        "README no longer claims git and asdf sources cannot be cache-restored offline")
+    (ng (search "`asdf` sources must already be present" readme-text
+                :test #'char-equal)
+        "README no longer claims asdf sources must be pre-installed for offline installs")
+    ;; The corrected scoping is present: `local` source type appears in the
+    ;; Known-limitation section (within 400 chars of the marker).
+    (ok (let* ((marker "Known limitation")
+               (pos (search marker readme-text :test #'char-equal)))
+          (when pos
+            (search "`local`" readme-text
+                    :start2 pos
+                    :end2 (min (length readme-text) (+ pos 400))
+                    :test #'char-equal)))
+        "README offline limitation is now scoped to the `local` source type")))

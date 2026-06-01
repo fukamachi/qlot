@@ -363,7 +363,7 @@ To load the bundled libraries, simply load `.bundle-libs/setup.lisp`.
 * `--locked` requires the checked-in `qlfile.lock` to already match `qlfile`. You can also enable it with the `QLOT_LOCKED` environment variable. In locked mode, Qlot installs the pinned versions from the lock file and does not rewrite `qlfile.lock`; changed, missing, or extra dependencies are reported as errors.
 * `--frozen` enables both `--offline` and `--locked`. Use it in CI or deployment when the install must use a warm cache, avoid the network, preserve `qlfile.lock`, and fail if `qlfile` and `qlfile.lock` do not match.
 
-Known limitation: `git` and `asdf` sources must already be present in the project-local checkout locations for offline installs. They do not use Qlot's shared cache layer, so Qlot cannot restore them from `~/.cache/qlot/` in offline mode.
+Known limitation: `local` sources must already be present at their configured filesystem paths for offline installs. Sources whose URLs contain credentials are not saved to Qlot's shared cache, so they also cannot be restored from `~/.cache/qlot/` in offline mode.
 
 ## Shared Dependency Cache
 
