@@ -19,6 +19,7 @@
                "qlot-tests/install/cache"
                "qlot-tests/install/offline"
                "qlot-tests/install/locked"
+               "qlot-tests/install/frozen"
                "qlot-tests/install"
                "qlot-tests/cache"
                "qlot-tests/cache-releases"

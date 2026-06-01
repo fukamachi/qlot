@@ -20,6 +20,7 @@
 * [Optional settings](#optional-settings)
   * [ASDF configuration to prevent from loading by mistake](#asdf-configuration-to-prevent-from-loading-by-mistake)
 * [Tutorial](#tutorial)
+* [Install Modes](#install-modes)
 * [Shared Dependency Cache](#shared-dependency-cache)
 * [qlfile syntax](#qlfile-syntax)
 * [Priorities of distributions](#priorities-of-distributions)
@@ -273,6 +274,9 @@ It will also overwrite `qlfile.lock`.
 ```
 $ qlot install
 $ qlot install --no-cache   # Disable shared cache for this invocation
+$ qlot install --offline    # Use only cached artifacts
+$ qlot install --locked     # Require qlfile.lock to match qlfile
+$ qlot install --frozen     # Equivalent to --offline --locked
 ```
 
 ### update
@@ -350,6 +354,16 @@ $ qlot bundle --output vendor           # Install into 'vendor'
 To load the bundled libraries, simply load `.bundle-libs/setup.lisp`.
 
 `qlot bundle` is ideal for creating self-contained Common Lisp projects, enabling reliable and portable deployment.
+
+## Install Modes
+
+`qlot install` supports modes for reproducible and network-restricted installs:
+
+* `--offline` uses only artifacts already present in Qlot's shared cache and blocks network access. You can also enable it with the `QLOT_OFFLINE` environment variable. Offline installs require a warm cache and an existing `qlfile.lock`; run an online `qlot install` first to populate the cache and lock file. `--offline --no-cache` is rejected because offline mode depends on the cache.
+* `--locked` requires the checked-in `qlfile.lock` to already match `qlfile`. You can also enable it with the `QLOT_LOCKED` environment variable. In locked mode, Qlot installs the pinned versions from the lock file and does not rewrite `qlfile.lock`; changed, missing, or extra dependencies are reported as errors.
+* `--frozen` enables both `--offline` and `--locked`. Use it in CI or deployment when the install must use a warm cache, avoid the network, preserve `qlfile.lock`, and fail if `qlfile` and `qlfile.lock` do not match.
+
+Known limitation: `git` and `asdf` sources must already be present in the project-local checkout locations for offline installs. They do not use Qlot's shared cache layer, so Qlot cannot restore them from `~/.cache/qlot/` in offline mode.
 
 ## Shared Dependency Cache
 
