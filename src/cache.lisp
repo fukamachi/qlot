@@ -259,9 +259,13 @@ release hook handles caching. Only metadata needs source-level caching."
                 (trimmed (subseq result scheme-length))
                 (slash (position #\/ trimmed)))
            (when slash
-             (format nil "~A~A"
-                     (string-downcase (subseq trimmed 0 slash))
-                     (subseq trimmed slash)))))
+             (let ((host-start (let ((at (position #\@ trimmed :end slash)))
+                                 (if at
+                                     (1+ at)
+                                     0))))
+               (format nil "~A~A"
+                       (string-downcase (subseq trimmed host-start slash))
+                       (subseq trimmed slash))))))
         (t result)))))
 
 (defun split-path (path)
@@ -278,13 +282,22 @@ release hook handles caching. Only metadata needs source-level caching."
 
 (defun url-has-credentials-p (url)
   (when (stringp url)
-    (let ((at (position #\@ url))
-          (scheme (search "://" url)))
-      (and at scheme
-           (< scheme at)
-           (let* ((auth (subseq url (+ scheme 3) at))
-                  (colon (position #\: auth)))
-             colon)))))
+    (let ((authority-start (let ((scheme-end (search "://" url)))
+                             (when scheme-end
+                               (+ scheme-end (length "://"))))))
+      (when authority-start
+        (let* ((authority-end (or (position #\/ url :start authority-start)
+                                  (length url)))
+               (at (position #\@ url
+                             :start authority-start
+                             :end authority-end)))
+          (and at
+               (< authority-start at)
+               (or (uiop:string-prefix-p "https://" url)
+                   (uiop:string-prefix-p "http://" url)
+                   (position #\: url
+                             :start authority-start
+                             :end at))))))))
 
 (defun source-has-credentials-p (source)
   (cond
@@ -391,8 +404,8 @@ with trailing slashes are handled correctly."
     ;; Fallback: use shell command (works on Unix-like systems)
     (handler-case
         (zerop (nth-value 2
-                 (uiop:run-program (list "test" "-L" clean-path)
-                                   :ignore-error-status t)))
+                          (uiop:run-program (list "test" "-L" clean-path)
+                                            :ignore-error-status t)))
       (error () nil))))
 
 (defun remove-path (path)

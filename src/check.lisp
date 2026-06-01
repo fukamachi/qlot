@@ -74,12 +74,16 @@
       (source-dist-name source)
       (source-identifier-for-report source)))
 
-(defun qlfile-sources-for-lock-check (qlfile)
+(defun qlfile-sources-for-lock-check (qlfile lock-sources)
   (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
         (sources (parse-qlfile qlfile)))
-    (unless (find "quicklisp" sources
-                  :key #'source-dist-name
-                  :test #'string=)
+    (unless (or (find "quicklisp" sources
+                      :key #'source-dist-name
+                      :test #'string=)
+                (and lock-sources
+                     (not (find "quicklisp" lock-sources
+                                :key #'source-dist-name
+                                :test #'string=))))
       (push default-ql-source sources))
     sources))
 
@@ -89,8 +93,8 @@
   (let ((qlfile.lock (find-lock qlfile)))
     (unless (uiop:file-exists-p qlfile.lock)
       (error 'qlfile-lock-not-found :path qlfile.lock))
-    (let* ((sources (qlfile-sources-for-lock-check qlfile))
-           (lock-sources (parse-qlfile-lock qlfile.lock))
+    (let* ((lock-sources (parse-qlfile-lock qlfile.lock))
+           (sources (qlfile-sources-for-lock-check qlfile lock-sources))
            (missing
             (loop for source in sources
                   for lock-source = (find (source-identifier source) lock-sources
