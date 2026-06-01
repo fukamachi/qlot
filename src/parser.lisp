@@ -150,17 +150,25 @@
   (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
         (sources (parse-qlfile qlfile))
         (qlfile-lock (and (or (not ignore-lock) projects)
-                          (find-lock qlfile))))
-    (unless (find "quicklisp" sources
-                  :key #'source-dist-name
-                  :test #'string=)
+                          (find-lock qlfile)))
+        (lock-sources nil))
+    (when (and qlfile-lock
+               (uiop:file-exists-p qlfile-lock))
+      (setf lock-sources
+            (parse-qlfile-lock qlfile-lock
+                               :test (lambda (name)
+                                       (not (find name projects :test 'equal))))))
+    (unless (or (find "quicklisp" sources
+                      :key #'source-dist-name
+                      :test #'string=)
+                (and lock-sources
+                     (not (find "quicklisp" lock-sources
+                                :key #'source-dist-name
+                                :test #'string=))))
       (push default-ql-source sources))
     (resolve-ql-dist-sources
-     (if (uiop:file-exists-p qlfile-lock)
-         (merging-lock-sources sources
-                               (parse-qlfile-lock qlfile-lock
-                                                  :test (lambda (name)
-                                                          (not (find name projects :test 'equal)))))
+     (if lock-sources
+         (merging-lock-sources sources lock-sources)
          sources))))
 
 (defun read-qlfile-for-outdated (qlfile)

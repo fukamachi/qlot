@@ -667,16 +667,23 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
            ((uiop:directory-exists-p asdf-dir)
             ;; Tag switch
             (git-switch-tag asdf-dir (source-version asdf-source)))
+           ((and *cache-enabled*
+                 (cache-exists-p asdf-source)
+                 (restore-from-cache asdf-source asdf-dir))
+            (git-switch-tag asdf-dir (source-version asdf-source)))
            (*offline*
-            (error 'offline-network-access
-                   :target (source-asdf-remote-url asdf-source)))
+            (error 'offline-cache-miss
+                   :project-name (source-project-name asdf-source)
+                   :requested-version (source-version asdf-source)))
            (t
             (message "Downloading ASDF to '~A'." asdf-dir)
             ;; Clone
             (git-clone (source-asdf-remote-url asdf-source)
                        asdf-dir
                        :checkout-to (source-version asdf-source)
-                       :recursive nil))))
+                       :recursive nil)
+            (when *cache-enabled*
+              (save-to-cache asdf-source asdf-dir)))))
         (t
          (when (uiop:directory-exists-p asdf-dir)
            (message "Removing ASDF at '~A'." asdf-dir)

@@ -20,6 +20,9 @@
                 #:source-git
                 #:source-git-remote-url
                 #:source-git-ref)
+  (:import-from #:qlot/source/asdf
+                #:source-asdf
+                #:source-asdf-remote-url)
   (:import-from #:qlot/source/github
                 #:source-github
                 #:source-github-repos
@@ -187,6 +190,14 @@ release hook handles caching. Only metadata needs source-level caching."
               (when (source-git-ref source)
                 (list (source-git-ref source)))))))
 
+(defmethod cache-key ((source source-asdf))
+  (let ((normalized (normalize-git-url (source-asdf-remote-url source))))
+    (when (and normalized
+               (slot-boundp source 'qlot/source/base::version))
+      (append (list "git")
+              (split-path normalized)
+              (list (source-version source))))))
+
 (defmethod cache-key ((source source-github))
   (append (list "github")
           (split-path (source-github-repos source))
@@ -279,6 +290,8 @@ release hook handles caching. Only metadata needs source-level caching."
   (cond
     ((typep source 'source-git)
      (url-has-credentials-p (source-git-remote-url source)))
+    ((typep source 'source-asdf)
+     (url-has-credentials-p (source-asdf-remote-url source)))
     ((typep source 'source-ql-upstream)
      (url-has-credentials-p (source-git-remote-url source)))
     ((typep source 'source-github)
@@ -292,14 +305,19 @@ release hook handles caching. Only metadata needs source-level caching."
              (not (source-has-credentials-p source)))
     (let ((metadata (cache-metadata-path source))
           (sources (cache-sources-path source)))
-      (and metadata
-           (uiop:directory-exists-p metadata)
-           (uiop:file-exists-p (merge-pathnames "distinfo.txt" metadata))
-           (uiop:file-exists-p (merge-pathnames "systems.txt" metadata))
-           (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))
-           ;; Sources directory required only for non-release-level-cache sources.
-           (or (source-uses-release-level-cache-p source)
-               (and sources (uiop:directory-exists-p sources)))))))
+      (cond
+        ((typep source 'source-asdf)
+         (and sources
+              (uiop:directory-exists-p sources)))
+        (t
+         (and metadata
+              (uiop:directory-exists-p metadata)
+              (uiop:file-exists-p (merge-pathnames "distinfo.txt" metadata))
+              (uiop:file-exists-p (merge-pathnames "systems.txt" metadata))
+              (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))
+              ;; Sources directory required only for non-release-level-cache sources.
+              (or (source-uses-release-level-cache-p source)
+                  (and sources (uiop:directory-exists-p sources)))))))))
 
 (defun move-directory (from to)
   (handler-case
@@ -494,6 +512,9 @@ embedded newlines."
 
 (defun restore-from-cache (source dist-path)
   "Restore SOURCE into DIST-PATH from cache. Returns T on success, NIL on fallback."
+  (when (typep source 'source-asdf)
+    (return-from restore-from-cache
+      (restore-asdf-from-cache source dist-path)))
   (handler-case
       (with-cache-lock (:shared)
         (let ((metadata-cache (cache-metadata-path source))
@@ -530,6 +551,25 @@ embedded newlines."
         (uiop:delete-directory-tree (cache-sources-path source) :validate t))
       nil)))
 
+(defun restore-asdf-from-cache (source asdf-path)
+  (handler-case
+      (with-cache-lock (:shared)
+        (let ((sources-cache (cache-sources-path source)))
+          (when (and sources-cache
+                     (uiop:directory-exists-p sources-cache))
+            (when (uiop:directory-exists-p asdf-path)
+              (uiop:delete-directory-tree asdf-path :validate t :if-does-not-exist :ignore))
+            (copy-directory-tree sources-cache asdf-path)
+            t)))
+    ((or file-error type-error) (e)
+      (warn "ASDF cache for version ~A is unusable, will reinstall: ~A"
+            (and (slot-boundp source 'qlot/source/base::version)
+                 (source-version source))
+            e)
+      (ignore-errors
+        (uiop:delete-directory-tree (cache-sources-path source) :validate t))
+      nil)))
+
 (defun save-to-cache (source dist-path)
   "Attempt to save SOURCE from DIST-PATH into cache; non-fatal on failure."
   (when (source-has-credentials-p source)
@@ -543,6 +583,9 @@ embedded newlines."
       (warn "Failed to cache ~A: ~A" (source-project-name source) e))))
 
 (defun save-to-cache-impl (source dist-path)
+  (when (typep source 'source-asdf)
+    (return-from save-to-cache-impl
+      (save-asdf-to-cache-impl source dist-path)))
   (let ((metadata-cache (cache-metadata-path source))
         (sources-cache (cache-sources-path source))
         (uses-release-cache (source-uses-release-level-cache-p source)))
@@ -605,6 +648,23 @@ embedded newlines."
           (ignore-errors (uiop:delete-directory-tree metadata-staging :validate t))
           (when sources-staging
             (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))))))))
+
+(defun save-asdf-to-cache-impl (source asdf-path)
+  (let ((sources-cache (cache-sources-path source)))
+    (when (and sources-cache
+               (uiop:directory-exists-p asdf-path))
+      (with-cache-lock (:exclusive)
+        (when (cache-exists-p source)
+          (return-from save-asdf-to-cache-impl))
+        (let ((sources-staging (staging-path sources-cache)))
+          (ignore-errors (uiop:delete-directory-tree sources-staging :validate t))
+          (unwind-protect
+               (progn
+                 (copy-directory-tree asdf-path sources-staging)
+                 (rename-file sources-staging sources-cache)
+                 (make-directory-read-only sources-cache))
+            (ignore-errors
+              (uiop:delete-directory-tree sources-staging :validate t))))))))
 
 (defun parse-releases-txt (dist-path)
   "Parse releases.txt and return an alist mapping prefix to (release-name . system-files)."
