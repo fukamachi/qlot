@@ -3,6 +3,8 @@
         #:rove)
   (:import-from #:qlot/http)
   (:import-from #:qlot/errors)
+  (:import-from #:qlot/modes
+                #:*offline*)
   (:import-from #:usocket))
 (in-package #:qlot-tests/http)
 
@@ -58,3 +60,32 @@
     (ok sym "NETWORK-UNREACHABLE symbol exists in :qlot/errors")
     (ok (eq :external status)
         "NETWORK-UNREACHABLE is exported from :qlot/errors")))
+
+;; With *offline* true, fetch must signal offline-network-access immediately
+;; without performing any HTTP request.
+(deftest offline-fetch-blocks-network
+  (let ((ona-sym (find-symbol "OFFLINE-NETWORK-ACCESS" :qlot/errors)))
+    (ok ona-sym
+        "qlot/errors:offline-network-access must be defined")
+    (when ona-sym
+      (let* ((caught (nth-value 1
+                       (ignore-errors
+                         (let ((*offline* t))
+                           (qlot/http:fetch "http://unreachable.invalid/file"
+                                            "/dev/null"))))))
+        (ok (and caught (typep caught ona-sym))
+            "fetch signals offline-network-access when *offline* is true")))))
+
+;; With *offline* true, get must signal offline-network-access immediately
+;; without performing any HTTP request.
+(deftest offline-get-blocks-network
+  (let ((ona-sym (find-symbol "OFFLINE-NETWORK-ACCESS" :qlot/errors)))
+    (ok ona-sym
+        "qlot/errors:offline-network-access must be defined")
+    (when ona-sym
+      (let* ((caught (nth-value 1
+                       (ignore-errors
+                         (let ((*offline* t))
+                           (qlot/http:get "http://unreachable.invalid/"))))))
+        (ok (and caught (typep caught ona-sym))
+            "get signals offline-network-access when *offline* is true")))))

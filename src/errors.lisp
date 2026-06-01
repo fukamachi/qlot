@@ -16,6 +16,11 @@
            #:qlot-directory-invalid
            #:network-unreachable
            #:offline-cache-conflict
+           #:offline-cache-miss
+           #:offline-cache-miss-project-name
+           #:offline-cache-miss-requested-version
+           #:offline-network-access
+           #:offline-network-access-target
            #:github-ratelimit-error
            #:ros-command-error
            #:command-not-found
@@ -137,6 +142,27 @@
   (:report (lambda (condition stream)
              (declare (ignore condition))
              (format stream "Offline mode cannot be used with cache disabled."))))
+
+(define-condition offline-cache-miss (qlot-error)
+  ((project-name :initarg :project-name
+                 :reader offline-cache-miss-project-name)
+   (requested-version :initarg :requested-version
+                      :initarg :version
+                      :reader offline-cache-miss-requested-version))
+  (:report (lambda (condition stream)
+             (with-slots (project-name requested-version) condition
+               (format stream "Offline cache miss for ~S version ~S. Populate the cache online before installing with --offline."
+                       project-name
+                       requested-version)))))
+
+(define-condition offline-network-access (qlot-error)
+  ((target :initarg :target
+           :initform nil
+           :reader offline-network-access-target))
+  (:report (lambda (condition stream)
+             (with-slots (target) condition
+               (format stream "Offline mode blocked network access~@[: ~A~]."
+                       target)))))
 
 (define-condition github-ratelimit-error (qlot-error)
   ((repos :type string

@@ -6,7 +6,10 @@
   (:import-from #:qlot/logger
                 #:*debug*)
   (:import-from #:qlot/errors
-                #:network-unreachable)
+                #:network-unreachable
+                #:offline-network-access)
+  (:import-from #:qlot/modes
+                #:*offline*)
   (:import-from #:dexador)
   #-(or mswindows win32)
   (:import-from #:cl+ssl)
@@ -64,6 +67,8 @@
   `(call-with-retry (lambda () ,@body)))
 
 (defun fetch (url file &key basic-auth)
+  (when *offline*
+    (error 'offline-network-access :target url))
   (with-retry ()
     (apply #'dex:fetch url file
            :if-exists :supersede
@@ -75,6 +80,8 @@
 
 (defun get (url &rest args &key want-stream basic-auth force-binary)
   (declare (ignore want-stream basic-auth force-binary))
+  (when *offline*
+    (error 'offline-network-access :target url))
   (with-retry ()
     (apply #'dex:get url
            :keep-alive nil

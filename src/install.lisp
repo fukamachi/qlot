@@ -13,9 +13,11 @@
                 #:source-asdf-remote-url
                 #:source-project-name
                 #:source-version
-                #:source-install-url)
+                #:source-install-url
+                #:defrost-source)
   (:import-from #:qlot/parser
-                #:read-qlfile-for-install)
+                #:read-qlfile-for-install
+                #:parse-qlfile-lock)
   (:import-from #:qlot/server
                 #:with-qlot-server)
   (:import-from #:qlot/distify
@@ -66,6 +68,11 @@
                 #:release-cache-exists-p
                 #:restore-release-from-cache
                 #:save-release-to-cache)
+  (:import-from #:qlot/modes
+                #:*offline*
+                #:*locked*)
+  (:import-from #:qlot/check
+                #:check-qlfile-lock-current)
   (:import-from #:qlot/color
                 #:color-text
                 #:*enable-color*)
@@ -73,7 +80,10 @@
                 #:qlot-simple-error
                 #:missing-projects
                 #:duplicate-project
-                #:qlfile-not-found)
+                #:qlfile-not-found
+                #:qlfile-lock-not-found
+                #:offline-cache-miss
+                #:offline-network-access)
   (:import-from #:bordeaux-threads)
   #+sbcl
   (:import-from #:sb-posix)
@@ -259,6 +269,8 @@ Should be called after Quicklisp is loaded."
         (with-open-file (out qlfile
                              :if-does-not-exist :create
                              :direction :output)))))
+  (when *locked*
+    (check-qlfile-lock-current qlfile))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
@@ -284,7 +296,8 @@ Should be called after Quicklisp is loaded."
                                 :concurrency concurrency)
 
         ;; Install project dependencies
-        (when install-deps
+        (when (and install-deps
+                   (not *offline*))
           (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
@@ -317,7 +330,8 @@ Should be called after Quicklisp is loaded."
                                 :concurrency concurrency)
 
         ;; Install project dependencies
-        (when install-deps
+        (when (and install-deps
+                   (not *offline*))
           (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
@@ -466,9 +480,20 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                      :type "lock"))
          (sources-from-lock (and (not ignore-lock)
                                  (uiop:file-exists-p qlfile-lock)))
-         (sources (read-qlfile-for-install qlfile
-                                           :ignore-lock ignore-lock
-                                           :projects projects)))
+         (sources (cond
+                    ((and *offline*
+                          (not ignore-lock)
+                          (not sources-from-lock))
+                     (error 'qlfile-lock-not-found :path qlfile-lock))
+                    ((and *offline* sources-from-lock)
+                     (mapcar #'defrost-source
+                             (parse-qlfile-lock qlfile-lock
+                                                :test (lambda (name)
+                                                        (not (find name projects :test 'equal))))))
+                    (t
+                     (read-qlfile-for-install qlfile
+                                              :ignore-lock ignore-lock
+                                              :projects projects)))))
     (when projects
       (let ((missing (set-difference projects (mapcar #'source-project-name sources)
                                      :test #'string=)))
@@ -512,6 +537,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                             (*enable-whisper* . nil)
                                                             (qlot/cache:*cache-directory* . ,qlot/cache:*cache-directory*)
                                                             (qlot/cache:*cache-enabled* . ,qlot/cache:*cache-enabled*)
+                                                            (qlot/modes:*offline* . ,qlot/modes:*offline*)
+                                                            (qlot/modes:*locked* . ,qlot/modes:*locked*)
                                                             (,(uiop:intern* '#:*fetch-scheme-functions* '#:ql-http) . ',(symbol-value (uiop:intern* '#:*fetch-scheme-functions* '#:ql-http))))
                                                           bt2:*default-special-bindings*))
                   (lock (bt2:make-lock))
@@ -549,6 +576,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                             (install-all-releases source)
                             (report :hit (if dist :update :new))
                             (return-from install-source-block))
+                          (when *offline*
+                            (error 'offline-cache-miss
+                                   :project-name (source-project-name source)
+                                   :requested-version (and (slot-boundp source 'qlot/source/base::version)
+                                                           (source-version source))))
                           (cond
                             ((not dist)
                              (progress :in-progress "Installing ~S."
@@ -632,6 +664,9 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
            ((uiop:directory-exists-p asdf-dir)
             ;; Tag switch
             (git-switch-tag asdf-dir (source-version asdf-source)))
+           (*offline*
+            (error 'offline-network-access
+                   :target (source-asdf-remote-url asdf-source)))
            (t
             (message "Downloading ASDF to '~A'." asdf-dir)
             ;; Clone

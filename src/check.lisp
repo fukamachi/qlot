@@ -4,13 +4,14 @@
                 #:source=
                 #:source-project-name
                 #:source-dist-name
+                #:source-identifier
                 #:source-version
                 #:source-local
                 #:source-asdf
-                #:defrost-source
                 #:make-source)
   (:import-from #:qlot/parser
                 #:find-lock
+                #:parse-qlfile
                 #:parse-qlfile-lock
                 #:read-qlfile-for-install
                 #:read-qlfile-for-outdated)
@@ -43,39 +44,64 @@
                 #:unnecessary-projects
                 #:outdated-projects)
   (:export #:check-qlfile
+           #:check-qlfile-lock-current
            #:check-project
            #:available-update-project))
 (in-package #:qlot/check)
+
+(defun source-name-for-report (source)
+  (or (source-project-name source)
+      (source-identifier source)))
+
+(defun qlfile-sources-for-lock-check (qlfile)
+  (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))
+        (sources (parse-qlfile qlfile)))
+    (unless (find "quicklisp" sources
+                  :key #'source-dist-name
+                  :test #'string=)
+      (push default-ql-source sources))
+    sources))
+
+(defun check-qlfile-lock-current (qlfile)
+  (unless (uiop:file-exists-p qlfile)
+    (error 'qlfile-not-found :path qlfile))
+  (let ((qlfile.lock (find-lock qlfile)))
+    (unless (uiop:file-exists-p qlfile.lock)
+      (error 'qlfile-lock-not-found :path qlfile.lock))
+    (let* ((sources (qlfile-sources-for-lock-check qlfile))
+           (lock-sources (parse-qlfile-lock qlfile.lock))
+           (missing
+            (loop for source in sources
+                  for lock-source = (find (source-identifier source) lock-sources
+                                          :key #'source-identifier
+                                          :test #'string=)
+                  unless (and lock-source
+                              (source= source lock-source))
+                  collect (source-name-for-report source)))
+           (unnecessary
+            (loop for lock-source in lock-sources
+                  for source = (find (source-identifier lock-source) sources
+                                     :key #'source-identifier
+                                     :test #'string=)
+                  unless (and source
+                              (source= source lock-source))
+                  collect (source-name-for-report lock-source))))
+      (when missing
+        (error 'missing-projects :projects missing))
+      (when unnecessary
+        (error 'unnecessary-projects :projects unnecessary)))))
 
 (defun check-qlfile (qlfile &key quiet)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
 
   (let* ((sources (read-qlfile-for-install qlfile :silent t))
-         (qlfile.lock (find-lock qlfile))
          (project-root (uiop:pathname-directory-pathname qlfile))
          (qlhome (merge-pathnames *qlot-directory* project-root)))
 
-    (unless (uiop:file-exists-p qlfile.lock)
-      (error 'qlfile-lock-not-found :path qlfile.lock))
+    (check-qlfile-lock-current qlfile)
 
     (check-local-quicklisp project-root)
-
-    ;; Check if qlfile.lock is up-to-date
-    (let* ((lock-sources (parse-qlfile-lock qlfile.lock))
-           (lock-sources (mapcar #'defrost-source lock-sources))
-           (old-sources
-             (remove-if (lambda (source)
-                          (let ((lock-source
-                                  (find (source-project-name source) lock-sources
-                                        :key #'source-project-name
-                                        :test #'string=)))
-                            (and lock-source
-                                 (source= source lock-source))))
-                        sources)))
-      (when old-sources
-        (error 'missing-projects
-               :projects (mapcar #'source-project-name old-sources))))
 
     (unless (find-package '#:ql)
       (load (merge-pathnames #P"setup.lisp" qlhome)))
