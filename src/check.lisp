@@ -49,9 +49,30 @@
            #:available-update-project))
 (in-package #:qlot/check)
 
+(defun source-identifier-for-report (source)
+  (let ((identifier (source-identifier source)))
+    (cond
+      ((and (stringp identifier)
+            (or (uiop:string-prefix-p "https://" identifier)
+                (uiop:string-prefix-p "http://" identifier)))
+       (let* ((without-query (subseq identifier 0 (or (position #\? identifier)
+                                                       (length identifier))))
+              (trimmed (string-right-trim "/" without-query))
+              (slash (position #\/ trimmed :from-end t))
+              (name (if slash
+                        (subseq trimmed (1+ slash))
+                        trimmed))
+              (dot (position #\. name :from-end t)))
+         (if dot
+             (subseq name 0 dot)
+             name)))
+      (t
+       identifier))))
+
 (defun source-name-for-report (source)
   (or (source-project-name source)
-      (source-identifier source)))
+      (source-dist-name source)
+      (source-identifier-for-report source)))
 
 (defun qlfile-sources-for-lock-check (qlfile)
   (let ((default-ql-source (make-source :dist "quicklisp" (quicklisp-distinfo-url)))

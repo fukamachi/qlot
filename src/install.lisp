@@ -8,6 +8,7 @@
                 #:prepare-source
                 #:source-dist
                 #:source-dist-name
+                #:source-identifier
                 #:source-local
                 #:source-asdf
                 #:source-asdf-remote-url
@@ -82,6 +83,7 @@
                 #:duplicate-project
                 #:qlfile-not-found
                 #:qlfile-lock-not-found
+                #:offline-cache-conflict
                 #:offline-cache-miss
                 #:offline-network-access)
   (:import-from #:bordeaux-threads)
@@ -473,8 +475,40 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (ignore-errors
     (uiop:delete-directory-tree dist-path :validate t)))
 
+(defun source-name-for-offline-lock-error (source)
+  (let ((identifier (source-identifier source)))
+    (or (source-project-name source)
+        (source-dist-name source)
+        (cond
+          ((and (stringp identifier)
+                (or (uiop:string-prefix-p "https://" identifier)
+                    (uiop:string-prefix-p "http://" identifier)))
+           (let* ((without-query (subseq identifier 0 (or (position #\? identifier)
+                                                           (length identifier))))
+                  (trimmed (string-right-trim "/" without-query))
+                  (slash (position #\/ trimmed :from-end t))
+                  (name (if slash
+                            (subseq trimmed (1+ slash))
+                            trimmed))
+                  (dot (position #\. name :from-end t)))
+             (if dot
+                 (subseq name 0 dot)
+                 name)))
+          (t
+           identifier)))))
+
+(defun defrost-offline-lock-source (source qlfile-lock)
+  (unless (source-project-name source)
+    (error 'qlot-simple-error
+           :format-control "Offline install cannot use the lock entry for ~S because ~A is missing a project name. Regenerate qlfile.lock online before installing with --offline."
+           :format-arguments (list (source-name-for-offline-lock-error source)
+                                   qlfile-lock)))
+  (defrost-source source))
+
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects concurrency)
   (check-type concurrency (or null (integer 0)))
+  (when (and *offline* (not *cache-enabled*))
+    (error 'offline-cache-conflict))
   (when (and *offline* ignore-lock)
     (error 'offline-network-access
            :target "updating qlfile sources without qlfile.lock"))
@@ -489,7 +523,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                           (not sources-from-lock))
                      (error 'qlfile-lock-not-found :path qlfile-lock))
                     ((and *offline* sources-from-lock)
-                     (mapcar #'defrost-source
+                     (mapcar (lambda (source)
+                               (defrost-offline-lock-source source qlfile-lock))
                              (parse-qlfile-lock qlfile-lock
                                                 :test (lambda (name)
                                                         (not (find name projects :test 'equal))))))
@@ -529,10 +564,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                             (slot-boundp source 'qlot/source/base::version)
                                             (equal (version dist)
                                                    (source-version source))
-                                            (let ((valid (validate-dist-installation dist-path)))
-                                              (unless valid
-                                                (invalidate-broken-dist dist-path))
-                                              valid))))
+                                            (or *offline*
+                                                (let ((valid (validate-dist-installation dist-path)))
+                                                  (unless valid
+                                                    (invalidate-broken-dist dist-path))
+                                                  valid)))))
                                    sources-non-local))))
                   (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
                                                             (*terminal* . ,*terminal*)
@@ -579,11 +615,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                             (install-all-releases source)
                             (report :hit (if dist :update :new))
                             (return-from install-source-block))
-                          (when *offline*
-                            (error 'offline-cache-miss
-                                   :project-name (source-project-name source)
-                                   :requested-version (and (slot-boundp source 'qlot/source/base::version)
-                                                           (source-version source))))
                           (cond
                             ((not dist)
                              (progress :in-progress "Installing ~S."
@@ -600,6 +631,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                        (source-project-name source)
                                        (source-project-name source)
                                        (source-version source)))
+                            (*offline*
+                             (error 'offline-cache-miss
+                                    :project-name (source-project-name source)
+                                    :requested-version (and (slot-boundp source 'qlot/source/base::version)
+                                                            (source-version source))))
                             ((typep source 'source-dist)
                              (with-package-functions #:ql-dist (uninstall version)
                                (let* ((current-dist (find-dist (source-dist-name source)))

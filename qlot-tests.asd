@@ -18,6 +18,7 @@
                "qlot-tests/install/quicklisp"
                "qlot-tests/install/cache"
                "qlot-tests/install/offline"
+               "qlot-tests/install/offline-evicted-cache"
                "qlot-tests/install/locked"
                "qlot-tests/install/frozen"
                "qlot-tests/install"
