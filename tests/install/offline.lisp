@@ -205,3 +205,24 @@ version: offline-warm-cache-test-v1
                  (ng (uiop:directory-exists-p (merge-pathnames #P"local-projects/asdf/" qlhome))
                      "asdf-dir not created — git-clone was blocked")))
           (setf (symbol-function 'git-clone) original-git-clone))))))
+
+;;; With *offline* true and ignore-lock true (the update-style path that
+;;; re-resolves qlfile sources without consulting qlfile.lock),
+;;; apply-qlfile-to-qlhome must fail fast with offline-network-access before any
+;;; network access — re-resolving sources from the qlfile would require the
+;;; network, which offline mode forbids.  This pins the guard at the top of
+;;; apply-qlfile-to-qlhome so an accidental removal or mis-spelled condition is
+;;; caught.
+(deftest offline-ignore-lock-blocks-update
+  (with-tmp-directory (tmp)
+    (let ((qlfile (merge-pathnames #P"qlfile" tmp))
+          (qlhome (merge-pathnames #P".qlot/" tmp))
+          (ona-sym (find-symbol "OFFLINE-NETWORK-ACCESS" :qlot/errors)))
+      (write-text-file qlfile "ql :all :latest")
+      (let ((caught (nth-value 1
+                      (ignore-errors
+                        (let ((*offline* t))
+                          (qlot/install::apply-qlfile-to-qlhome
+                           qlfile qlhome :ignore-lock t))))))
+        (ok (and caught ona-sym (typep caught ona-sym))
+            "*offline* + ignore-lock signals offline-network-access before any network access")))))

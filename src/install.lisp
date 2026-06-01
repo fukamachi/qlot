@@ -475,6 +475,9 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
 
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects concurrency)
   (check-type concurrency (or null (integer 0)))
+  (when (and *offline* ignore-lock)
+    (error 'offline-network-access
+           :target "updating qlfile sources without qlfile.lock"))
   (let* ((qlfile-lock (make-pathname :defaults qlfile
                                      :name (file-namestring qlfile)
                                      :type "lock"))
@@ -684,10 +687,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                          :if-does-not-exist :create
                          :if-exists :supersede)
       (dump-source-registry-conf out sources))
-    (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
-                                     :type "lock"
-                                     :defaults qlfile)
-                      sources)
+    (unless *locked*
+      (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
+                                       :type "lock"
+                                       :defaults qlfile)
+                        sources))
 
     (values)))
 

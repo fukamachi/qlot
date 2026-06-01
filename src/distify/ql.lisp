@@ -20,6 +20,8 @@
                 #:split-with)
   (:import-from #:qlot/errors
                 #:qlot-simple-error)
+  (:import-from #:qlot/modes
+                #:*locked*)
   (:import-from #:qlot/http)
   (:import-from #:fuzzy-match
                 #:fuzzy-match)
@@ -38,6 +40,9 @@
            (aref matches 0)))))
 
 (defun load-source-ql-version (source)
+  (when (and *locked*
+             (slot-boundp source 'qlot/source/base::version))
+    (return-from load-source-ql-version source))
   (progress "Getting the distinfo.")
   (let* ((body-stream (handler-case (qlot/http:get (source-distinfo-url source)
                                                    :want-stream t)

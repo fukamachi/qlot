@@ -7,6 +7,10 @@
                 #:make-source
                 #:source-project-name
                 #:source-version)
+  (:import-from #:qlot/source/dist
+                #:source-distinfo-url)
+  (:import-from #:qlot/modes
+                #:*locked*)
   (:import-from #:qlot/utils/ql
                 #:parse-distinfo-file
                 #:parse-space-delimited-file)
@@ -89,3 +93,129 @@
       (let ((data (parse-distinfo-file distinfo.txt)))
         (ok (equal (aget data "name") "quicklisp"))
         (ok (equal (aget data "version") "2019-08-13"))))))
+
+;;; Minimal canned data returned by the qlot/http:get stub used in the three
+;;; load-source-ql-version locked-mode tests.
+;;;
+;;; Call 1 (distinfo): parse-distinfo-stream needs "version" and "release-index-url".
+;;; Call 2 (release-index): parse-space-delimited-stream needs a #-comment header
+;;;   then a row whose first field matches (source-project-name source).
+;;;   The second field is the archive URL; get-version-from-archive-url extracts
+;;;   the date component "2014-03-17" from it and uses that as the resolved version.
+
+(defun make-canned-distinfo-stream ()
+  (make-string-input-stream
+   "version: 2014-03-17
+release-index-url: https://beta.quicklisp.org/dist/quicklisp/2014-03-17/releases.txt
+"))
+
+(defun make-canned-release-index-stream ()
+  (make-string-input-stream
+   "# project url size file-md5 content-sha1 prefix
+log4cl https://beta.quicklisp.org/archive/log4cl/2014-03-17/log4cl-20140317-git.tgz 1234 abc def log4cl-20140317-git
+"))
+
+(defmacro with-http-get-stub ((call-count-var) &body body)
+  "Replace qlot/http:get with a counting stub that returns canned streams.
+  CALL-COUNT-VAR is bound to a place holding the number of calls made."
+  (let ((saved (gensym "SAVED")))
+    `(let ((,call-count-var 0)
+           (,saved (fdefinition 'qlot/http:get)))
+       (setf (fdefinition 'qlot/http:get)
+             (lambda (url &rest args)
+               (declare (ignore url args))
+               (incf ,call-count-var)
+               (case ,call-count-var
+                 (1 (make-canned-distinfo-stream))
+                 (2 (make-canned-release-index-stream))
+                 (otherwise
+                  (error "qlot/http:get stub: unexpected call ~A" ,call-count-var)))))
+       (unwind-protect
+            (progn ,@body)
+         (setf (fdefinition 'qlot/http:get) ,saved)))))
+
+(defun make-pinned-source ()
+  "Return a source-ql for 'log4cl' with the version slot already bound,
+  simulating a source that was defrosted from qlfile.lock.
+  source-distinfo-url is set to a non-nil dummy so load-source-ql-version
+  does not call get-distinfo-url before its first qlot/http:get.
+  The sentinel version is deliberately distinct from the canned network-resolved
+  value (ql-2014-03-17) so tests can distinguish 'version preserved from lock'
+  from 'version re-resolved from network'."
+  (let ((source (make-source :ql "log4cl" "2014-03-17")))
+    (setf (source-version source) "ql-pinned-from-lock")
+    (setf (source-distinfo-url source)
+          "https://beta.quicklisp.org/dist/quicklisp/2014-03-17/distinfo.txt")
+    source))
+
+(defun make-unpinned-source ()
+  "Return a source-ql for 'log4cl' whose version slot is unbound,
+  simulating a source read from qlfile (never defrosted).
+  source-distinfo-url is set to a non-nil dummy for the same reason."
+  (let ((source (make-source :ql "log4cl" "2014-03-17")))
+    (setf (source-distinfo-url source)
+          "https://beta.quicklisp.org/dist/quicklisp/2014-03-17/distinfo.txt")
+    source))
+
+;;; Gate 1 — *locked* t + pinned version → qlot/http:get NOT called
+;;;
+;;; load-source-ql-version must return early without touching the network
+;;; when *locked* is true and the source already carries a bound version slot
+;;; (i.e. it was defrosted from qlfile.lock).
+;;; This test FAILS before the implementation because the current code always
+;;; calls qlot/http:get regardless of *locked* or version binding.
+(deftest locked-pin-respect-skips-network
+  (testing "*locked* t + pinned version: qlot/http:get must not be called"
+    (let ((source (make-pinned-source))
+          (http-called-p nil)
+          (saved (fdefinition 'qlot/http:get)))
+      (setf (fdefinition 'qlot/http:get)
+            (lambda (url &rest args)
+              (declare (ignore url args))
+              (setf http-called-p t)
+              (error "network trap: qlot/http:get called despite *locked* t + pinned version")))
+      (unwind-protect
+           (progn
+             (let ((*locked* t))
+               (ignore-errors
+                 (qlot/distify/ql::load-source-ql-version source)))
+             (ng http-called-p
+                 "qlot/http:get must NOT be called when *locked* t and version slot is bound")
+             (ok (equal (source-version source) "ql-pinned-from-lock")
+                 "pinned version must be preserved unchanged: early return must not alter the version slot"))
+        (setf (fdefinition 'qlot/http:get) saved)))))
+
+;;; Gate 2 — *locked* nil + pinned version → qlot/http:get IS called
+;;;
+;;; The optimisation must not fire when *locked* is nil, even if the version
+;;; slot is already bound.  The stub verifies the two expected HTTP calls are made
+;;; AND that the response was actually processed (source-version is updated from
+;;; the canned data, overwriting the distinct sentinel set in make-pinned-source).
+(deftest unlocked-pinned-source-still-resolves
+  (testing "*locked* nil + pinned version: qlot/http:get must be called"
+    (let ((source (make-pinned-source)))
+      (with-http-get-stub (n)
+        (let ((*locked* nil))
+          (qlot/distify/ql::load-source-ql-version source))
+        (ok (>= n 2)
+            "qlot/http:get must be invoked twice: distinfo call then release-index call")
+        (ok (equal "ql-2014-03-17" (source-version source))
+            "source-version must be updated to the network-resolved value, not the sentinel pin")))))
+
+;;; Gate 3 — *locked* t + version slot UNBOUND → qlot/http:get IS called
+;;;
+;;; The optimisation applies only when the version is already pinned.
+;;; When the source has no version (undefrosted), the network must still be consulted
+;;; AND the response must be processed: version slot must be bound and set to the
+;;; network-resolved value after the call.
+(deftest locked-unpinned-source-still-resolves
+  (testing "*locked* t + version slot unbound: qlot/http:get must be called"
+    (let ((source (make-unpinned-source)))
+      (with-http-get-stub (n)
+        (let ((*locked* t))
+          (qlot/distify/ql::load-source-ql-version source))
+        (ok (>= n 2)
+            "qlot/http:get must be invoked twice: distinfo call then release-index call")
+        (ok (and (slot-boundp source 'qlot/source/base::version)
+                 (equal "ql-2014-03-17" (source-version source)))
+            "source-version must be bound and set to the network-resolved value")))))

@@ -23,6 +23,11 @@
                                  ,(or (second p) "")))
                         pairs)
               ,@body)
+         ;; Teardown limitation: a var that was originally unset is restored to
+         ;; "" rather than truly unset (portable CL has no unsetenv). This is
+         ;; safe here because every reader of QLOT_OFFLINE / QLOT_LOCKED /
+         ;; QLOT_NO_CACHE goes through initialize-modes -> uiop:getenvp, which
+         ;; treats "" as unset; no code reads these vars with raw uiop:getenv.
          (loop for (name . old) in ,saved
                do (setf (uiop:getenv name) (or old "")))))))
 
