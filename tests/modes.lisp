@@ -80,25 +80,25 @@
 
 ;;; --- Gate 4: qlot-command-install flag->env bridge ---
 ;;;
-;;; The implementation must factor the flag->env mapping into a function
-;;; apply-install-mode-flags (offline-p locked-p) that is callable from tests.
-;;; --offline -> (apply-install-mode-flags t nil)
-;;; --locked  -> (apply-install-mode-flags nil t)
-;;; --frozen  -> (apply-install-mode-flags t t)
+;;; qlot/cli is gated behind :ros.installing in qlot.asd, so the test system
+;;; does not depend on it at compile time.  We load it at runtime and call
+;;; apply-install-mode-flags via uiop:symbol-call to keep the package reference
+;;; out of read/compile time, mirroring the pattern in tests/cli.lisp.
 
 (deftest install-flag-env-bridge
+  (asdf:load-system :qlot/cli)
   (testing "--frozen (t t) sets both QLOT_OFFLINE and QLOT_LOCKED"
     (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
-      (qlot/cli::apply-install-mode-flags t t)
+      (uiop:symbol-call '#:qlot/cli '#:apply-install-mode-flags t t)
       (ok (uiop:getenvp "QLOT_OFFLINE") "--frozen: QLOT_OFFLINE must be set")
       (ok (uiop:getenvp "QLOT_LOCKED")  "--frozen: QLOT_LOCKED must be set")))
   (testing "--offline (t nil) sets only QLOT_OFFLINE"
     (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
-      (qlot/cli::apply-install-mode-flags t nil)
+      (uiop:symbol-call '#:qlot/cli '#:apply-install-mode-flags t nil)
       (ok (uiop:getenvp "QLOT_OFFLINE")  "--offline: QLOT_OFFLINE must be set")
       (ng (uiop:getenvp "QLOT_LOCKED")   "--offline: QLOT_LOCKED must NOT be set")))
   (testing "--locked (nil t) sets only QLOT_LOCKED"
     (with-env (("QLOT_OFFLINE" nil) ("QLOT_LOCKED" nil) ("QLOT_NO_CACHE" nil))
-      (qlot/cli::apply-install-mode-flags nil t)
+      (uiop:symbol-call '#:qlot/cli '#:apply-install-mode-flags nil t)
       (ng (uiop:getenvp "QLOT_OFFLINE")  "--locked: QLOT_OFFLINE must NOT be set")
       (ok (uiop:getenvp "QLOT_LOCKED")   "--locked: QLOT_LOCKED must be set"))))
