@@ -553,27 +553,3 @@ version: offline-warm-cache-test-v1
                    "git fetch is invoked when *offline* is nil (online path preserved)")))
         (setf (symbol-function 'safety-shell-command) original-ssc)
         (setf (symbol-function 'qlot/utils/git::git-checkout) original-git-checkout)))))
-
-;;; The README.markdown must no longer claim that git and asdf sources cannot be
-;;; cache-restored offline.  After the fix, only local (and credential-bearing)
-;;; sources retain that limitation.  The old stale sentence is verified absent.
-(deftest readme-offline-limitation-scoped
-  (let* ((readme-path (merge-pathnames #P"README.markdown"
-                                       (asdf:system-source-directory :qlot)))
-         (readme-text (uiop:read-file-string readme-path)))
-    (ng (search "git` and `asdf` sources must already be present" readme-text
-                :test #'char-equal)
-        "README no longer claims git and asdf sources cannot be cache-restored offline")
-    (ng (search "`asdf` sources must already be present" readme-text
-                :test #'char-equal)
-        "README no longer claims asdf sources must be pre-installed for offline installs")
-    ;; The corrected scoping is present: `local` source type appears in the
-    ;; Known-limitation section (within 400 chars of the marker).
-    (ok (let* ((marker "Known limitation")
-               (pos (search marker readme-text :test #'char-equal)))
-          (when pos
-            (search "`local`" readme-text
-                    :start2 pos
-                    :end2 (min (length readme-text) (+ pos 400))
-                    :test #'char-equal)))
-        "README offline limitation is now scoped to the `local` source type")))

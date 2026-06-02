@@ -36,30 +36,26 @@
              (ignore-errors (typep caught nru)))
         "ns-host-not-found-error is re-signaled as qlot/errors:network-unreachable")))
 
-;; The network-unreachable condition report must name the host/URL involved
-;; and suggest checking connectivity.
+;; network-unreachable must be exported from :qlot/errors so callers can handle
+;; it specifically, and its report must name the host/URL involved and suggest
+;; checking connectivity.
 (deftest network-unreachable-report-content
-  (let* ((nru (find-symbol "NETWORK-UNREACHABLE" :qlot/errors))
-         (condition (when nru
-                      (ignore-errors
-                        (make-condition nru :url "http://example.com/"))))
-         (report (when condition
-                   (with-output-to-string (s) (princ condition s)))))
-    (ok (and report (search "example.com" report))
-        "condition report names the failing host or URL")
-    (ok (and report
-             (some (lambda (w) (search w report))
-                   '("network" "connectivity" "offline" "Network" "Connectivity")))
-        "condition report suggests checking connectivity or --offline")))
-
-;; network-unreachable must be exported from :qlot/errors so callers can
-;; handle it specifically.
-(deftest network-unreachable-is-exported
-  (multiple-value-bind (sym status)
+  (multiple-value-bind (nru status)
       (find-symbol "NETWORK-UNREACHABLE" :qlot/errors)
-    (ok sym "NETWORK-UNREACHABLE symbol exists in :qlot/errors")
+    (ok nru "NETWORK-UNREACHABLE symbol exists in :qlot/errors")
     (ok (eq :external status)
-        "NETWORK-UNREACHABLE is exported from :qlot/errors")))
+        "NETWORK-UNREACHABLE is exported from :qlot/errors")
+    (let* ((condition (when nru
+                        (ignore-errors
+                          (make-condition nru :url "http://example.com/"))))
+           (report (when condition
+                     (with-output-to-string (s) (princ condition s)))))
+      (ok (and report (search "example.com" report))
+          "condition report names the failing host or URL")
+      (ok (and report
+               (some (lambda (w) (search w report))
+                     '("network" "connectivity" "offline" "Network" "Connectivity")))
+          "condition report suggests checking connectivity or --offline"))))
 
 ;; With *offline* true, fetch must signal offline-network-access immediately
 ;; without performing any HTTP request.

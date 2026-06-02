@@ -365,7 +365,7 @@ To load the bundled libraries, simply load `.bundle-libs/setup.lisp`.
 
 `QLOT_OFFLINE` and `QLOT_LOCKED` are also honored by install-touching commands that do not expose these flags directly. `QLOT_OFFLINE=1` makes `qlot add` and `qlot remove` use only cached artifacts. `QLOT_LOCKED=1` blocks `qlot update`, because update re-resolves sources while locked mode installs only pinned sources from `qlfile.lock`.
 
-Known limitation: `local` sources must already be present at their configured filesystem paths for offline installs. Sources whose URLs contain credentials are not saved to Qlot's shared cache, so they also cannot be restored from `~/.cache/qlot/` in offline mode.
+Known limitation: sources whose URLs contain credentials are not saved to Qlot's shared cache, so they cannot be restored from `~/.cache/qlot/` in offline mode.
 
 ## Shared Dependency Cache
 

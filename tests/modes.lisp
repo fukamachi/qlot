@@ -102,3 +102,19 @@
       (uiop:symbol-call '#:qlot/cli '#:apply-install-mode-flags nil t)
       (ng (uiop:getenvp "QLOT_OFFLINE")  "--locked: QLOT_OFFLINE must NOT be set")
       (ok (uiop:getenvp "QLOT_LOCKED")   "--locked: QLOT_LOCKED must be set"))))
+
+;;; --- Gate 5: README documents all three install modes and both env vars ---
+
+(deftest readme-documents-modes
+  (let* ((readme (asdf:system-relative-pathname :qlot #P"README.markdown"))
+         (content (uiop:read-file-string readme)))
+    (ok (search "--offline" content :test #'char-equal)
+        "README.markdown documents --offline flag")
+    (ok (search "--locked" content :test #'char-equal)
+        "README.markdown documents --locked flag")
+    (ok (search "--frozen" content :test #'char-equal)
+        "README.markdown documents --frozen flag")
+    (ok (search "QLOT_OFFLINE" content)
+        "README.markdown documents QLOT_OFFLINE env var")
+    (ok (search "QLOT_LOCKED" content)
+        "README.markdown documents QLOT_LOCKED env var")))
