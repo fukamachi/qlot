@@ -85,3 +85,32 @@
                            (qlot/http:get "http://unreachable.invalid/"))))))
         (ok (and caught (typep caught ona-sym))
             "get signals offline-network-access when *offline* is true")))))
+
+;; The printed report of offline-network-access must scrub user:password
+;; credentials from the target URL so tokens do not appear in logs.
+(deftest offline-network-access-report-scrubs-user-password
+  (let* ((raw "https://user:tok@example.com/dist.txt")
+         (err (make-condition 'qlot/errors:offline-network-access :target raw))
+         (report (princ-to-string err)))
+    (ok (search "example.com" report)
+        "report contains the host")
+    (ng (search "user:tok" report)
+        "report does not expose the credential substring user:tok")))
+
+;; The printed report must also scrub bare-token userinfo (no colon).
+(deftest offline-network-access-report-scrubs-bare-token
+  (let* ((raw "https://ghp_secret@example.com/d.txt")
+         (err (make-condition 'qlot/errors:offline-network-access :target raw))
+         (report (princ-to-string err)))
+    (ok (search "example.com" report)
+        "report contains the host")
+    (ng (search "ghp_secret" report)
+        "report does not expose the bare token ghp_secret")))
+
+;; The :target slot accessor must return the raw unscrubbed URL so callers
+;; that need the credential (e.g. to retry) are not broken.
+(deftest offline-network-access-target-slot-stays-raw
+  (let* ((raw "https://user:tok@example.com/dist.txt")
+         (err (make-condition 'qlot/errors:offline-network-access :target raw)))
+    (ok (string= raw (qlot/errors:offline-network-access-target err))
+        ":target slot accessor returns the unscrubbed URL")))

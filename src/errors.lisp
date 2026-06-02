@@ -1,5 +1,7 @@
 (defpackage #:qlot/errors
   (:use #:cl)
+  (:import-from #:qlot/utils
+                #:scrub-url-credentials)
   (:export #:qlot-error
            #:qlot-simple-error
            #:unknown-source
@@ -164,7 +166,7 @@
   (:report (lambda (condition stream)
              (with-slots (target) condition
                (format stream "Offline mode blocked network access~@[: ~A~]."
-                       target)))))
+                       (scrub-url-credentials target))))))
 
 (define-condition locked-operation-rejected (qlot-error)
   ((operation :initarg :operation
