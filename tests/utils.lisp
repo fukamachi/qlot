@@ -45,4 +45,9 @@
   ;; @ outside authority must not be stripped
   (ok (equal (qlot/utils::scrub-url-credentials "https://github.com/foo/bar?e=a@b.com")
              "https://github.com/foo/bar?e=a@b.com")
-      "@ in query string not stripped"))
+      "@ in query string not stripped")
+  ;; A literal @ inside the userinfo (e.g. a token containing @) must be
+  ;; fully stripped to the last @ in the authority, leaving no residue
+  (ok (equal (qlot/utils::scrub-url-credentials "https://user:p@ss@github.com/foo/bar")
+             "https://github.com/foo/bar")
+      "@ within userinfo stripped to the last authority @"))

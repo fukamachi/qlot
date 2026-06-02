@@ -130,9 +130,14 @@ with the same key."
             (let* ((authority-start (+ scheme-end 3))
                    (authority-end (or (position #\/ url :start authority-start)
                                       (length url)))
+                   ;; Strip up to the LAST @ within the authority so a
+                   ;; literal @ in the userinfo (e.g. a token or password
+                   ;; containing @) is fully removed rather than leaking a
+                   ;; residue past the first @.
                    (userinfo-end (position #\@ url
                                            :start authority-start
-                                           :end authority-end)))
+                                           :end authority-end
+                                           :from-end t)))
               (if userinfo-end
                   (concatenate 'string
                                (subseq url 0 authority-start)
