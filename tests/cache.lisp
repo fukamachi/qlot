@@ -862,7 +862,7 @@
                 "Sources directory should NOT exist for source-ql")))))))
 
 ;;; ==========================================================================
-;;; Tests for bare-token credential detection (AC1 / AC2)
+;;; Tests for bare-token credential detection.
 ;;; url-has-credentials-p must flag bare-token userinfo (no colon), not only
 ;;; the user:pass form.  source-has-credentials-p must gate save-to-cache so
 ;;; the token never appears as a component of an on-disk cache path.
@@ -931,7 +931,7 @@
             "token string must not be a path component under cache-root")))))
 
 ;;; ==========================================================================
-;;; Test for host-only URL yielding NIL cache-key (AC3 regression guard)
+;;; Test for host-only URL yielding NIL cache-key (regression guard).
 ;;; normalize-git-url returns NIL for https://github.com (no path component),
 ;;; so cache-key must propagate that NIL rather than producing an empty or
 ;;; colliding key that silently mis-caches the source.

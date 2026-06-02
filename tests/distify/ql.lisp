@@ -157,13 +157,10 @@ log4cl https://beta.quicklisp.org/archive/log4cl/2014-03-17/log4cl-20140317-git.
           "https://beta.quicklisp.org/dist/quicklisp/2014-03-17/distinfo.txt")
     source))
 
-;;; Gate 1 — *locked* t + pinned version → qlot/http:get NOT called
-;;;
+;;; *locked* t + pinned version → qlot/http:get NOT called.
 ;;; load-source-ql-version must return early without touching the network
 ;;; when *locked* is true and the source already carries a bound version slot
 ;;; (i.e. it was defrosted from qlfile.lock).
-;;; This test FAILS before the implementation because the current code always
-;;; calls qlot/http:get regardless of *locked* or version binding.
 (deftest locked-pin-respect-skips-network
   (testing "*locked* t + pinned version: qlot/http:get must not be called"
     (let ((source (make-pinned-source))
@@ -185,9 +182,8 @@ log4cl https://beta.quicklisp.org/archive/log4cl/2014-03-17/log4cl-20140317-git.
                  "pinned version must be preserved unchanged: early return must not alter the version slot"))
         (setf (fdefinition 'qlot/http:get) saved)))))
 
-;;; Gate 2 — *locked* nil + pinned version → qlot/http:get IS called
-;;;
-;;; The optimisation must not fire when *locked* is nil, even if the version
+;;; *locked* nil + pinned version → qlot/http:get IS called.
+;;; The early return must not fire when *locked* is nil, even if the version
 ;;; slot is already bound.  The stub verifies the two expected HTTP calls are made
 ;;; AND that the response was actually processed (source-version is updated from
 ;;; the canned data, overwriting the distinct sentinel set in make-pinned-source).
@@ -202,9 +198,8 @@ log4cl https://beta.quicklisp.org/archive/log4cl/2014-03-17/log4cl-20140317-git.
         (ok (equal "ql-2014-03-17" (source-version source))
             "source-version must be updated to the network-resolved value, not the sentinel pin")))))
 
-;;; Gate 3 — *locked* t + version slot UNBOUND → qlot/http:get IS called
-;;;
-;;; The optimisation applies only when the version is already pinned.
+;;; *locked* t + version slot UNBOUND → qlot/http:get IS called.
+;;; The early return applies only when the version is already pinned.
 ;;; When the source has no version (undefrosted), the network must still be consulted
 ;;; AND the response must be processed: version slot must be bound and set to the
 ;;; network-resolved value after the call.

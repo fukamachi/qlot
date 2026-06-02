@@ -146,7 +146,7 @@ dist referenced by LOCK-ENTRY is installed from cache."
     (ignore-errors
       (install-qlfile (merge-pathnames #P"qlfile" tmp)))))
 
-;;; --- Gate 1: production wiring + offline update fail-fast -----------------
+;;; Production wiring + offline update fail-fast.
 ;;;
 ;;; `qlot update` re-resolves sources from the qlfile (ignore-lock), which needs
 ;;; the network to discover latest versions, so with QLOT_OFFLINE it must FAIL
@@ -177,7 +177,7 @@ dist referenced by LOCK-ENTRY is installed from cache."
               (ok (not (typep err 'network-trap-fired))
                   "no real network/git call was attempted -- the offline guard fired first"))))))))
 
-;;; --- Gate 2: offline add fail-fast ---------------------------------------
+;;; Offline add fail-fast.
 ;;;
 ;;; `qlot add` of a source re-installs from the qlfile; with QLOT_OFFLINE and a
 ;;; cached dist at version V1, but the lock demanding V2 (not in cache), qlot
@@ -210,7 +210,7 @@ dist referenced by LOCK-ENTRY is installed from cache."
               (ok (not (typep err 'network-trap-fired))
                   "no real network/git call was attempted"))))))))
 
-;;; --- Gate 3: env-unset default takes the online path (discriminator) ------
+;;; Env-unset default takes the online path (discriminator).
 ;;;
 ;;; Proves the offline tests above are not vacuous: with QLOT_OFFLINE unset, the
 ;;; update path does NOT fail fast, reaches the network, and so trips a trap.
@@ -233,7 +233,7 @@ dist referenced by LOCK-ENTRY is installed from cache."
               (ok (typep err 'network-trap-fired)
                   "with QLOT_OFFLINE unset, qlot update takes the online path (a real network call is attempted)"))))))))
 
-;;; --- Gate 4: offline remove is cache-only and succeeds --------------------
+;;; Offline remove is cache-only and succeeds.
 ;;;
 ;;; `qlot remove` reinstalls the remaining deps from the lock; with QLOT_OFFLINE
 ;;; and a warm cache for those deps it completes with no network access.  Here
@@ -269,7 +269,7 @@ version: env-modes-test-v1
               (ok (null err)
                   "qlot remove completes offline without signalling"))))))))
 
-;;; --- Gate 4b: offline remove HONORS the env (discriminator) ---------------
+;;; Offline remove HONORS the env (discriminator).
 ;;;
 ;;; The success test above (full warm cache + matching lock) cannot tell offline
 ;;; mode apart from an online run that happened to need no network -- both just
@@ -304,7 +304,7 @@ version: env-modes-test-v1
                                (typep err 'offline-network-access)))
                   "offline remove of an uncached remaining dep fails fast with an offline error"))))))))
 
-;;; --- Gate 5: QLOT_LOCKED + qlot update signals locked-operation-rejected ---
+;;; QLOT_LOCKED + qlot update signals locked-operation-rejected.
 ;;;
 ;;; `qlot update` re-resolves sources from the qlfile (ignore-lock), which is
 ;;; explicitly prohibited in locked mode.  The guard fires in update-qlfile at
@@ -335,7 +335,7 @@ version: env-modes-test-v1
               (ok (not (typep err 'network-trap-fired))
                   "no real network/git call was attempted -- the locked guard fired first"))))))))
 
-;;; --- Gate 5b: QLOT_LOCKED unset takes the online path (discriminator) ------
+;;; QLOT_LOCKED unset takes the online path (discriminator).
 ;;;
 ;;; Proves env-locked-update-fails-fast is not vacuous: with QLOT_LOCKED unset,
 ;;; the update path does NOT fail fast, reaches the network, and trips a trap.
@@ -357,7 +357,7 @@ version: env-modes-test-v1
               (ok (typep err 'network-trap-fired)
                   "with QLOT_LOCKED unset, qlot update takes the online path (a real network call is attempted)"))))))))
 
-;;; --- Gate 6: QLOT_LOCKED blocks qlot add / qlot remove before mutating qlfile ---
+;;; QLOT_LOCKED blocks qlot add / qlot remove before mutating qlfile.
 ;;;
 ;;; Locked mode forbids changing the dependency set.  add/remove must fail fast
 ;;; with locked-operation-rejected BEFORE the qlfile is touched, so the file is

@@ -31,7 +31,7 @@
          (loop for (name . old) in ,saved
                do (setf (uiop:getenv name) (or old "")))))))
 
-;;; --- Gate 1: QLOT_OFFLINE -> *offline* ---
+;;; QLOT_OFFLINE -> *offline*
 
 (deftest offline-mode-reads-from-env
   (testing "QLOT_OFFLINE=1 makes *offline* true after initialize-modes"
@@ -47,7 +47,7 @@
         (ng *offline*
             "*offline* must be nil when QLOT_OFFLINE is unset")))))
 
-;;; --- Gate 2: QLOT_LOCKED -> *locked* ---
+;;; QLOT_LOCKED -> *locked*
 
 (deftest locked-mode-reads-from-env
   (testing "QLOT_LOCKED=1 makes *locked* true after initialize-modes"
@@ -63,7 +63,7 @@
         (ng *locked*
             "*locked* must be nil when QLOT_LOCKED is unset")))))
 
-;;; --- Gate 3: QLOT_OFFLINE + QLOT_NO_CACHE conflict ---
+;;; QLOT_OFFLINE + QLOT_NO_CACHE conflict
 
 (deftest offline-cache-conflict-detection
   (testing "QLOT_OFFLINE + QLOT_NO_CACHE signals offline-cache-conflict"
@@ -78,7 +78,7 @@
         (ok *offline*
             "*offline* must be true when QLOT_OFFLINE is set without QLOT_NO_CACHE")))))
 
-;;; --- Gate 4: qlot-command-install flag->env bridge ---
+;;; qlot-command-install flag->env bridge.
 ;;;
 ;;; qlot/cli is gated behind :ros.installing in qlot.asd, so the test system
 ;;; does not depend on it at compile time.  We load it at runtime and call
@@ -103,7 +103,7 @@
       (ng (uiop:getenvp "QLOT_OFFLINE")  "--locked: QLOT_OFFLINE must NOT be set")
       (ok (uiop:getenvp "QLOT_LOCKED")   "--locked: QLOT_LOCKED must be set"))))
 
-;;; --- Gate 5: README documents all three install modes and both env vars ---
+;;; README documents all three install modes and both env vars.
 
 (deftest readme-documents-modes
   (let* ((readme (asdf:system-relative-pathname :qlot #P"README.markdown"))

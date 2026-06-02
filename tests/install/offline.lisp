@@ -292,8 +292,7 @@ version: offline-warm-cache-test-v1
 ;;;
 ;;; The cache-restored directory is a real local git repository with the pinned
 ;;; tag already present, so git-switch-tag itself is exercised without stubbing
-;;; checkout.  This replaces a prior version that stubbed git-switch-tag to
-;;; (values), which masked the missing guard.
+;;; checkout.
 (deftest offline-asdf-warm-cache
   (with-tmp-directory (tmp)
     (let* ((qlfile (merge-pathnames #P"qlfile" tmp))
@@ -318,8 +317,8 @@ version: offline-warm-cache-test-v1
       (unwind-protect
            (progn
              ;; Trap safety-shell-command for git fetch: offline mode must never
-             ;; perform a network fetch.  Before the fix git-switch-tag calls this
-             ;; unconditionally; after the fix the *offline* guard skips it.
+             ;; perform a network fetch.  The *offline* guard in git-switch-tag
+             ;; must skip the fetch.
              (setf (symbol-function 'safety-shell-command)
                    (lambda (program args &rest rest)
                      (when (and (string= program "git")
@@ -516,8 +515,8 @@ version: offline-warm-cache-test-v1
         (setf (symbol-function 'safety-shell-command) original-ssc)))))
 
 ;;; With *offline* nil (the default), git-switch-tag must still perform a git
-;;; fetch before checking out the tag.  This is a regression guard: the offline
-;;; guard added by the fix must be conditional on *offline*, not unconditional.
+;;; fetch before checking out the tag.  Regression guard: the offline guard
+;;; must be conditional on *offline*, not unconditional.
 ;;;
 ;;; safety-shell-command is intercepted to record the fetch call and return
 ;;; success without running real git (the fake directory is not a repository).

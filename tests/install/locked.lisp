@@ -41,7 +41,7 @@
 (defparameter *ql-lock-entry*
   "(\"quicklisp\" . (:class qlot.source.dist:source-dist :initargs (:project-name \"quicklisp\" :%version :latest :distribution \"https://beta.quicklisp.org/dist/quicklisp.txt\") :version \"2018-02-28\"))")
 
-;;; Gate 4 — *locked* + qlfile declares a dep absent from lock → missing-projects
+;;; *locked* + qlfile declares a dep absent from lock → missing-projects.
 ;;;
 ;;; check-qlfile-lock-current must signal missing-projects naming the new project,
 ;;; and the lock file must be unchanged on disk.
@@ -68,7 +68,7 @@
           (ok (equalp lock-bytes-before (file-bytes lockfile))
               "qlfile.lock must be unchanged after missing-projects"))))))
 
-;;; Gate 5 — *locked* + lock has a dep removed from qlfile → unnecessary-projects
+;;; *locked* + lock has a dep removed from qlfile → unnecessary-projects.
 ;;;
 ;;; check-qlfile-lock-current must signal unnecessary-projects naming the removed
 ;;; project, and the lock file must be unchanged.
@@ -99,7 +99,7 @@
           (ok (equalp lock-bytes-before (file-bytes lockfile))
               "qlfile.lock must be unchanged after unnecessary-projects"))))))
 
-;;; Gate 6 — *locked* + qlfile constraint differs from lock under source= → missing-projects
+;;; *locked* + qlfile constraint differs from lock under source= → missing-projects.
 ;;;
 ;;; When the qlfile requests cl-ppcre at "2019-01-01" but the lock has it at "2018-08-31",
 ;;; source= fails (%version mismatch), so cl-ppcre appears in the "missing" list
@@ -132,9 +132,9 @@
           (ok (equalp lock-bytes-before (file-bytes lockfile))
               "qlfile.lock must be unchanged after missing-projects"))))))
 
-;;; Gate 7 — *locked* + qlfile exactly matches lock → full install completes, lock bytes unchanged
+;;; *locked* + qlfile exactly matches lock → full install completes, lock bytes unchanged.
 ;;;
-;;; AC #8 requires the FULL install path (apply-qlfile-to-qlhome), not the read-only
+;;; This exercises the FULL install path (apply-qlfile-to-qlhome), not the read-only
 ;;; check-qlfile-lock-current predicate alone: the predicate never reaches the
 ;;; dump-qlfile-lock write at the end of the install, so it cannot catch a *locked*
 ;;; install that re-serializes (and thereby rewrites) a matching qlfile.lock.  Driven

@@ -33,16 +33,16 @@
           version))
 
 ;;; -----------------------------------------------------------------------
-;;; AC1 + AC2: Offline install with evicted cache must be an idempotent no-op.
+;;; Offline install with evicted cache must be an idempotent no-op.
 ;;;
 ;;; Scenario:
 ;;;   1. First offline install with a warm cache restores the dist and
 ;;;      creates a software/mylib → cache/sources/.../mylib symlink.
 ;;;   2. Cache is evicted (deleted) so the symlink becomes dangling.
-;;;   3. Second offline install must NOT signal offline-cache-miss (AC1) and
-;;;      must NOT delete the dist directory via invalidate-broken-dist (AC2).
+;;;   3. Second offline install must NOT signal offline-cache-miss and
+;;;      must NOT delete the dist directory via invalidate-broken-dist.
 ;;;
-;;; Without the fix:
+;;; The hazard this guards against:
 ;;;   - sources-to-install filter calls invalidate-broken-dist (deletes dist dir)
 ;;;   - install loop hits the *offline* guard → signals offline-cache-miss
 ;;; -----------------------------------------------------------------------
@@ -122,31 +122,26 @@
                  (let ((err (nth-value 1
                               (ignore-errors
                                 (qlot/install::apply-qlfile-to-qlhome qlfile qlhome)))))
-                   ;; AC1: idempotent no-op — must not signal offline-cache-miss.
+                   ;; Idempotent no-op — must not signal offline-cache-miss.
                    (ok (null err)
-                       "AC1: second offline install with evicted cache completes without error")
-                   ;; AC2 (mechanism): invalidate-broken-dist must not be called when *offline*.
-                   ;; This is the direct check for Fix A — verifies the filter short-circuits
-                   ;; before calling invalidate-broken-dist, not just that the dir happens to exist.
+                       "second offline install with evicted cache completes without error")
+                   ;; invalidate-broken-dist must not be called when *offline*: verify the
+                   ;; filter short-circuits before calling it, not just that the dir survives.
                    (ng invalidate-broken-called
-                       "AC2: invalidate-broken-dist was not called under *offline*")
-                   ;; AC2 (effect): dist directory must survive.
+                       "invalidate-broken-dist was not called under *offline*")
                    (ok (uiop:directory-exists-p dist-dir)
-                       "AC2: dist directory preserved — invalidate-broken-dist did not run under *offline*")))
+                       "dist directory preserved — invalidate-broken-dist did not run under *offline*")))
             (setf (symbol-function 'invalidate-broken-dist) original-invalidate)))))))
 
 ;;; -----------------------------------------------------------------------
-;;; AC3: Direct dynamic binding of *offline* t and *cache-enabled* nil must
+;;; Direct dynamic binding of *offline* t and *cache-enabled* nil must
 ;;; signal offline-cache-conflict at the top of apply-qlfile-to-qlhome,
 ;;; before any per-source work.
 ;;;
-;;; initialize-modes only detects this conflict via env vars.  Directly
-;;; binding the vars bypasses that guard.  The fix adds a check inside
-;;; apply-qlfile-to-qlhome (or equivalent choke point) so the conflict is
-;;; caught regardless of how the vars were set.
-;;;
-;;; Without the fix: each source hits the *offline* guard → offline-cache-miss.
-;;; After the fix:   offline-cache-conflict fires before per-source work.
+;;; initialize-modes only detects this conflict via env vars; directly
+;;; binding the vars bypasses that guard, so apply-qlfile-to-qlhome must
+;;; re-check the conflict regardless of how the vars were set — otherwise
+;;; each source hits the *offline* guard and signals offline-cache-miss.
 ;;; -----------------------------------------------------------------------
 (deftest offline-direct-binding-conflict
   (with-tmp-directory (tmp)
@@ -160,8 +155,8 @@
       ;; Direct bindings — NOT going through initialize-modes / env vars.
       (let ((*offline*       t)
             (*cache-enabled* nil))
-        ;; AC3: must signal offline-cache-conflict, NOT offline-cache-miss.
+        ;; Must signal offline-cache-conflict, NOT offline-cache-miss.
         (ok (signals
               (qlot/install::apply-qlfile-to-qlhome qlfile qlhome)
               'offline-cache-conflict)
-            "AC3: direct binding of *offline* t + *cache-enabled* nil signals offline-cache-conflict")))))
+            "direct binding of *offline* t + *cache-enabled* nil signals offline-cache-conflict")))))
