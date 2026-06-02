@@ -14,6 +14,7 @@
            #:merge-hash-tables
            #:octets-stream-to-string
            #:https-of
+           #:scrub-url-credentials
            #:ensure-list
            #:ensure-cons
            #:ensure-package-loaded))
@@ -120,6 +121,24 @@ with the same key."
            (<= 7 (length url))
            (search "http://" url :end2 7))
       (format nil "https://~A" (subseq url 7))
+      url))
+
+(defun scrub-url-credentials (url)
+  (if (stringp url)
+      (let ((scheme-end (search "://" url)))
+        (if scheme-end
+            (let* ((authority-start (+ scheme-end 3))
+                   (authority-end (or (position #\/ url :start authority-start)
+                                      (length url)))
+                   (userinfo-end (position #\@ url
+                                           :start authority-start
+                                           :end authority-end)))
+              (if userinfo-end
+                  (concatenate 'string
+                               (subseq url 0 authority-start)
+                               (subseq url (1+ userinfo-end)))
+                  url))
+            url))
       url))
 
 (defun ensure-list (object)

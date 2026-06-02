@@ -3,6 +3,8 @@
   (:import-from #:qlot/logger
                 #:*debug*
                 #:debug-log)
+  (:import-from #:qlot/utils
+                #:scrub-url-credentials)
   (:export #:safety-shell-command
            #:shell-command-error
            #:shell-command-error-output
@@ -32,26 +34,30 @@
 
 (defun safety-shell-command (program args &key (output :string))
   (setf args (mapcar #'princ-to-string args))
-  (debug-log "Running shell command: ~A~{ ~S~}" program args)
-  (uiop:with-temporary-file (:pathname stderr-file
-                             :stream stderr
-                             :direction :io)
-    (handler-case
-        (uiop:run-program (cons program args)
-                          :input :interactive
-                          :output output
-                          :error-output (if *debug*
-                                            :interactive
-                                            stderr-file))
-      (uiop/run-program:subprocess-error (e)
-        (error 'shell-command-error
-               :command (cons program args)
-               :code (uiop/run-program:subprocess-error-code e)
-               :stderr (uiop:slurp-stream-string stderr))))))
+  (let ((display-args (mapcar #'scrub-url-credentials args)))
+    (debug-log "Running shell command: ~A~{ ~S~}" program display-args)
+    (uiop:with-temporary-file (:pathname stderr-file
+                                         :stream stderr
+                                         :direction :io)
+      (handler-case
+          (uiop:run-program (cons program args)
+                            :input :interactive
+                            :output output
+                            :error-output (if *debug*
+                                              :interactive
+                                              stderr-file))
+        (uiop/run-program:subprocess-error (e)
+          (error 'shell-command-error
+                 :command (cons program display-args)
+                 :code (uiop/run-program:subprocess-error-code e)
+                 :stderr (scrub-url-credentials
+                          (uiop:slurp-stream-string stderr))))))))
 
 (defun safety-background-command (program args &key input output)
   (setf args (mapcar #'princ-to-string args))
-  (debug-log "Running a background command: ~A~{ ~S~}" program args)
+  (debug-log "Running a background command: ~A~{ ~S~}"
+             program
+             (mapcar #'scrub-url-credentials args))
   (uiop:launch-program (cons program args)
                        :input input
                        :output output
