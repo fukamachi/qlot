@@ -134,6 +134,59 @@ version: offline-warm-cache-test-v1
                (merge-pathnames #P"dists/quicklisp/distinfo.txt" qlhome))
               "dist metadata is installed in qlhome after warm-cache restore"))))))
 
+;;; install-dependencies is the only layer that populates dists/*/software/, so
+;;; it must run in offline mode too; skipping it leaves software/ empty.  It is
+;;; trapped here to assert only that install-qlfile reaches it when *offline*.
+(deftest offline-installs-dependencies
+  (with-tmp-directory (tmp)
+    (let* ((qlfile (merge-pathnames #P"qlfile" tmp))
+           (lockfile (merge-pathnames #P"qlfile.lock" tmp))
+           (qlhome (merge-pathnames #P".qlot/" tmp))
+           (cache-dir (uiop:ensure-directory-pathname
+                       (merge-pathnames #P"cache/" tmp)))
+           (meta-dir (merge-pathnames
+                      #P"metadata/dist/quicklisp/offline-deps-test-v1/"
+                      cache-dir))
+           (src-dir (merge-pathnames
+                     #P"sources/dist/quicklisp/offline-deps-test-v1/"
+                     cache-dir))
+           (install-deps-called nil)
+           (original-install-deps
+             (symbol-function 'qlot/install::install-dependencies)))
+      (write-text-file qlfile "")
+      (write-text-file lockfile
+                       "(\"quicklisp\" . (:class qlot.source.dist:source-dist :initargs (:project-name \"quicklisp\" :%version :latest :distribution \"https://beta.quicklisp.org/dist/quicklisp.txt\") :version \"offline-deps-test-v1\"))")
+      ;; Warm metadata cache so apply-qlfile-to-qlhome restores the dist.
+      (ensure-directories-exist meta-dir)
+      (ensure-directories-exist src-dir)
+      (write-text-file (merge-pathnames "distinfo.txt" meta-dir)
+                       "name: quicklisp
+version: offline-deps-test-v1
+")
+      (write-text-file (merge-pathnames "systems.txt" meta-dir) "")
+      (write-text-file (merge-pathnames "releases.txt" meta-dir) "")
+      ;; Pre-create a local quicklisp so install-qlfile takes the
+      ;; already-installed branch instead of trying to install one.
+      (write-text-file (merge-pathnames #P"setup.lisp" qlhome) "")
+      (unwind-protect
+           (progn
+             (setf (symbol-function 'qlot/install::install-dependencies)
+                   (lambda (&rest args)
+                     (declare (ignore args))
+                     (setf install-deps-called t)
+                     (values)))
+             (let ((*cache-directory* cache-dir)
+                   (*offline* t))
+               (let ((err (nth-value 1
+                            (ignore-errors
+                              (install-qlfile qlfile :quicklisp-home qlhome)))))
+                 (ok (null err)
+                     "offline install against warm cache completes without error")
+                 (ok install-deps-called
+                     "install-dependencies runs in offline mode (software/ gets populated)"))))
+        (setf (symbol-function 'qlot/install::install-dependencies)
+              original-install-deps)))))
+
 ;;; With *offline* true and no qlfile.lock present, apply-qlfile-to-qlhome
 ;;; must fail fast with an actionable error that names the missing lock
 ;;; before attempting any network access.  The report must contain "lock" —

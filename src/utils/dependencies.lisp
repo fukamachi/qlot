@@ -9,6 +9,8 @@
                 #:*terminal*)
   (:import-from #:qlot/color
                 #:*enable-color*)
+  (:import-from #:qlot/modes
+                #:*offline*)
   (:export #:project-dependencies-in-child-process))
 (in-package #:qlot/utils/dependencies)
 
@@ -18,6 +20,8 @@
     (run-lisp `((load ,(merge-pathnames #P"setup.lisp" quicklisp-home))
                 (setf *enable-color* ,*enable-color*)
                 (setf *terminal* ,*terminal*)
+                ;; Propagate offline mode so the child resolves without network.
+                (setf qlot/modes:*offline* ,*offline*)
                 (with-open-file (cl-user::out ,tmp
                                               :direction :output
                                               :if-exists :supersede)
@@ -36,6 +40,6 @@
                     :test 'equal
                     :from-end t)
                    cl-user::out)))
-              :systems '("qlot/utils/project" "qlot/color")
+              :systems '("qlot/utils/project" "qlot/color" "qlot/modes")
               :source-registry *qlot-source-directory*)
     (uiop:read-file-form tmp)))

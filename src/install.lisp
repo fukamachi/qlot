@@ -306,9 +306,10 @@ Should be called after Quicklisp is loaded."
         (apply-qlfile-to-qlhome qlfile quicklisp-home
                                 :concurrency concurrency)
 
-        ;; Install project dependencies
-        (when (and install-deps
-                   (not *offline*))
+        ;; Runs in offline mode too: this is the only layer that extracts
+        ;; release tarballs into dists/*/software/, restoring them from the
+        ;; release cache (offline-cache-miss if absent).
+        (when install-deps
           (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
