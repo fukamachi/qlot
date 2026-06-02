@@ -21,3 +21,33 @@
              '("abc")))
   (ok (equal (split-with #\Space "a b c " :limit 2)
              '("a" "b c "))))
+
+(deftest scrub-url-credentials-tests
+  ;; Credentialed forms — userinfo must be stripped
+  (ok (equal (qlot/utils::scrub-url-credentials "https://x-access-token:TOKEN@github.com/foo/bar")
+             "https://github.com/foo/bar")
+      "token:password form stripped")
+  (ok (equal (qlot/utils::scrub-url-credentials "https://ghp_secret@github.com/foo/bar")
+             "https://github.com/foo/bar")
+      "bare-token userinfo (no colon) stripped")
+  (ok (equal (qlot/utils::scrub-url-credentials "https://user:pass@gitlab.com/a/b.git")
+             "https://gitlab.com/a/b.git")
+      "user:pass form stripped")
+  ;; Non-credentialed inputs — must pass through unchanged
+  (ok (equal (qlot/utils::scrub-url-credentials "https://github.com/foo/bar")
+             "https://github.com/foo/bar")
+      "URL without credentials unchanged")
+  (ok (equal (qlot/utils::scrub-url-credentials "git@github.com:foo/bar")
+             "git@github.com:foo/bar")
+      "SCP form (no ://) unchanged")
+  (ok (null (qlot/utils::scrub-url-credentials nil))
+      "nil passes through as NIL")
+  ;; @ outside authority must not be stripped
+  (ok (equal (qlot/utils::scrub-url-credentials "https://github.com/foo/bar?e=a@b.com")
+             "https://github.com/foo/bar?e=a@b.com")
+      "@ in query string not stripped")
+  ;; A literal @ inside the userinfo (e.g. a token containing @) must be
+  ;; fully stripped to the last @ in the authority, leaving no residue
+  (ok (equal (qlot/utils::scrub-url-credentials "https://user:p@ss@github.com/foo/bar")
+             "https://github.com/foo/bar")
+      "@ within userinfo stripped to the last authority @"))
