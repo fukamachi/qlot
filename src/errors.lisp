@@ -21,6 +21,8 @@
            #:offline-cache-miss-requested-version
            #:offline-network-access
            #:offline-network-access-target
+           #:locked-operation-rejected
+           #:locked-operation-rejected-operation
            #:github-ratelimit-error
            #:ros-command-error
            #:command-not-found
@@ -163,6 +165,17 @@
              (with-slots (target) condition
                (format stream "Offline mode blocked network access~@[: ~A~]."
                        target)))))
+
+(define-condition locked-operation-rejected (qlot-error)
+  ((operation :initarg :operation
+              :initform nil
+              :reader locked-operation-rejected-operation))
+  (:report (lambda (condition stream)
+             (with-slots (operation) condition
+               (if operation
+                   (format stream "~A is incompatible with --locked; use qlot install to install pinned versions."
+                           operation)
+                   (format stream "This operation is incompatible with --locked; use qlot install to install pinned versions."))))))
 
 (define-condition github-ratelimit-error (qlot-error)
   ((repos :type string

@@ -8,11 +8,11 @@
                 #:prepare-source
                 #:source-dist
                 #:source-dist-name
-                #:source-identifier
                 #:source-local
                 #:source-asdf
                 #:source-asdf-remote-url
                 #:source-project-name
+                #:source-name-for-report
                 #:source-version
                 #:source-install-url
                 #:defrost-source)
@@ -85,7 +85,8 @@
                 #:qlfile-lock-not-found
                 #:offline-cache-conflict
                 #:offline-cache-miss
-                #:offline-network-access)
+                #:offline-network-access
+                #:locked-operation-rejected)
   (:import-from #:bordeaux-threads)
   #+sbcl
   (:import-from #:sb-posix)
@@ -310,6 +311,8 @@ Should be called after Quicklisp is loaded."
                                   concurrency)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
+  (when *locked*
+    (error 'locked-operation-rejected :operation "qlot update"))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
@@ -475,33 +478,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (ignore-errors
     (uiop:delete-directory-tree dist-path :validate t)))
 
-(defun source-name-for-offline-lock-error (source)
-  (let ((identifier (source-identifier source)))
-    (or (source-project-name source)
-        (source-dist-name source)
-        (cond
-          ((and (stringp identifier)
-                (or (uiop:string-prefix-p "https://" identifier)
-                    (uiop:string-prefix-p "http://" identifier)))
-           (let* ((without-query (subseq identifier 0 (or (position #\? identifier)
-                                                           (length identifier))))
-                  (trimmed (string-right-trim "/" without-query))
-                  (slash (position #\/ trimmed :from-end t))
-                  (name (if slash
-                            (subseq trimmed (1+ slash))
-                            trimmed))
-                  (dot (position #\. name :from-end t)))
-             (if dot
-                 (subseq name 0 dot)
-                 name)))
-          (t
-           identifier)))))
-
 (defun defrost-offline-lock-source (source qlfile-lock)
   (unless (source-project-name source)
     (error 'qlot-simple-error
-           :format-control "Offline install cannot use the lock entry for ~S because ~A is missing a project name. Regenerate qlfile.lock online before installing with --offline."
-           :format-arguments (list (source-name-for-offline-lock-error source)
+           :format-control "Offline install cannot use the lock entry for ~S: the entry in ~A has no project name. Regenerate qlfile.lock online before installing with --offline."
+           :format-arguments (list (source-name-for-report source)
                                    qlfile-lock)))
   (defrost-source source))
 
@@ -512,6 +493,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (when (and *offline* ignore-lock)
     (error 'offline-network-access
            :target "updating qlfile sources without qlfile.lock"))
+  (when (and *locked* ignore-lock)
+    (error 'locked-operation-rejected :operation "qlot update"))
   (let* ((qlfile-lock (make-pathname :defaults qlfile
                                      :name (file-namestring qlfile)
                                      :type "lock"))

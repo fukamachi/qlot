@@ -367,6 +367,10 @@ OPTIONS:
 SYNOPSIS:
     qlot update [name...] [--no-deps] [--cache DIRECTORY] [--no-cache]
 
+ENVIRONMENT:
+    QLOT_OFFLINE=1 blocks update because update re-resolves sources.
+    QLOT_LOCKED=1 blocks update because locked mode installs pinned sources.
+
 OPTIONS:
     --no-deps
         Don't install dependencies of all systems from the current directory.
@@ -395,6 +399,9 @@ OPTIONS:
     (when (or (uiop:getenv "QLOT_NO_CACHE")
               (uiop:getenv "QLOT_CACHE_DIRECTORY"))
       (uiop:symbol-call '#:qlot/cache '#:initialize-cache))
+    ;; Honor QLOT_OFFLINE / QLOT_LOCKED on the update path (re-resolves -> must
+    ;; fail fast offline via the *offline*+ignore-lock guard in install).
+    (initialize-modes)
     (uiop:symbol-call '#:qlot/install '#:update-project
                       *default-pathname-defaults*
                       :projects projects
@@ -601,6 +608,9 @@ OPTIONS:
             (declare (ignorable out))))
         (uiop:copy-file qlfile qlfile.bak)
         (uiop:symbol-call '#:qlot/add '#:add-project argv qlfile)
+        ;; Honor QLOT_OFFLINE / QLOT_LOCKED on the add path (re-resolves a new
+        ;; source -> must fail fast offline rather than hit the network).
+        (initialize-modes)
         (unless no-install
           (handler-bind ((error
                            (lambda (e)
@@ -659,6 +669,9 @@ OPTIONS:
                 (message "Nothing to remove in '~A'." qlfile)
                 (return-from qlot-command-remove))
 
+              ;; Honor QLOT_OFFLINE / QLOT_LOCKED on the remove path (reinstalls
+              ;; the remaining deps from the lock -> offline is cache-only).
+              (initialize-modes)
               (unless no-install
                 (handler-bind ((error
                                  (lambda (e)
