@@ -356,3 +356,47 @@ version: env-modes-test-v1
             (let ((err (nth-value 1 (ignore-errors (run-command '#:qlot-command-update '())))))
               (ok (typep err 'network-trap-fired)
                   "with QLOT_LOCKED unset, qlot update takes the online path (a real network call is attempted)"))))))))
+
+;;; --- Gate 6: QLOT_LOCKED blocks qlot add / qlot remove before mutating qlfile ---
+;;;
+;;; Locked mode forbids changing the dependency set.  add/remove must fail fast
+;;; with locked-operation-rejected BEFORE the qlfile is touched, so the file is
+;;; left byte-identical and the user gets an actionable error rather than the
+;;; confusing missing-projects / unnecessary-projects that the lock-currency
+;;; check would otherwise surface for the library just added or removed.
+
+(deftest env-locked-add-fails-fast
+  (with-tmp-directory (tmp)
+    (let* ((qlfile (merge-pathnames #P"qlfile" tmp)))
+      (write-text-file qlfile "ql alexandria")
+      (let ((before (uiop:read-file-string qlfile)))
+        (with-env (("QLOT_LOCKED" . "1") ("QLOT_OFFLINE" . nil) ("QLOT_NO_CACHE" . nil))
+          (let ((*default-pathname-defaults* (uiop:ensure-directory-pathname tmp))
+                (*locked* nil)
+                (*offline* nil))
+            (with-network-traps
+              (let ((err (nth-value 1 (ignore-errors (run-command '#:qlot-command-add '("ql" "mito"))))))
+                (ok (and err (typep err 'locked-operation-rejected))
+                    "QLOT_LOCKED + qlot add signals locked-operation-rejected (env honored on add path)")
+                (ok (not (typep err 'network-trap-fired))
+                    "no real network/git call was attempted -- the locked guard fired first")
+                (ok (equal before (uiop:read-file-string qlfile))
+                    "qlfile is left byte-identical after a rejected locked add")))))))))
+
+(deftest env-locked-remove-fails-fast
+  (with-tmp-directory (tmp)
+    (let* ((qlfile (merge-pathnames #P"qlfile" tmp)))
+      (write-text-file qlfile "ql alexandria")
+      (let ((before (uiop:read-file-string qlfile)))
+        (with-env (("QLOT_LOCKED" . "1") ("QLOT_OFFLINE" . nil) ("QLOT_NO_CACHE" . nil))
+          (let ((*default-pathname-defaults* (uiop:ensure-directory-pathname tmp))
+                (*locked* nil)
+                (*offline* nil))
+            (with-network-traps
+              (let ((err (nth-value 1 (ignore-errors (run-command '#:qlot-command-remove '("alexandria"))))))
+                (ok (and err (typep err 'locked-operation-rejected))
+                    "QLOT_LOCKED + qlot remove signals locked-operation-rejected (env honored on remove path)")
+                (ok (not (typep err 'network-trap-fired))
+                    "no real network/git call was attempted -- the locked guard fired first")
+                (ok (equal before (uiop:read-file-string qlfile))
+                    "qlfile is left byte-identical after a rejected locked remove")))))))))

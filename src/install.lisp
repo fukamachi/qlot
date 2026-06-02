@@ -146,7 +146,7 @@ This makes Quicklisp recognize the release as installed."
 (defun release-cache-install-around (release next-method-fn)
   "Handle caching logic for release installation via :around method."
   (with-package-functions #:ql-dist (archive-url dist canonical-distinfo-url name
-                                     archive-md5 prefix relative-to)
+                                     archive-md5 prefix relative-to version)
     (let ((archive-url (archive-url release)))
       ;; Skip caching for qlot:// sources (already handled by dist-level cache)
       (when (uiop:string-prefix-p "qlot://" archive-url)
@@ -172,7 +172,15 @@ This makes Quicklisp recognize the release as installed."
                ;; Cache restoration failed, fall back to normal install
                (funcall next-method-fn))))
           (t
-           ;; Cache miss - install normally then try to cache
+           ;; Cache miss - in offline mode the archive cannot be fetched, so
+           ;; fail fast with an actionable cache-miss naming the release rather
+           ;; than letting the download trip the generic offline-network-access
+           ;; guard in qlot/http.
+           (when *offline*
+             (error 'offline-cache-miss
+                    :project-name release-name
+                    :requested-version (version dist)))
+           ;; install normally then try to cache
            (funcall next-method-fn)
            (handler-case
                (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
@@ -599,6 +607,24 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                             (report :hit (if dist :update :new))
                             (return-from install-source-block))
                           (cond
+                            ((and (not ignore-lock)
+                                  dist
+                                  (slot-boundp source 'qlot/source/base::version)
+                                  (equal (version dist)
+                                         (source-version source)))
+                             (progress :done "Already have dist ~S version ~S."
+                                       (source-project-name source)
+                                       (source-version source)))
+                            ;; Offline: the cache-restore block above did not fire,
+                            ;; so the pinned artifact is absent from the cache.  Fail
+                            ;; fast with a specific cache-miss instead of letting
+                            ;; install-source reach the network and trip the generic
+                            ;; offline-network-access guard.
+                            (*offline*
+                             (error 'offline-cache-miss
+                                    :project-name (source-project-name source)
+                                    :requested-version (and (slot-boundp source 'qlot/source/base::version)
+                                                            (source-version source))))
                             ((not dist)
                              (progress :in-progress "Installing ~S."
                                        (source-dist-name source))
@@ -606,19 +632,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                (bt2:with-lock-held (install-lock)
                                  (install-source source)))
                              (report (cache-status) :new))
-                            ((and (not ignore-lock)
-                                  (slot-boundp source 'qlot/source/base::version)
-                                  (equal (version dist)
-                                         (source-version source)))
-                             (progress :done "Already have dist ~S version ~S."
-                                       (source-project-name source)
-                                       (source-project-name source)
-                                       (source-version source)))
-                            (*offline*
-                             (error 'offline-cache-miss
-                                    :project-name (source-project-name source)
-                                    :requested-version (and (slot-boundp source 'qlot/source/base::version)
-                                                            (source-version source))))
                             ((typep source 'source-dist)
                              (with-package-functions #:ql-dist (uninstall version)
                                (let* ((current-dist (find-dist (source-dist-name source)))

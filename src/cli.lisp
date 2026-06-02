@@ -14,8 +14,10 @@
                 #:qlfile-not-found
                 #:qlfile-lock-not-found
                 #:qlot-directory-not-found
-                #:qlot-directory-invalid)
+                #:qlot-directory-invalid
+                #:locked-operation-rejected)
   (:import-from #:qlot/modes
+                #:*locked*
                 #:initialize-modes)
   (:import-from #:qlot/color
                 #:*enable-color*
@@ -599,6 +601,13 @@ OPTIONS:
                     argv))
 
       (ensure-package-loaded '(:qlot/add :qlot/install))
+      ;; Honor QLOT_OFFLINE / QLOT_LOCKED before touching qlfile.  Locked mode
+      ;; forbids changing the dependency set, so reject add before any mutation
+      ;; rather than letting the lock-currency check surface a confusing
+      ;; missing-projects error for the library just added.
+      (initialize-modes)
+      (when *locked*
+        (error 'locked-operation-rejected :operation "qlot add"))
       (let ((qlfile *default-qlfile*)
             (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
                                          (uiop:temporary-directory))))
@@ -608,9 +617,6 @@ OPTIONS:
             (declare (ignorable out))))
         (uiop:copy-file qlfile qlfile.bak)
         (uiop:symbol-call '#:qlot/add '#:add-project argv qlfile)
-        ;; Honor QLOT_OFFLINE / QLOT_LOCKED on the add path (re-resolves a new
-        ;; source -> must fail fast offline rather than hit the network).
-        (initialize-modes)
         (unless no-install
           (handler-bind ((error
                            (lambda (e)
@@ -658,6 +664,14 @@ OPTIONS:
         (uiop:quit -1))
 
       (ensure-package-loaded '(:qlot/add :qlot/install))
+      ;; Honor QLOT_OFFLINE / QLOT_LOCKED before touching qlfile.  Locked mode
+      ;; forbids changing the dependency set, so reject remove before any
+      ;; mutation rather than surfacing a confusing unnecessary-projects error
+      ;; for the library just removed.  Offline mode then reinstalls the
+      ;; remaining deps from the lock (cache-only).
+      (initialize-modes)
+      (when *locked*
+        (error 'locked-operation-rejected :operation "qlot remove"))
       (let ((qlfile *default-qlfile*))
         (when (uiop:file-exists-p qlfile)
           (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
@@ -669,9 +683,6 @@ OPTIONS:
                 (message "Nothing to remove in '~A'." qlfile)
                 (return-from qlot-command-remove))
 
-              ;; Honor QLOT_OFFLINE / QLOT_LOCKED on the remove path (reinstalls
-              ;; the remaining deps from the lock -> offline is cache-only).
-              (initialize-modes)
               (unless no-install
                 (handler-bind ((error
                                  (lambda (e)
