@@ -66,6 +66,18 @@
              (split-path "single")))
   (ok (null (split-path ""))))
 
+(deftest test-split-path-drops-dot-segments
+  (testing "Drops .. segments"
+    (ok (equal '("a" "b")
+               (split-path "a/../b"))
+        ".. between real segments must be dropped")
+    (ng (member ".." (split-path "../../etc/passwd") :test #'string=)
+        "no .. segment may survive a traversal-attack path"))
+  (testing "Drops . segments"
+    (ok (equal '("a" "b")
+               (split-path "a/./b"))
+        ". between real segments must be dropped")))
+
 (deftest test-url-has-credentials-p
   (testing "URLs with credentials"
     (ok (url-has-credentials-p "https://user:token@github.com/foo/bar"))

@@ -255,7 +255,8 @@ release hook handles caching. Only metadata needs source-level caching."
 
 (defun split-path (path)
   (when (and path (string/= "" path))
-    (remove-if (lambda (segment) (string= segment ""))
+    (remove-if (lambda (segment)
+                 (member segment '("" "." "..") :test #'string=))
                (uiop:split-string path :separator "/"))))
 
 (defun staging-path (pathname)
