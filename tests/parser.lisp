@@ -14,6 +14,7 @@
                 #:defrost-source
                 #:source-git
                 #:source-git-remote-url
+                #:source-git-ref
                 #:source-ql
                 #:source-ql-upstream
                 #:source-dist
@@ -323,6 +324,34 @@
       (ok (equal (source-distribution source) "http://dist.shirakumo.org/shirakumo.txt"))
       ;; Note: distinfo URL is converted to HTTPS by parent's defrost-source :after method
       (ok (equal (source-distinfo-url source) "https://dist.shirakumo.org/shirakumo/2024-01-01/distinfo.txt")))))
+
+(deftest git-freeze-defrost-tests
+  (testing "make-source binds version eagerly for a :ref source"
+    (let ((source (make-source :git "mylib" "https://github.com/user/mylib.git"
+                               :ref "abc123def456")))
+      (ok (equal (source-version source) "git-abc123def456"))
+      (ok (equal (source-git-ref source) "abc123def456"))))
+
+  (testing "freeze/defrost round-trip keeps version and ref consistent"
+    ;; Reproduce how parse-qlfile-lock reconstructs a source: make-instance
+    ;; with the frozen :initargs (which carry :ref), then apply the frozen
+    ;; :version via defrost-source. The eager initialize-instance :after must
+    ;; agree with the defrosted value rather than fight it.
+    (let* ((source (make-source :git "mylib" "https://github.com/user/mylib.git"
+                                :ref "abc123def456"))
+           (frozen (freeze-source source))
+           (args (cdr frozen))
+           (restored (apply #'make-instance (getf args :class)
+                            :project-name (car frozen)
+                            (getf args :initargs))))
+      (setf (source-defrost-args restored)
+            (loop for (k v) on args by #'cddr
+                  unless (member k '(:class :initargs))
+                  append (list k v)))
+      (defrost-source restored)
+      (ok (equal (source-version restored) "git-abc123def456"))
+      (ok (equal (source-git-ref restored) "abc123def456"))
+      (ok (source= source restored)))))
 
 (deftest ql-dist-invalid-input-tests
   (testing "make-source errors on non-string dist-name"

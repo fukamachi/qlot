@@ -107,6 +107,14 @@
     (ok (equal '("git" "github.com" "user" "mylib" "abc123def456")
                (cache-key source)))))
 
+(deftest test-ref-git-source-has-version
+  ;; cache hit skips distify, so version must already be bound -- see prepare-source.
+  (let ((source (make-source :git "mylib" "https://github.com/user/mylib.git"
+                             :ref "abc123def456")))
+    (ok (equal "git-abc123def456" (source-version source)))
+    (ok (equal '("git" "github.com" "user" "mylib" "abc123def456")
+               (cache-key source)))))
+
 (deftest test-cache-key-source-github
   (let ((source (make-source :github "user/repo" :ref "abc123")))
     (setf (source-github-ref source) "abc123def456")
