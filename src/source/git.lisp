@@ -48,6 +48,22 @@
            :remote-url remote-url
            args)))
 
+(defmethod prepare-source ((source source-git))
+  ;; A ref fully determines the version (git-<ref>) with no network access,
+  ;; so bind it eagerly. distify-git is the only other place that sets the
+  ;; version, and it is skipped on a cache hit -- leaving the slot unbound
+  ;; and crashing install when something later reads it.
+  (when (and (source-git-ref source)
+             (not (slot-boundp source 'qlot/source/base::version)))
+    (setf (source-version source)
+          (concatenate 'string
+                       (source-version-prefix source)
+                       (source-git-ref source)))))
+
+(defmethod initialize-instance :after ((source source-git) &rest initargs)
+  (declare (ignore initargs))
+  (prepare-source source))
+
 (defmethod defrost-source :after ((source source-git))
   (when (slot-boundp source 'qlot/source/base::version)
     (setf (source-git-ref source)
