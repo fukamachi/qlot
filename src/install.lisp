@@ -12,10 +12,13 @@
                 #:source-asdf
                 #:source-asdf-remote-url
                 #:source-project-name
+                #:source-name-for-report
                 #:source-version
-                #:source-install-url)
+                #:source-install-url
+                #:defrost-source)
   (:import-from #:qlot/parser
-                #:read-qlfile-for-install)
+                #:read-qlfile-for-install
+                #:parse-qlfile-lock)
   (:import-from #:qlot/server
                 #:with-qlot-server)
   (:import-from #:qlot/distify
@@ -66,6 +69,11 @@
                 #:release-cache-exists-p
                 #:restore-release-from-cache
                 #:save-release-to-cache)
+  (:import-from #:qlot/modes
+                #:*offline*
+                #:*locked*)
+  (:import-from #:qlot/check
+                #:check-qlfile-lock-current)
   (:import-from #:qlot/color
                 #:color-text
                 #:*enable-color*)
@@ -73,7 +81,12 @@
                 #:qlot-simple-error
                 #:missing-projects
                 #:duplicate-project
-                #:qlfile-not-found)
+                #:qlfile-not-found
+                #:qlfile-lock-not-found
+                #:offline-cache-conflict
+                #:offline-cache-miss
+                #:offline-network-access
+                #:locked-operation-rejected)
   (:import-from #:bordeaux-threads)
   #+sbcl
   (:import-from #:sb-posix)
@@ -133,7 +146,7 @@ This makes Quicklisp recognize the release as installed."
 (defun release-cache-install-around (release next-method-fn)
   "Handle caching logic for release installation via :around method."
   (with-package-functions #:ql-dist (archive-url dist canonical-distinfo-url name
-                                     archive-md5 prefix relative-to)
+                                     archive-md5 prefix relative-to version)
     (let ((archive-url (archive-url release)))
       ;; Skip caching for qlot:// sources (already handled by dist-level cache)
       (when (uiop:string-prefix-p "qlot://" archive-url)
@@ -159,7 +172,15 @@ This makes Quicklisp recognize the release as installed."
                ;; Cache restoration failed, fall back to normal install
                (funcall next-method-fn))))
           (t
-           ;; Cache miss - install normally then try to cache
+           ;; Cache miss - in offline mode the archive cannot be fetched, so
+           ;; fail fast with an actionable cache-miss naming the release rather
+           ;; than letting the download trip the generic offline-network-access
+           ;; guard in qlot/http.
+           (when *offline*
+             (error 'offline-cache-miss
+                    :project-name release-name
+                    :requested-version (version dist)))
+           ;; install normally then try to cache
            (funcall next-method-fn)
            (handler-case
                (save-release-to-cache dist-url release-name archive-md5 software-dir prefix)
@@ -259,6 +280,8 @@ Should be called after Quicklisp is loaded."
         (with-open-file (out qlfile
                              :if-does-not-exist :create
                              :direction :output)))))
+  (when *locked*
+    (check-qlfile-lock-current qlfile))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
@@ -283,7 +306,9 @@ Should be called after Quicklisp is loaded."
         (apply-qlfile-to-qlhome qlfile quicklisp-home
                                 :concurrency concurrency)
 
-        ;; Install project dependencies
+        ;; Runs in offline mode too: this is the only layer that extracts
+        ;; release tarballs into dists/*/software/, restoring them from the
+        ;; release cache (offline-cache-miss if absent).
         (when install-deps
           (install-dependencies project-root quicklisp-home))))
 
@@ -295,6 +320,8 @@ Should be called after Quicklisp is loaded."
                                   concurrency)
   (unless (uiop:file-exists-p qlfile)
     (error 'qlfile-not-found :path qlfile))
+  (when *locked*
+    (error 'locked-operation-rejected :operation "qlot update"))
 
   (let* ((project-root (uiop:pathname-directory-pathname qlfile))
          (quicklisp-home (if quicklisp-home
@@ -317,7 +344,8 @@ Should be called after Quicklisp is loaded."
                                 :concurrency concurrency)
 
         ;; Install project dependencies
-        (when install-deps
+        (when (and install-deps
+                   (not *offline*))
           (install-dependencies project-root quicklisp-home))))
 
     (message "Successfully installed.")))
@@ -459,16 +487,43 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
   (ignore-errors
     (uiop:delete-directory-tree dist-path :validate t)))
 
+(defun defrost-offline-lock-source (source qlfile-lock)
+  (unless (source-project-name source)
+    (error 'qlot-simple-error
+           :format-control "Offline install cannot use the lock entry for ~S: the entry in ~A has no project name. Regenerate qlfile.lock online before installing with --offline."
+           :format-arguments (list (source-name-for-report source)
+                                   qlfile-lock)))
+  (defrost-source source))
+
 (defun apply-qlfile-to-qlhome (qlfile qlhome &key ignore-lock projects concurrency)
   (check-type concurrency (or null (integer 0)))
+  (when (and *offline* (not *cache-enabled*))
+    (error 'offline-cache-conflict))
+  (when (and *offline* ignore-lock)
+    (error 'offline-network-access
+           :target "updating qlfile sources without qlfile.lock"))
+  (when (and *locked* ignore-lock)
+    (error 'locked-operation-rejected :operation "qlot update"))
   (let* ((qlfile-lock (make-pathname :defaults qlfile
                                      :name (file-namestring qlfile)
                                      :type "lock"))
          (sources-from-lock (and (not ignore-lock)
                                  (uiop:file-exists-p qlfile-lock)))
-         (sources (read-qlfile-for-install qlfile
-                                           :ignore-lock ignore-lock
-                                           :projects projects)))
+         (sources (cond
+                    ((and *offline*
+                          (not ignore-lock)
+                          (not sources-from-lock))
+                     (error 'qlfile-lock-not-found :path qlfile-lock))
+                    ((and *offline* sources-from-lock)
+                     (mapcar (lambda (source)
+                               (defrost-offline-lock-source source qlfile-lock))
+                             (parse-qlfile-lock qlfile-lock
+                                                :test (lambda (name)
+                                                        (not (find name projects :test 'equal))))))
+                    (t
+                     (read-qlfile-for-install qlfile
+                                              :ignore-lock ignore-lock
+                                              :projects projects)))))
     (when projects
       (let ((missing (set-difference projects (mapcar #'source-project-name sources)
                                      :test #'string=)))
@@ -501,10 +556,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                             (slot-boundp source 'qlot/source/base::version)
                                             (equal (version dist)
                                                    (source-version source))
-                                            (let ((valid (validate-dist-installation dist-path)))
-                                              (unless valid
-                                                (invalidate-broken-dist dist-path))
-                                              valid))))
+                                            (or *offline*
+                                                (let ((valid (validate-dist-installation dist-path)))
+                                                  (unless valid
+                                                    (invalidate-broken-dist dist-path))
+                                                  valid)))))
                                    sources-non-local))))
                   (bt2:*default-special-bindings* (append `((*enable-color* . ,*enable-color*)
                                                             (*terminal* . ,*terminal*)
@@ -512,6 +568,8 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                                             (*enable-whisper* . nil)
                                                             (qlot/cache:*cache-directory* . ,qlot/cache:*cache-directory*)
                                                             (qlot/cache:*cache-enabled* . ,qlot/cache:*cache-enabled*)
+                                                            (qlot/modes:*offline* . ,qlot/modes:*offline*)
+                                                            (qlot/modes:*locked* . ,qlot/modes:*locked*)
                                                             (,(uiop:intern* '#:*fetch-scheme-functions* '#:ql-http) . ',(symbol-value (uiop:intern* '#:*fetch-scheme-functions* '#:ql-http))))
                                                           bt2:*default-special-bindings*))
                   (lock (bt2:make-lock))
@@ -550,6 +608,24 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                             (report :hit (if dist :update :new))
                             (return-from install-source-block))
                           (cond
+                            ((and (not ignore-lock)
+                                  dist
+                                  (slot-boundp source 'qlot/source/base::version)
+                                  (equal (version dist)
+                                         (source-version source)))
+                             (progress :done "Already have dist ~S version ~S."
+                                       (source-project-name source)
+                                       (source-version source)))
+                            ;; Offline: the cache-restore block above did not fire,
+                            ;; so the pinned artifact is absent from the cache.  Fail
+                            ;; fast with a specific cache-miss instead of letting
+                            ;; install-source reach the network and trip the generic
+                            ;; offline-network-access guard.
+                            (*offline*
+                             (error 'offline-cache-miss
+                                    :project-name (source-project-name source)
+                                    :requested-version (and (slot-boundp source 'qlot/source/base::version)
+                                                            (source-version source))))
                             ((not dist)
                              (progress :in-progress "Installing ~S."
                                        (source-dist-name source))
@@ -557,14 +633,6 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                                (bt2:with-lock-held (install-lock)
                                  (install-source source)))
                              (report (cache-status) :new))
-                            ((and (not ignore-lock)
-                                  (slot-boundp source 'qlot/source/base::version)
-                                  (equal (version dist)
-                                         (source-version source)))
-                             (progress :done "Already have dist ~S version ~S."
-                                       (source-project-name source)
-                                       (source-project-name source)
-                                       (source-version source)))
                             ((typep source 'source-dist)
                              (with-package-functions #:ql-dist (uninstall version)
                                (let* ((current-dist (find-dist (source-dist-name source)))
@@ -632,13 +700,23 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
            ((uiop:directory-exists-p asdf-dir)
             ;; Tag switch
             (git-switch-tag asdf-dir (source-version asdf-source)))
+           ((and *cache-enabled*
+                 (cache-exists-p asdf-source)
+                 (restore-from-cache asdf-source asdf-dir))
+            (git-switch-tag asdf-dir (source-version asdf-source)))
+           (*offline*
+            (error 'offline-cache-miss
+                   :project-name (source-project-name asdf-source)
+                   :requested-version (source-version asdf-source)))
            (t
             (message "Downloading ASDF to '~A'." asdf-dir)
             ;; Clone
             (git-clone (source-asdf-remote-url asdf-source)
                        asdf-dir
                        :checkout-to (source-version asdf-source)
-                       :recursive nil))))
+                       :recursive nil)
+            (when *cache-enabled*
+              (save-to-cache asdf-source asdf-dir)))))
         (t
          (when (uiop:directory-exists-p asdf-dir)
            (message "Removing ASDF at '~A'." asdf-dir)
@@ -649,10 +727,11 @@ exec /bin/sh \"$CURRENT/../~A\" \"$@\"
                          :if-does-not-exist :create
                          :if-exists :supersede)
       (dump-source-registry-conf out sources))
-    (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
-                                     :type "lock"
-                                     :defaults qlfile)
-                      sources)
+    (unless *locked*
+      (dump-qlfile-lock (make-pathname :name (file-namestring qlfile)
+                                       :type "lock"
+                                       :defaults qlfile)
+                        sources))
 
     (values)))
 

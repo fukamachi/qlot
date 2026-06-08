@@ -14,7 +14,11 @@
                 #:qlfile-not-found
                 #:qlfile-lock-not-found
                 #:qlot-directory-not-found
-                #:qlot-directory-invalid)
+                #:qlot-directory-invalid
+                #:locked-operation-rejected)
+  (:import-from #:qlot/modes
+                #:*locked*
+                #:initialize-modes)
   (:import-from #:qlot/color
                 #:*enable-color*
                 #:color-text)
@@ -248,9 +252,18 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
       (qlot/errors:ros-command-error "'~A' is an unknown option" option)
       (qlot/errors:ros-command-error "'~A' is an extra argument" option)))
 
+(defun apply-install-mode-flags (offline-p locked-p)
+  (when offline-p
+    (setf (uiop:getenv "QLOT_OFFLINE") "1"))
+  (when locked-p
+    (setf (uiop:getenv "QLOT_LOCKED") "1"))
+  (values))
+
 (defun qlot-command-install (argv)
   (let ((install-deps t)
         (cache nil)
+        (offline nil)
+        (locked nil)
         concurrency)
     (do-options (option argv)
       ("--no-deps"
@@ -267,12 +280,19 @@ Run 'qlot COMMAND --help' for more information on a subcommand.
        (qlot-option-debug))
       ("--no-cache"
        (setf (uiop:getenv "QLOT_NO_CACHE") "1"))
+      ("--offline"
+       (setf offline t))
+      ("--locked"
+       (setf locked t))
+      ("--frozen"
+       (setf offline t
+             locked t))
       ("--help"
        (format *error-output*
                "~&qlot install - Install libraries to './.qlot'.
 
 SYNOPSIS:
-    qlot install [--no-deps] [--cache DIRECTORY] [--no-cache]
+    qlot install [--no-deps] [--cache DIRECTORY] [--no-cache] [--offline] [--locked] [--frozen]
 
 OPTIONS:
     --no-deps
@@ -281,6 +301,12 @@ OPTIONS:
         Keep intermediate files for fast reinstallation.
     --no-cache
         Disable shared cache usage for this invocation.
+    --offline
+        Use cached artifacts only and do not access the network.
+    --locked
+        Require qlfile.lock to already match qlfile.
+    --frozen
+        Enable both --offline and --locked.
     --jobs [concurrency]
         The number of threads to install simultaneously. (Default: 4)
     --debug
@@ -292,6 +318,8 @@ OPTIONS:
        (unless (starts-with "--" option)
          (message (color-text :yellow "Did you mean:~%    qlot add ~A" option)))
        (uiop:quit -1)))
+    (apply-install-mode-flags offline locked)
+    (initialize-modes)
     (ensure-package-loaded :qlot/install)
     (when cache
       (setf (uiop:getenv "QLOT_CACHE_DIRECTORY")
@@ -341,6 +369,10 @@ OPTIONS:
 SYNOPSIS:
     qlot update [name...] [--no-deps] [--cache DIRECTORY] [--no-cache]
 
+ENVIRONMENT:
+    QLOT_OFFLINE=1 blocks update because update re-resolves sources.
+    QLOT_LOCKED=1 blocks update because locked mode installs pinned sources.
+
 OPTIONS:
     --no-deps
         Don't install dependencies of all systems from the current directory.
@@ -369,6 +401,9 @@ OPTIONS:
     (when (or (uiop:getenv "QLOT_NO_CACHE")
               (uiop:getenv "QLOT_CACHE_DIRECTORY"))
       (uiop:symbol-call '#:qlot/cache '#:initialize-cache))
+    ;; Honor QLOT_OFFLINE / QLOT_LOCKED on the update path (re-resolves -> must
+    ;; fail fast offline via the *offline*+ignore-lock guard in install).
+    (initialize-modes)
     (uiop:symbol-call '#:qlot/install '#:update-project
                       *default-pathname-defaults*
                       :projects projects
@@ -566,6 +601,13 @@ OPTIONS:
                     argv))
 
       (ensure-package-loaded '(:qlot/add :qlot/install))
+      ;; Honor QLOT_OFFLINE / QLOT_LOCKED before touching qlfile.  Locked mode
+      ;; forbids changing the dependency set, so reject add before any mutation
+      ;; rather than letting the lock-currency check surface a confusing
+      ;; missing-projects error for the library just added.
+      (initialize-modes)
+      (when *locked*
+        (error 'locked-operation-rejected :operation "qlot add"))
       (let ((qlfile *default-qlfile*)
             (qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))
                                          (uiop:temporary-directory))))
@@ -622,6 +664,14 @@ OPTIONS:
         (uiop:quit -1))
 
       (ensure-package-loaded '(:qlot/add :qlot/install))
+      ;; Honor QLOT_OFFLINE / QLOT_LOCKED before touching qlfile.  Locked mode
+      ;; forbids changing the dependency set, so reject remove before any
+      ;; mutation rather than surfacing a confusing unnecessary-projects error
+      ;; for the library just removed.  Offline mode then reinstalls the
+      ;; remaining deps from the lock (cache-only).
+      (initialize-modes)
+      (when *locked*
+        (error 'locked-operation-rejected :operation "qlot remove"))
       (let ((qlfile *default-qlfile*))
         (when (uiop:file-exists-p qlfile)
           (let ((qlfile.bak (merge-pathnames (format nil "qlfile-~A.bak" (generate-random-string))

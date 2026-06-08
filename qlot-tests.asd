@@ -4,6 +4,7 @@
   :depends-on ("rove"
                "qlot"
                "qlot-tests/main"
+               "qlot-tests/http"
                "qlot-tests/parser"
                "qlot-tests/distify/ql"
                "qlot-tests/distify/git"
@@ -16,6 +17,10 @@
                "qlot-tests/server"
                "qlot-tests/install/quicklisp"
                "qlot-tests/install/cache"
+               "qlot-tests/install/offline"
+               "qlot-tests/install/offline-evicted-cache"
+               "qlot-tests/install/locked"
+               "qlot-tests/install/env-modes"
                "qlot-tests/install"
                "qlot-tests/cache"
                "qlot-tests/cache-releases"
@@ -24,7 +29,8 @@
                "qlot-tests/utils/asdf"
                "qlot-tests/shell"
                "qlot-tests/bundle"
-               "qlot-tests/cli")
+               "qlot-tests/cli"
+               "qlot-tests/modes")
   :perform (test-op (op c) (symbol-call :rove :run c)))
 
 ;; Tests that require patched quicklisp-client (with *install-release-hook*).

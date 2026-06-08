@@ -6,6 +6,8 @@
   (:import-from #:qlot/logger
                 #:*debug*
                 #:warn-message)
+  (:import-from #:qlot/modes
+                #:*offline*)
   (:export #:with-autoload-on-missing
            #:directory-system-files
            #:system-class-name
@@ -47,7 +49,10 @@
         #-asdf3.3 progn
          (handler-bind ((asdf:missing-component
                           (lambda (,e)
-                            (unless (gethash (asdf::missing-requires ,e) ,retrying)
+                            ;; Skip in offline mode: ensure-installed would fetch
+                            ;; from the network (no release cache in this child).
+                            (unless (or *offline*
+                                        (gethash (asdf::missing-requires ,e) ,retrying))
                               (setf (gethash (asdf::missing-requires ,e) ,retrying) t)
                               (when (find :quicklisp *features*)
                                 (uiop:symbol-call '#:ql-dist '#:ensure-installed

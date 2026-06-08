@@ -13,6 +13,7 @@
                 #:normalize-git-url
                 #:split-path
                 #:url-has-credentials-p
+                #:source-has-credentials-p
                 #:staging-path
                 #:validate-dist-installation)
   (:import-from #:qlot/source/base
@@ -79,10 +80,17 @@
         ". between real segments must be dropped")))
 
 (deftest test-url-has-credentials-p
-  (testing "URLs with credentials"
+  (testing "URLs with credentials (user:pass form)"
     (ok (url-has-credentials-p "https://user:token@github.com/foo/bar"))
     (ok (url-has-credentials-p "https://user:pass@gitlab.com/foo/bar.git"))
     (ok (url-has-credentials-p "https://oauth2:token@github.com/foo/bar")))
+  (testing "URLs with credentials (bare-token form, no colon in userinfo)"
+    ;; A real GitHub PAT used as bare userinfo: https://ghp_xxx@github.com/...
+    ;; url-has-credentials-p must treat any non-empty userinfo as credentials,
+    ;; not only the colon form.
+    (ok (url-has-credentials-p "https://ghp_secret@github.com/foo/bar"))
+    (ok (url-has-credentials-p "https://ghs_token@github.com/org/repo.git"))
+    (ok (url-has-credentials-p "https://x-access-token@github.com/foo/bar")))
   (testing "URLs without credentials"
     (ng (url-has-credentials-p "https://github.com/foo/bar"))
     (ng (url-has-credentials-p "git@github.com:foo/bar.git"))
@@ -860,6 +868,99 @@
           (let ((sources (cache-sources-path source)))
             (ng (and sources (uiop:directory-exists-p sources))
                 "Sources directory should NOT exist for source-ql")))))))
+
+;;; ==========================================================================
+;;; Tests for bare-token credential detection.
+;;; url-has-credentials-p must flag bare-token userinfo (no colon), not only
+;;; the user:pass form.  source-has-credentials-p must gate save-to-cache so
+;;; the token never appears as a component of an on-disk cache path.
+;;; ==========================================================================
+
+(deftest test-source-has-credentials-p
+  (testing "bare-token git URL is treated as credentialed"
+    (let ((source (make-source :git "mylib" "https://ghp_secret@github.com/foo/bar"
+                               :ref "abc123")))
+      (ok (source-has-credentials-p source)
+          "bare-token URL (no colon) must be recognized as credentialed")))
+  (testing "user:pass git URL is treated as credentialed"
+    (let ((source (make-source :git "mylib" "https://user:pass@github.com/foo/bar"
+                               :ref "abc123")))
+      (ok (source-has-credentials-p source)
+          "user:pass URL must remain credentialed")))
+  (testing "credential-free git URL is not credentialed"
+    (let ((source (make-source :git "mylib" "https://github.com/foo/bar"
+                               :ref "abc123")))
+      (ng (source-has-credentials-p source)
+          "plain HTTPS URL must not be flagged as credentialed"))))
+
+(deftest test-save-to-cache-skips-bare-token-source
+  ;; A git remote URL using a bare PAT (https://ghp_xxx@github.com/foo/bar)
+  ;; must not be written to disk: save-to-cache must skip it, leaving the cache
+  ;; empty, so the token never appears as a path component under *cache-directory*.
+  (with-tmp-directory (cache-root)
+    (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
+          (*cache-enabled* t)
+          (source (make-source :git "mylib" "https://ghp_secret@github.com/foo/bar"
+                               :ref "abc123")))
+      (setf (qlot/source/git::source-git-ref source) "abc123def456")
+      (setf (source-version source) "git-abc123def456")
+      (with-tmp-directory (dist-path)
+        ;; Provide a complete dist layout so save-to-cache has something to act on.
+        (dolist (file '("distinfo.txt" "systems.txt"))
+          (with-open-file (s (merge-pathnames file dist-path)
+                             :direction :output :if-does-not-exist :create)
+            (write-line "dummy" s)))
+        (with-open-file (s (merge-pathnames "releases.txt" dist-path)
+                           :direction :output :if-does-not-exist :create)
+          (write-line "mylib qlot://localhost/mylib/git-abc123def456/archive.tar.gz 1234 abc sha1 mylib-abc123 mylib.asd" s))
+        (ensure-directories-exist (merge-pathnames "software/mylib-abc123/" dist-path))
+        (with-open-file (s (merge-pathnames "software/mylib-abc123/mylib.asd" dist-path)
+                           :direction :output :if-does-not-exist :create)
+          (write-line ";; asd" s))
+        (save-to-cache source dist-path)
+        (ng (cache-exists-p source)
+            "bare-token source must not be seen as cached")
+        ;; Direct filesystem check: save-to-cache must not write anything to disk.
+        ;; cache-exists-p alone is insufficient — it returns NIL whenever
+        ;; source-has-credentials-p is T, regardless of what is actually on disk.
+        ;; A buggy save-to-cache that still writes files would slip through undetected.
+        (ng (uiop:subdirectories cache-root)
+            "no subdirectories must be written under cache-root for a credentialed source")
+        ;; The normalized metadata path (credentials stripped by the URL normalizer)
+        ;; is non-NIL; assert the value exists and no directory was created there.
+        (let ((meta-path (cache-metadata-path source)))
+          (ok meta-path "normalized meta path must be computable (credentials are stripped from key)")
+          (ng (uiop:directory-exists-p meta-path)
+              "normalized metadata directory must not be created for a credentialed source"))
+        ;; Belt-and-suspenders: the raw token string must not appear as a path component,
+        ;; catching a potential regression in normalize-git-url as well.
+        (ng (uiop:directory-exists-p
+             (merge-pathnames "sources/git/ghp_secret@github.com/" cache-root))
+            "token string must not be a path component under cache-root")))))
+
+;;; ==========================================================================
+;;; Test for host-only URL yielding NIL cache-key (regression guard).
+;;; normalize-git-url returns NIL for https://github.com (no path component),
+;;; so cache-key must propagate that NIL rather than producing an empty or
+;;; colliding key that silently mis-caches the source.
+;;; ==========================================================================
+
+(deftest test-cache-key-source-git-host-only-url
+  (testing "cache-key is NIL for a host-only git remote URL (no path)"
+    (let ((source (make-source :git "mylib" "https://github.com"
+                               :ref "abc123")))
+      (setf (qlot/source/git::source-git-ref source) "abc123def456")
+      (ok (null (cache-key source))
+          "a URL with no path component must yield NIL from cache-key")))
+  (testing "cache-exists-p is NIL for a host-only git remote URL"
+    (with-tmp-directory (cache-root)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname cache-root))
+            (*cache-enabled* t)
+            (source (make-source :git "mylib" "https://github.com"
+                                 :ref "abc123")))
+        (setf (qlot/source/git::source-git-ref source) "abc123def456")
+        (ok (null (cache-exists-p source))
+            "cache-exists-p must return NIL when cache-key is NIL")))))
 
 (deftest test-source-ql-restore-metadata-only
   (testing "source-ql restore only restores metadata, no software symlinks"

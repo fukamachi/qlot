@@ -21,6 +21,7 @@
            #:defrost-source
            #:source-dist-name
            #:source-identifier
+           #:source-name-for-report
            #:source=
            #:source-install-url
            #:source-version-prefix))
@@ -131,6 +132,30 @@
 (defgeneric source-identifier (source)
   (:method ((source source))
     (source-dist-name source)))
+
+(defun source-identifier-name-for-report (identifier)
+  (cond
+    ((and (stringp identifier)
+          (or (uiop:string-prefix-p "https://" identifier)
+              (uiop:string-prefix-p "http://" identifier)))
+     (let* ((without-query (subseq identifier 0 (or (position #\? identifier)
+                                                     (length identifier))))
+            (trimmed (string-right-trim "/" without-query))
+            (slash (position #\/ trimmed :from-end t))
+            (name (if slash
+                      (subseq trimmed (1+ slash))
+                      trimmed))
+            (dot (position #\. name :from-end t)))
+       (if dot
+           (subseq name 0 dot)
+           name)))
+    (t
+     identifier)))
+
+(defun source-name-for-report (source)
+  (or (source-project-name source)
+      (source-dist-name source)
+      (source-identifier-name-for-report (source-identifier source))))
 
 (defgeneric source= (source1 source2)
   (:method (source1 source2)
