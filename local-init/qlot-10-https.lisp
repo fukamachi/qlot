@@ -60,11 +60,26 @@
     (uiop/run-program:subprocess-error ()
       nil)))
 
+(defun netrc-arguments ()
+  "Let curl authenticate against a private dist.
+Only a plaintext file works here; ~/.authinfo.gpg is handled by the Lisp
+fetcher, or can be decrypted to the file named by $NETRC."
+  (let ((netrc (uiop:getenvp "NETRC")))
+    (if netrc
+        (list "--netrc-file" netrc)
+        ;; Not --netrc: that fails with exit code 26 when ~/.netrc is absent,
+        ;; which is the usual case.
+        (list "--netrc-optional"))))
+
 (defun curl-fetch (url file &rest args &key quietly &allow-other-keys)
   (declare (ignore args))
   (let ((url (https-of url)))
     (with-logging (url file :quietly quietly)
-      (uiop:run-program (list "curl" "-sSL" url "-o" (uiop:native-namestring file))
+      ;; --fail, so that an HTTP error is a failed subprocess rather than a
+      ;; zero-length file reported below as a status 200.
+      (uiop:run-program (append (list "curl" "-sSLf")
+                                (netrc-arguments)
+                                (list url "-o" (uiop:native-namestring file)))
                         :error-output :interactive)))
   (values (make-instance 'ql-http::header :status 200)
           (probe-file file)))
