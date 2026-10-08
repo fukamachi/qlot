@@ -50,7 +50,7 @@ ln -sf "$QLOT_SOURCE_DIR/bin/qlot" "$QLOT_BIN_DIR/qlot"
 if [ "$(id -u)" -eq 0 ]; then
   REGISTRY_DIR=/usr/local/share/common-lisp/systems
 else
-  REGISTRY_DIR="${XDG_DATA_HOME:-~/.local/share}/common-lisp/systems"
+  REGISTRY_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/common-lisp/systems"
 fi
 
 mkdir -p "$REGISTRY_DIR"
