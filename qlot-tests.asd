@@ -5,6 +5,7 @@
                "qlot"
                "qlot-tests/main"
                "qlot-tests/parser"
+               "qlot-tests/http"
                "qlot-tests/distify/ql"
                "qlot-tests/distify/git"
                "qlot-tests/distify/http"
