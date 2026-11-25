@@ -234,20 +234,22 @@ dist https://dist.example.com/cl-dist/my-dist.txt
 machine dist.example.com login alice password s3cret
 ```
 
-The credential file is looked up in this order, and only the first one found is used:
+The credential sources are asked in this order, and the first one with an entry for the host wins:
 
 1. the file named by the `NETRC` environment variable (useful on CI, where the file is written to a tmpfs path)
-2. `~/.authinfo.gpg`, decrypted with `gpg` — the same file Emacs' auth-source uses, and it may prompt through gpg-agent once per Qlot run
-3. `~/.netrc`
+2. `~/.netrc`
+3. `~/.authinfo.gpg`, the same file Emacs' auth-source uses. It is decrypted with `gpg --batch` only when the two plaintext files have no entry for the host, and at most once per Qlot run; gpg-agent may then ask for the passphrase.
 
-Both formats use the same `machine` / `login` / `password` tokens. As with curl, a `default` entry applies to every host, which means it is also sent to `beta.quicklisp.org` and `github.com` — prefer an explicit `machine` line.
+Credentials are sent only to `https://` URLs. Qlot follows a redirect with the credentials of the redirect target, so they never reach another host or a plain `http://` URL.
+
+Both formats use the same `machine` / `login` / `password` tokens. Host names are compared case-insensitively. As with curl, a `default` entry applies to every host, which means it is also sent to `beta.quicklisp.org` and `github.com` — prefer an explicit `machine` line. A `macdef` is skipped together with its body, which ends at the next blank line. A token that is neither a keyword nor a value is skipped with a warning that names the file, the line and the zero-based character index of the token, but not the token itself. A file that cannot be read is skipped with a warning.
 
 Release archives of a `dist` source are downloaded by the bundled Quicklisp client rather than by Qlot itself, which is why the fetcher it uses matters:
 
 | Fetcher | Credentials |
 | --- | --- |
 | Lisp (used when Qlot is installed as a bundle) | all three sources above |
-| curl | `$NETRC`, else `~/.netrc` |
+| curl | `$NETRC`, else `~/.netrc`; redirects to `http://` are refused |
 | wget | `~/.netrc` only, since wget has no equivalent of `--netrc-file` |
 
 So on a machine that falls back to curl or wget, decrypt the credentials into the file named by `$NETRC`, or keep a plaintext `~/.netrc`.

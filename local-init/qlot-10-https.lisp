@@ -77,7 +77,9 @@ fetcher, or can be decrypted to the file named by $NETRC."
     (with-logging (url file :quietly quietly)
       ;; --fail, so that an HTTP error is a failed subprocess rather than a
       ;; zero-length file reported below as a status 200.
-      (uiop:run-program (append (list "curl" "-sSLf")
+      ;; --proto-redir, because curl looks up netrc credentials again for each
+      ;; redirect and would send them in cleartext to an http:// target.
+      (uiop:run-program (append (list "curl" "-sSLf" "--proto-redir" "=https")
                                 (netrc-arguments)
                                 (list url "-o" (uiop:native-namestring file)))
                         :error-output :interactive)))
