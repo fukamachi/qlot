@@ -299,7 +299,11 @@ release hook handles caching. Only metadata needs source-level caching."
            (uiop:file-exists-p (merge-pathnames "releases.txt" metadata))
            ;; Sources directory required only for non-release-level-cache sources.
            (or (source-uses-release-level-cache-p source)
-               (and sources (uiop:directory-exists-p sources)))))))
+               (and sources
+                    (uiop:directory-exists-p sources)
+                    ;; An empty sources directory (e.g. left by an interrupted
+                    ;; install) cannot be restored from.
+                    (uiop:subdirectories sources)))))))
 
 (defun move-directory (from to)
   (handler-case
@@ -560,6 +564,10 @@ embedded newlines."
                 (remove-path project-dir)
                 (create-symlink cache-target project-dir)))))
         (return-from save-to-cache-impl))
+      ;; An incomplete entry (see CACHE-EXISTS-P) would block publishing the new one.
+      (ignore-errors
+        (when metadata-cache (remove-path metadata-cache))
+        (when sources-cache (remove-path sources-cache)))
       (let ((metadata-staging (staging-path metadata-cache))
             (sources-staging (unless uses-release-cache
                                (staging-path sources-cache))))

@@ -1,0 +1,8 @@
+("quicklisp" .
+ (:class qlot.source.dist:source-dist
+  :initargs (:project-name "quicklisp" :%version :latest :distribution "http://beta.quicklisp.org/dist/quicklisp.txt")
+  :version "2018-02-28"))
+("assoc-utils" .
+ (:class qlot/source/git:source-git
+  :initargs (:remote-url "https://github.com/fukamachi/assoc-utils.git" :ref "b14ab685231ebd924fc84ffd6099b2819ebcb7c7")
+  :version "git-b14ab685231ebd924fc84ffd6099b2819ebcb7c7"))
