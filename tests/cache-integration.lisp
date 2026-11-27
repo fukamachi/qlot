@@ -102,6 +102,36 @@
             (ok (< 0 symlink-count)
                 (format nil "Should use symlinks (found ~A)" symlink-count))))))))
 
+(deftest test-reinstall-with-empty-cached-sources
+  "A cache entry whose sources directory is empty should be treated as a miss."
+  (with-tmp-directory (cache-dir)
+    (with-tmp-directory (project-dir)
+      (let ((*cache-directory* (uiop:ensure-directory-pathname cache-dir))
+            (*cache-enabled* t))
+        (uiop:copy-file (asdf:system-relative-pathname :qlot #P"tests/data/qlfile-cache-git")
+                        (merge-pathnames #P"qlfile" project-dir))
+        (uiop:copy-file (asdf:system-relative-pathname :qlot #P"tests/data/qlfile-cache-git.lock")
+                        (merge-pathnames #P"qlfile.lock" project-dir))
+        (let ((qlhome (merge-pathnames #P".qlot/" project-dir))
+              (qlfile (merge-pathnames #P"qlfile" project-dir))
+              (source (make-source :git "assoc-utils" "https://github.com/fukamachi/assoc-utils.git"
+                                   :ref "b14ab685231ebd924fc84ffd6099b2819ebcb7c7")))
+          (setf (source-version source) "git-b14ab685231ebd924fc84ffd6099b2819ebcb7c7")
+          (install-qlfile qlfile :quicklisp-home qlhome)
+          (ok (cache-exists-p source) "Cache should be populated after first install")
+          ;; Simulate a broken entry: metadata present, sources directory empty
+          (let ((sources (qlot/cache::cache-sources-path source)))
+            (uiop:run-program (list "chmod" "-R" "u+w" (namestring sources)))
+            (dolist (dir (uiop:subdirectories sources))
+              (uiop:delete-directory-tree dir :validate t)))
+          (ng (cache-exists-p source) "An empty sources directory should not count as cached")
+          (uiop:delete-directory-tree qlhome :validate t)
+          (install-qlfile qlfile :quicklisp-home qlhome)
+          (ok (uiop:directory-exists-p
+               (merge-pathnames "dists/assoc-utils/software/" qlhome))
+              "assoc-utils should be reinstalled")
+          (ok (cache-exists-p source) "The incomplete cache entry should be replaced"))))))
+
 (deftest test-cache-miss-after-clear
   "After clearing cache, sources should be re-downloaded."
   (with-tmp-directory (cache-dir)
